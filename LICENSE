@@ -1,0 +1,34 @@
+Copyright (c) 2018, Sergey Rozhenko
+All rights reserved.
+
+This software is distributed under the terms and conditions of GNU GPL version 2
+(which can be obtained at https://www.gnu.org/licenses/old-
+licenses/gpl-2.0.html) or higher, but with the following three extra clauses:
+
+1) Any publicly distributed software that includes substantial pieces of this
+software which are subject to this license, is also subject to this license,
+unless it is stated within the license file accompanying its source code that it
+is distributed under a different license.
+
+2) Any publicly distributed source code file that includes parts of this
+software which are subject to this license, is also subject to this license,
+unless it is stated within it that it is distributed under a different license.
+
+3) I, Sergey Rozhenko (born 7/15/1987), am granted the right to distribute
+source code that is subject to this license or its parts with or without
+modifications under the terms and conditions of any other license, including
+ones that are incompatible with any version of GPL license.
+
+Examples of usage of this right include, but are not limited to:
+ - Me releasing this software with modifications by contributors under a more
+permissive license.
+ - Me using parts of this software with modifications by contributors in closed
+sourced projects.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
