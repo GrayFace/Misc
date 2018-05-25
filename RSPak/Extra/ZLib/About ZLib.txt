@@ -1,0 +1,5 @@
+This is a translation of ZLib to Pascal by Jacques Nomssi Nzali with my modifications.
+E.g. I renamed Zlib.pas to ZlibSpec.pas, because ZLib.pas is a standard Delphi unit.
+I remember encountering some issues with ZLib version included with Delphi, so I use this one.
+
+Yours, Sergey Rozhenko

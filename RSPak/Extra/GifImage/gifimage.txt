@@ -1,0 +1,29 @@
+Changed 2007.01.18
+
+This is a version of Anders Melander's TGIFImage ported to Delphi 7, Delphi 2005, Delphi 2006.
+It supports animated GIF files.
+
+This version should also work with older Delphi versions (not tested much).
+It only works in VCL applications for Win32 platform.
+It doesn't work in .NET applications.
+
+WARNING: Use it at your own risk.
+
+I'm posting it with permission from the author Anders Melander.
+
+The original TGIFImage was originally located at
+http://www.melander.dk/delphi/gifimage/
+Note: His website has been offline for a long time.
+
+Please look at the comments in the pas file to see changes.
+
+You should also look at the GIF FAQ on the website and
+you should download and look at the gif demo applications.
+
+Regards,
+Finn Tolderlund
+
+Mail:
+finn@tolderlund.eu
+website:
+http://www.tolderlund.eu/delphi/

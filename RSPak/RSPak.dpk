@@ -1,0 +1,79 @@
+package RSPak;
+
+{$R *.res}
+{$R 'RSSpinEdit.dcr'}
+{$R 'RSTimer.dcr'}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DESCRIPTION 'RSPak'}
+{$IMPLICITBUILD OFF}
+
+requires
+  rtl,
+  vcl;
+
+contains
+  QPix in 'QPix.pas',
+  RSCommon in 'RSCommon.pas',
+  RSGlue in 'RSGlue.pas',
+  RSGraphics in 'RSGraphics.pas',
+  RSImgList in 'RSImgList.pas',
+  RSLang in 'RSLang.pas',
+  RSMenus in 'RSMenus.pas',
+  RSMessages in 'RSMessages.pas',
+  RSPainters in 'RSPainters.pas',
+  RSPanel in 'RSPanel.pas',
+  RSQ in 'RSQ.pas',
+  RSRecent in 'RSRecent.pas',
+  RSRegistry in 'RSRegistry.pas',
+  RSSpeedButton in 'RSSpeedButton.pas',
+  RSSpinEdit in 'RSSpinEdit.pas',
+  RSStrUtils in 'RSStrUtils.pas',
+  RSSysUtils in 'RSSysUtils.pas',
+  RSTimer in 'RSTimer.pas',
+  RSUtils in 'RSUtils.pas',
+  RSValueListEditor in 'RSValueListEditor.pas',
+  RSWinController in 'RSWinController.pas',
+  RSWindowProc in 'RSWindowProc.pas',
+  RSListBoxHint in 'RSListBoxHint.pas',
+  RSComboBox in 'RSComboBox.pas',
+  RSListBox in 'RSListBox.pas',
+  RSListView in 'RSListView.pas',
+  RSMemo in 'RSMemo.pas',
+  RSPageControl in 'RSPageControl.pas',
+  RSShape in 'RSShape.pas',
+  RSStringGrid in 'RSStringGrid.pas',
+  RSTrackBar in 'RSTrackBar.pas',
+  RSDialogs in 'RSDialogs.pas',
+  RSEdit in 'RSEdit.pas',
+  RSPopupMenu in 'RSPopupMenu.pas',
+  RSSplitter in 'RSSplitter.pas',
+  RSDebug in 'RSDebug.pas',
+  RSButton in 'RSButton.pas',
+  RSFileAssociation in 'RSFileAssociation.pas',
+  RSIni in 'RSIni.pas',
+  RSTreeView in 'RSTreeView.pas',
+  RSForm in 'RSForm.pas',
+  RSTrayIcon in 'RSTrayIcon.pas',
+  RSClipboard in 'RSClipboard.pas';
+
+end.

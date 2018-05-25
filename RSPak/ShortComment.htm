@@ -1,0 +1,171 @@
+<html>
+
+<head>
+<meta http-equiv="Content-Language" content="ru">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1251">
+<title>Краткое описание RSPak</title>
+</head>
+
+<body>
+<p style="margin-top: 0; margin-bottom: 0" align="center"><font size="4">Краткое описание пакета RSPak</font></p>
+<p></p>
+<p></p>
+<p style="margin-top: 0; margin-bottom: 0"><b>Модули:</b></p>
+<p></p>
+<p style="margin-top: 0; margin-bottom: 0"><U>QPix</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TQuickPixels - класс для быстрой работы с пикселями TBitmap'а, создан MBo и Алексеем Радионовым, я исправл несколько багов и кое-что добавил</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSGraphics</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSLoadPic - загрузка картинки известного программе формата в TBitmap</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSGetPixelFormat - получение PixelFormat'а битмэпки - иногда(в случае pf16bit, например) TBitmap.PixelFormat возвращает pfCustom, 
+обычно <span lang="en-us">PixelFormat</span> можно уточнить (by
+<span lang="en-us">MBo</span> <span lang="en-us">/ Alexey Radionov</span>)</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rsRGBtoHLS, rsHLStoRGB - перевод в/из HLS</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSAdjustLum - осветление через HLS</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSGetIntensity - все равно что Lum в HLS, но проскалировано от 0 до 255, а не до 240.</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSAdjustIntensity - осветление, не добавляющее былый (в 
+отличие RSAdjustLum) при достижении предела по одной из компонент</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSSwapColor - меняет местами Red и 
+<span lang="en-us">Blue</span></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSMixColors - смешивание цветов с весами</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSMixPics - смешивание картинок с весами</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSGrayscale - перевод картинки в Grayscale</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSGrayscaleSpec - перевод картинки в градации двух цветов (не обязательно белого с черным, как в Grayscale)</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSDrawMonoBmp - рисование монохромной битмэпки выбранным цветом (by Алексей Румянцев - автор RyMenus)</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSDrawMask - рисует маску выбранным цветом</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSDrawDisabled - рисует Disabled картинку, как OfficeXP</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSTransparentRandom - устанавливает цвет случайных пикселей в цвет фона, используя 
+процент или маску прозрачности</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSTransparentFixed - устанавливает в цвет фона пиксели с определенным шагом</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSChangeGrayPic - для добавления/вычитания числа из маски прозрачности</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSGradientV,H - линейный градиент</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSSimpleRotate32 - вращение на 90, 180, 270 градусов и Flip-анье картинок</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSTransform32 - произвольное вращение картинок и другие преобразования координат</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSAnyTransform32 - произвольное искажение картинки</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSImgList</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Одна функция вытаскивания картинки из ImageList</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSLang</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Для перевода приложения, пример - Demo</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSMessages</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Обертки для CM_ сообщений</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSStrUtils</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSParseString, RSGetToken, RSGetTokens, RSGetTokensCount - распарсивание строки, разбитой на части разделителями (например, разбиение текста на строки) - очень удобно, надо будет демку сделать</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSStringReplace - и в Африке StringReplace, только оптимизированный</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSIntToStr, RSStrToInt - сами знаете что</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSVal - обертка над Val для удобства</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSSysUtils</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TRSWnd - класс для удобства работы с hwnd. (к нему надо явно приводить hwnd, вместо того, чтобы создавать / уничтожать)</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TRSBits - класс для работы с битами. Приводите к нему указатель на некоторую память и работайте как с массивом битов.</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TRSObjStack - стек, не реаллокирующийся при добавлении элементов 
+(выделяет память блоками).</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TRSSharedData - для разделения MMF между процессами</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TRSFindFile - удобная 
+обертка над FindFirstFile и т.п.</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSCreateDir и т.п. - создание всех директорий пути (как ForceDirectory), RSCreateFile - в случае создания файла, создает весь путь к нему.</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSLoadFile, RSSaveFile, RSLoadTextFile, RSSaveTextFile - просто загружает файлы в array of byte 
+или в <span lang="en-us">string</span></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSFileOperation - удобная обертка для SHFileOperation</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSLoadProc - для динамической загрузки 
+процедур</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSDelayLoad - отложенная загрузка</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSRunWait - запуск и ожидание завершения приложения</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSAssertErrorHandler - обработчик Assertion'ов, не показывающий пути к модулю (только имя) в сообщении об ошибке</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSMessageBox - обертка MessageBox</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSCreateRemoteCopy - для создания копии данных в АП др. процесса</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSSendDataMessage - для отправки сообщений типа LVM_GETITEM другому приложению</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSUtils</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TRSSimpleHintWindow - хинт с настраиваемым цветом обводки (RSHintHasShadow) и наличием тени (RSHintBorderColor)</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSFixThemesBug - исправляет баг с отсутствием реакции на включение тем (в Delphi 2006 
+баг уже исправили)</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSIsControlVisible - видим ли контрол, RSPtInControl - в Rect-е контрола ли 
+точка, RSSetFocus - SetFocus, RSIsChild - аналог IsChild для контролов</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSHookFlatBevels - чтобы без тем приложение смотрелось хорошо, я ставлю всем Edit'ам плоский Bevel, а чтобы они отключались при включении тем, сделал эту процедуру</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSShowHint, RSHelpHint, RSErrorHint - см. Demo</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSMakeTransparent - нормальная реализация "прозрачного" окна - примера, который можно найти в очень многих FAQ'ах, в том числе в нашем</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSPaintList - отрисовка ListBox'а и ComboBox'а по типу RSMenus</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSProcessMessages - как Application.ProcessMessages, но вызывает MouseIdle(т.е. SpeedButton'ы реагируют на вход мыши) и синхронизацию потоков</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSListBoxHint</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Для показа хинта для пунктов, не помещающихся в ListBox</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSMessages</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;record'ы для некоторых CM_ сообщений</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSMenus</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Красивая отрисовка менюшек. Цвета вычисляются в соответствии с цветовой темой.</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSRecent</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Реализация списка недавних документов</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSRegistry</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Добавлена функция Read, не возбуждающая исключение при ошибке (отсутствие параметра и т.п.)</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSQ</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Мои "настройки"</p>
+<p></p>
+<p style="margin-top: 0; margin-bottom: 0"><b>Компоненты:</b></p>
+<p></p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSTimer</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Таймер, создающий окно только на время работы, а не на все время существования.</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSDialogs</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TRSOpenSaveDialog - диалог, у которого можно менять режим Open/Save</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSPopupMenu</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Добавлено событие OnAfterPopup</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Процедура SetItems - для того, чтобы "склонировать" подменю. Например, в меню File есть подменю Recent Files - его можно показать при нажатии на 
+кнопку на <span lang="en-us">Open </span>таким способом.</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSPainters</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TRSColorTheme - настройки отрисовки RSMenus и RSSpeedButton</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSGlue</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Прилипание формы к краям экрана и слипание между собой, а так же контроллов к краям формы.</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSWinController</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Для перехвата оконной процедуры контролов, у которых нет свойства OnWndProc</p>
+<p></p>
+<p></p>
+<p style="margin-top: 0; margin-bottom: 0"><b>Контролы:</b></p>
+<p></p>
+<p style="margin-top: 0; margin-bottom: 0">Во всех контролах добавлены события OnMouseEnter, OnMouseLeave, OnWndProc, свойство MouseInside. Так же расшарены 
+некоторые стандартные свойства.</p>
+<p style="margin-top: 0; margin-bottom: 0">В WinControl'ах еще добавлено событие OnCreateParams и свойство State.</p>
+<p style="margin-top: 0; margin-bottom: 0">В наследниках TCustomEdit добавлены GetSelection и SetSelection, позволяющие получить и установить выделение и положение каретки (определить, на каком конце выделения она находится, в стандартных невозможно)</p>
+<p></p>
+<p></p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSButton, RSEdit, RSShape</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Не добавлено ничего, кроме перечисленного выше (разве что в RSEdit добавлено Ctrl+A)</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSPageControl</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Свойство RuntimeTabIndex - при установке, вне зависимостти от Tab-а, выбранного в DesignTime, в Runtime будет выбран указанный здесь.</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSLabel</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Ложится на сетку так, что линия ткста совпадает с линией текста Edit'ов</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSListView</U>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Исправлен 1 баг - при Multiselect при выделении нового пункта не срабатывал OnSelectItem</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSValueListEditor</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Исправлены 2 бага:</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;List index out of bounds в процедуре SetCell</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;OnSelectCell и OnValidate не вызывались после удаления строки</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSStringGrid</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;OnBeforeSetEditText - можно поменять устанавливаемый текст</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;OnCreateEditor - срабатывает при создании InplaceEdit'а</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSListBox</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Добавлен Hint из RSListBoxHint</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSTrackBar</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Исправлена большая кривость - при клике мышкой бегунок перескакивал на 2(PageSize) позиции, вместо того, чтобы встать в указанное положение</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SelEnabled - включение/отключение режима выделения (в стандартном всегда включен)</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;OnAdjustClickRect - например, в стандарте при клике по самим отметкам бегунок не передвигается. Измените ClickRect и он будет передвигаться.</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSComboBox</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Добавлен Hint из RSListBoxHint (thx Игорю Шевченко за способ получить Hfndle выпадающего списка)</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;В режиме OwnerDraw можно менять высоту</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Кнопка рисуется стандартно вне зависимости от выбранного BevelKind</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;OwnerDraw можно использовать при любом стиле - свойство 
+StyleOwnerDraw</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSMemo</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Поддерживает Ctrl+A 
+и правильную навигацию - см. Demo</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSPanel</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Поддерживает CustomDraw</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Расшарены Bevel'ы, общие для всех WinControl'ов, под именем BevelEx</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSSpeedButton</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Поддерживает CustomDraw</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Красивая отрисовка по типу RSMenu</p>
+<p></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RSMakeToolBar - создание тулбара из моих кнопок на основе списка MenuItem'ов</p>
+<p style="margin-top: 0; margin-bottom: 0"><U>RSSpinEdit</U></p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Правильно поддерживает темы XP</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Настраивается система счисления</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Можно ускорить перемотку мышкой, нажав на кнопку и "потянув"</p>
+<p style="margin-top: 0; margin-bottom: 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Есть событие Changed, срабатывающее при нажатии Enter / переходе в другой контрол / нажатии на кнопку SpinButton, 
+но не при каждом вводе символа</p>
+</body>
+
+</html>
