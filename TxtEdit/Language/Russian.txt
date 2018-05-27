@@ -1,0 +1,64 @@
+	[Help]
+GlobalCharset	RUSSIAN_CHARSET
+EditsCharset	RUSSIAN_CHARSET
+Caption	Справка
+Button1.Caption	OK
+Memo1.Lines.Strings	Версия %VERSION%
+Автор: Роженко Сергей
+http://sites.google.com/site/sergroj/
+sergroj@mail.ru
+
+
+	[Main Form]
+GlobalCharset	RUSSIAN_CHARSET
+SSaveQuestion	Сохранить изменения в "%s"?
+SSaveQuestionUntitled	Сохранить изменения в Безымянный документ?
+SReopenQuestion	Вы уверены, что хотите заново открыть "%s", отказавшись от изменений?
+SSearchNotFound	Не удается найти "%s"
+SSearchOtherEnd	Продолжить поиск с другого конца файла?
+STxtAssociationCaption	Открыть как таблицу TxtEdit
+Caption	Редактор таблиц TxtEdit
+EditX.Hint	Фиксированные Строки
+EditY.Hint	Фиксированные Столбцы
+SaveDialog1.Filter	Txt таблицы|*.txt|Все файлы|*.*
+OpenDialog1.Filter	Txt таблицы|*.txt|Все файлы|*.*
+File1.Caption	Файл
+New1.Caption	Новый
+Open1.Caption	Открыть
+Save1.Caption	Сохранить
+SaveAs1.Caption	Сохранить как...
+Recent1.Caption	Недавние документы
+Exit1.Caption	Выход
+Edit1.Caption	Редактировать
+Undo1.Caption	&Отменить
+Redo1.Caption	Пов&торить
+Cut1.Caption	&Вырезать
+Copy1.Caption	&Копировать
+Paste1.Caption	Вст&авить
+SelectAll1.Caption	В&ыделить все
+Find1.Caption	Найти...
+FindNext1.Caption	Найти далее
+Replace1.Caption	Заменить...
+WordWrap1.Caption	Перенос слов
+InsertRow1.Caption	Вставить строку
+DeleteRow1.Caption	Удалить строку
+AddRow1.Caption	Добавить строку
+InsertColumn1.Caption	Вставить столбец
+DeleteColumn1.Caption	Удалить столбец
+AddColumn1.Caption	Добавить столбец
+SelectRow1.Caption	Выделить строку
+SelectColumn1.Caption	Выделить столбец
+Options1.Caption	Опции
+Language1.Caption	Язык
+Associate1.Caption	&Добавить в контекстное меню для файлов *.txt
+Associatewithert1.Caption	Ассоциировать с файлами *.ert
+Associatewithers1.Caption	Ассоциировать с файлами *.ers
+Help1.Caption	Справка
+Undo2.Caption	Отменить
+Redo2.Caption	Повторить
+Cut2.Caption	Копировать
+Copy2.Caption	Вырезать
+Paste2.Caption	Вставить
+Delete1.Caption	&Удалить
+SelectAll2.Caption	Выделить всё
+

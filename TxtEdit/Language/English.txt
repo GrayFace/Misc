@@ -1,0 +1,6 @@
+	[Help]
+Memo1.Lines.Strings	Version %VERSION%
+Author: Sergey Rozhenko
+http://sites.google.com/site/sergroj/
+sergroj@mail.ru
+
