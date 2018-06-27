@@ -326,7 +326,7 @@ type
 
   with TRSFindFile.Create(FilesMask) do
     try
-      while FindNextAttributes(0, FILE_ATTRIBUTE_DIRECTORY) do // Only files
+      while FindEachFile do // Only files
         DoSomething(FileName);
     finally
       Free;
@@ -349,10 +349,30 @@ type
     function FindNext: Boolean;
     function FindAttributes(Require, Exclude:DWord): Boolean;
     function FindNextAttributes(Require, Exclude:DWord): Boolean;
+    function FindEachFile: Boolean;
+    function FindEachFolder: Boolean;
     property FileName: string read GetFileName;
     property Found: Boolean read FFound;
     property Path: string read FPath;
     property IgnoreDotFolders: Boolean read FIgnoreDotFolders write FIgnoreDotFolders;
+  end;
+
+  PRSCmd = ^TRSCmd;
+  TRSCmd = record
+    InitDone: string;
+    SI: TStartupInfo;
+    AttributeList: ptr;  // _STARTUPINFOEX member
+    PI: TProcessInformation;
+    NeedProcessHandle, NeedThreadHandle, InheritHandles: Boolean;
+    ApplicationName: string;
+    ProcessAttributes, ThreadAttributes: PSecurityAttributes;
+    CreationFlags: DWord;
+    Environment: ptr;
+    function App(const AppName: string): PRSCmd;
+    function ShowCmd(showCmd:Word): PRSCmd;
+    function Flags(Flags: DWord): PRSCmd;
+    function NeedHandles(process: Boolean = true; thread: Boolean = true): PRSCmd;
+    function Run(Command: string; Dir: string = ''; Timeout:DWord = INFINITE): Boolean;
   end;
 
    // Used in RSWindowProc.pas
@@ -1817,6 +1837,16 @@ begin
   Result:= FindAttributes(Require, Exclude);
 end;
 
+function TRSFindFile.FindEachFile: Boolean;
+begin
+  Result:= FindNextAttributes(0, FILE_ATTRIBUTE_DIRECTORY);
+end;
+
+function TRSFindFile.FindEachFolder: Boolean;
+begin
+  Result:= FindNextAttributes(FILE_ATTRIBUTE_DIRECTORY, 0);
+end;
+
 function TRSFindFile.FindAttributes(Require, Exclude: DWord): Boolean;
 var bits:DWord;
 begin
@@ -1833,6 +1863,75 @@ begin
   if Found and (FFileName = '') then
     FFileName:= Path + Data.cFileName;
   Result:= FFileName;
+end;
+
+{
+********************************* TRSCmd *********************************
+}
+
+function Check(var a: TRSCmd): PRSCmd;
+begin
+  if a.InitDone = '' then
+  begin
+    FillChar(a, SizeOf(a), 0);
+    a.SI.cb := SizeOf(a.SI);
+    a.InitDone:= 'ok';
+  end;
+  Result:= @a;
+end;
+
+function TRSCmd.NeedHandles(process, thread: Boolean): PRSCmd;
+begin
+  Result:= Check(self);
+  NeedProcessHandle:= process;
+  NeedThreadHandle:= thread;
+end;
+
+function TRSCmd.Run(Command, Dir: string; Timeout: DWord): Boolean;
+var
+  i: uint;
+begin
+  Check(self);
+  RSWin32Check(CreateProcess(ptr(ApplicationName), ptr(Command),
+     ProcessAttributes, ThreadAttributes, InheritHandles, CreationFlags,
+     Environment, ptr(Dir), SI, PI));
+  if not NeedThreadHandle then
+    CloseHandle(PI.hThread);
+  i:= WAIT_TIMEOUT;
+  if Timeout > 0 then
+    i:= WaitForSingleObject(pi.hProcess, Timeout);
+  Result:= (i = WAIT_OBJECT_0);
+  if not Result and (i <> WAIT_TIMEOUT) then
+  begin
+    if not NeedProcessHandle then
+    begin
+      i:= GetLastError;
+      CloseHandle(PI.hProcess);
+      SetLastError(i);
+    end;
+    RSRaiseLastOSError;
+  end;
+  if not NeedProcessHandle then
+    CloseHandle(PI.hProcess);
+end;
+
+function TRSCmd.ShowCmd(showCmd: Word): PRSCmd;
+begin
+  Result:= Check(self);
+  SI.dwFlags:= SI.dwFlags or STARTF_USESHOWWINDOW;
+  SI.wShowWindow:= showCmd;
+end;
+
+function TRSCmd.App(const AppName: string): PRSCmd;
+begin
+  Result:= Check(self);
+  ApplicationName:= AppName;
+end;
+
+function TRSCmd.Flags(Flags: DWord): PRSCmd;
+begin
+  Result:= Check(self);
+  SI.dwFlags:= SI.dwFlags or Flags;
 end;
 
 {
@@ -2232,7 +2331,6 @@ begin
     Result:= '';
 end;
 
-function RSGetModuleVersion(out Major, Minor, Release, Build: int; Instance: LongWord = 0): Boolean; overload;
 type
   VS_VERSIONINFO = packed record
     wLength: Word;
@@ -2244,6 +2342,8 @@ type
     Padding2: Word;
     Children: Word;
   end;
+  
+function RSGetModuleVersion(out Major, Minor, Release, Build: int; Instance: LongWord = 0): Boolean; overload;
 var
   h: THandle;
   p: ^VS_VERSIONINFO;

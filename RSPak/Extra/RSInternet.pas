@@ -36,7 +36,7 @@ begin
   sAppName:= ExtractFileName(ParamStr(0));
   hSession:= InternetOpen(PChar(sAppName), INTERNET_OPEN_TYPE_PRECONFIG, nil, nil, 0);
   if hSession = nil then  exit;
-  
+
   try
     if Timeout <> 0 then
     begin
@@ -45,7 +45,7 @@ begin
     end;
     hURL := InternetOpenURL(hSession, PChar(URL), nil, 0, Flags, 0);
     if hURL = nil then  exit;
-    
+
     try
       while InternetReadFile(hURL, @Buffer, min(SizeOf(Buffer), Limit), BufLen)
          and (BufLen <> 0) do

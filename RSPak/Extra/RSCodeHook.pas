@@ -21,9 +21,22 @@ type
     RShtJmp2, RShtBStr, RShtStr, RShtCallStore, RShtBefore, RShtAfter,
     RShtFunctionStart, RShtCodePtrStore);
 {
-  RShtCallStore - store original function ptr in eax
   RShtBefore, RShtAfter - seemlessly "insert" new code before/after
+  RShtCallStore - store original function ptr in eax
   RShtFunctionStart - like RShtCallStore, but placed at the start of a function
+
+  Explanation:
+   @store:
+    mov eax, @std
+    call @hook
+
+  RShtCallStore:
+    call @std  ->  call @store
+  RShtCodePtrStore:
+    .dd @std  ->  .dd @store
+  RShtFunctionStart:
+    <code at @p>  ->  jmp @store
+    (here @std is an allocated code block containing code from @p and jump to p + size)
 }
 
   PRSHookInfo = ^TRSHookInfo;
