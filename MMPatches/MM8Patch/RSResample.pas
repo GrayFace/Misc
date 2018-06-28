@@ -1,4 +1,4 @@
-unit RSResample;
+{$IFNDEF RSResample15}unit RSResample;
 
 interface
 
@@ -24,6 +24,7 @@ procedure RSResampleTrans16(const info: TRSResampleInfo; Src: ptr; SrcPitch: int
 procedure RSResampleTrans16_NoAlpha(const info: TRSResampleInfo; Src: ptr; SrcPitch: int; Dest: ptr; DestPitch: int; Trans: int);
 
 implementation
+{$ENDIF}
 
 {$I RSPak.inc}
 
@@ -142,15 +143,16 @@ end;
 
 //----- 16 bit color
 
+{$IFNDEF RSResample15}
 function GetPixel16(c: uint): uint;
 begin
   Result:= (c and $F81F)*33 shr 2;  // r,b components - 5 bit: *(2^5 + 1) shr 2
   Result:= byte(Result) + Result shr 11 shl 16;
   inc(Result, (c and $7E0)*65 shr 9 shl 8);  // g component - 6 bit: *(2^6 + 1) shr 4
 end;
+{$ENDIF}
 
 var
-  //ToTrueColor: array[0..$FFFF] of int;
   ToBits: array[0..$FFFF] of array[0..1] of uint;
   TransMix: array[0..MaxMix*MaxMix*MaxMix*4 - 1] of uint;
 
@@ -385,9 +387,8 @@ begin
     end;
 end;
 
-procedure ResampleTransV(p, p2: puint; v: uint; pc, pl: puint);
-const
-  AlphaFF = ($FF000000 div MaxMix) and $FF000000;
+// I forgot alpha is opacity, thought it's transparency, so I have to XOR it
+procedure ResampleTransV_Alpha(p, p2: puint; v: uint; pc, pl: puint);
 var
   tr: PIntegerArray;
   c, a: uint;
@@ -398,7 +399,7 @@ begin
     begin
       c:= pc^*MaxMix;
       inc(pc);
-      p^:= c + pc^;
+      p^:= (c + pc^) xor $FF000000;
       inc(pc);
       inc(p);
     end
@@ -412,7 +413,8 @@ begin
       c:= pc^*v + pl^*(MaxMix - v);
       inc(pl, 2);
       inc(pc);
-      p^:= (c + pc^) and $FFFFFF + a;
+      //p^:= (c + pc^) and $FFFFFF + a;
+      p^:= ((c + pc^) or $FF000000) xor a;
       inc(pc);
       inc(p);
     end;
@@ -455,7 +457,7 @@ begin
         c:= pc^*v + pl^*(MaxMix - v);
         inc(pl, 2);
         inc(pc);
-        p^:= (c + pc^) and $FFFFFF;
+        p^:= c + pc^;
         inc(pc);
         inc(p);
       end else
@@ -523,7 +525,7 @@ begin
       if NoAlpha then
         ResampleTransV_NoAlpha(Dest, p2, v, pc, pl)
       else
-        ResampleTransV(Dest, p2, v, pc, pl)
+        ResampleTransV_Alpha(Dest, p2, v, pc, pl)
     else
       ResampleV(Dest, p2, v, pc, pl);
     inc(PChar(Dest), DestPitch);
@@ -535,6 +537,7 @@ begin
   RSResample16_Any(info, Src, SrcPitch, Dest, DestPitch, 0, false, false);
 end;
 
+{$IFNDEF RSResample15}
 procedure RSResample16(const info: TRSResampleInfo; Src, Dest: TBitmap); overload;
 var
   s, d: PChar;
@@ -563,6 +566,7 @@ begin
   Dest.PixelFormat:= pf32bit;
   RSResample16(info, Src, Dest);
 end;
+{$ENDIF}
 
 procedure RSResampleTrans16(const info: TRSResampleInfo; Src: ptr; SrcPitch: int; Dest: ptr; DestPitch: int; Trans: int);
 begin
@@ -573,6 +577,8 @@ procedure RSResampleTrans16_NoAlpha(const info: TRSResampleInfo; Src: ptr; SrcPi
 begin
   RSResample16_Any(info, Src, SrcPitch, Dest, DestPitch, Trans, true, true);
 end;
+
+{$IFNDEF RSResample15}
 
 { TRSResampleInfo }
 
@@ -600,5 +606,7 @@ begin
   CmdX:= PrepareResampleArray(sW, dW);
   CmdY:= PrepareResampleArray(sH, dH);
 end;
+
+{$ENDIF}
 
 end.

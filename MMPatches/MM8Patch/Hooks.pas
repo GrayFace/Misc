@@ -5,7 +5,7 @@ interface
 uses
   Windows, Messages, SysUtils, Classes, RSSysUtils, RSQ, Common, RSCodeHook,
   Math, MP3, RSDebug, IniFiles, Direct3D, Graphics, MMSystem, RSStrUtils,
-  DirectDraw, RSGraphics, DXProxy, RSResample;
+  DirectDraw, DXProxy, RSResample;
 
 procedure HookAll;
 procedure ApplyDeferredHooks;
@@ -3600,119 +3600,14 @@ end;
 
 //----- 32 bits support (Direct3D)
 
-function GetPixel16(c: uint): uint;
-begin
-  Result:= (c and $F81F)*33 shr 2;  // r,b components - 5 bit: *(2^5 + 1) shr 2
-  Result:= byte(Result) + Result shr 11 shl 16;
-  inc(Result, (c and $7E0)*65 shr 9 shl 8);  // g component - 6 bit: *(2^6 + 1) shr 4
-end;
-
-var
-  ToTrueColor: array[0..$FFFF] of int;
-
-procedure Prepare16to32;
-var
-  i: int;
-begin
-  for i:= 0 to $FFFF do
-    ToTrueColor[i]:= GetPixel16(i);
-end;
-
-procedure ScaleHQ(SrcBuf: ptr; info: PDDSurfaceDesc2);
-var
-  ps: PWord; pd: pint;
-  trans: Word;
-  x, y, dpitch, i: int;
-begin
-  ps:= SrcBuf;
-  pd:= info.lpSurface;
-  dpitch:= info.lPitch - SW*8;
-  trans:= _GreenMask^ + _BlueMask^;
-  for y:= 1 to SH do
-  begin
-    i:= ToTrueColor[ps^];
-    for x:= 1 to SW do
-    begin
-      if ps^ <> trans then
-        if i <> $00FFFF then
-          pd^:= RSMixColorsRGB(ToTrueColor[ps^], i, 196)
-        else
-          pd^:= ToTrueColor[ps^];
-      inc(pd);
-      i:= ToTrueColor[ps^];
-      if ps^ <> trans then
-        pd^:= i;
-      inc(ps);
-      inc(pd);
-    end;
-    inc(PChar(pd), dpitch);
-    dec(ps, SW);
-    i:= ToTrueColor[ps^];
-    for x:= 1 to SW do
-    begin
-      if ps^ <> trans then
-        if i <> $00FFFF then
-          pd^:= RSMixColorsRGB(ToTrueColor[ps^], i, 196)
-        else
-          pd^:= ToTrueColor[ps^];
-      inc(pd);
-      i:= ToTrueColor[ps^];
-      if ps^ <> trans then
-        pd^:= i;
-      inc(ps);
-      inc(pd);
-    end;
-    inc(PChar(pd), dpitch);
-  end;
-end;
-
-procedure TrueColorProc(SrcBuf: ptr; info: PDDSurfaceDesc2);
-var
-  ps: PWord; pd: pint;
-  trans: Word;
-  x, y, dpitch: int;
-begin
-  DXProxyScale(SrcBuf, info);
-  //ScaleHQ(SrcBuf, info);
-  exit;
-
-  if ToTrueColor[1] = 0 then
-    Prepare16to32;
-  NeedScreenWH;
-  ps:= SrcBuf;
-  pd:= info.lpSurface;
-  dpitch:= info.lPitch - SW*4;
-  trans:= _GreenMask^ + _BlueMask^;
-  for y:= 1 to SH do
-  begin
-    for x:= 1 to SW do
-    begin
-      if ps^ <> trans then
-        pd^:= ToTrueColor[ps^];
-      inc(ps);
-      inc(pd);
-    end;
-    inc(PChar(pd), dpitch);
-  end;
-end;
-
 procedure TrueColorHook;
 asm
   lea edx, [ebp - $98]
   cmp dword ptr [edx + $54], 32
   jnz @std
   mov dword ptr [esp], $4A3978
-  jmp TrueColorProc
+  jmp DXProxyScale
 @std:
-end;
-
-procedure TrueColorHookNew;
-asm
-  call DXProxyDraw
-  sub [esp], 5+6
-  mov eax, 1
-  xor ecx, ecx
-  test ecx, ecx
 end;
 
 function MakePixel16(c32: int): Word;
@@ -3781,208 +3676,17 @@ begin
   DoTrueColorShot(info, ptr(ShotBuf), SW, SH, Rect(0, 0, SW, SH));
 end;
 
-//----- 32 bit color support (Software)
+//----- Generate mipmaps
 
-type
-  VMTDirectDrawSurface4 = array[0..$B4-1] of byte;
-  TMySurface = record
-    PVMT: ^VMTDirectDrawSurface4;
-    Original: ptr;
-    VMT: VMTDirectDrawSurface4;
-  end;
-
-var
-  BaseVMT: VMTDirectDrawSurface4;
-  FrontBuffer, BackBuffer: TMySurface;
-  ScreenBmp: TBitmap; ScreenScanline: ptr;
-
-procedure PassThrough;
+procedure NeedMipmapsHook;
 asm
-  mov ecx, [esp + 4]
-  mov ecx, [ecx + 4]
-  mov [esp + 4], ecx
-  jmp eax
+  mov DXProxyLastLoadedTexture, esi
 end;
-
-procedure InitBaseVMT(surf: pptr);
-const
-  HookBase: TRSHookInfo = (newp: @PassThrough; t: RShtCodePtrStore);
-var
-  hook: TRSHookInfo;
-  i: int;
-begin
-  CopyMemory(@BaseVMT, surf^, SizeOf(VMTDirectDrawSurface4));
-  hook:= HookBase;
-  hook.p:= int(@BaseVMT);
-  for i:= 1 to SizeOf(VMTDirectDrawSurface4) div 4 do
-  begin
-    RSApplyHook(hook);
-    inc(hook.p, 4);
-  end;
-end;
-
-function AnyBuffer_IsLost(this: ptr): HRESULT; stdcall;
-begin
-  Result:= DD_OK;
-end;
-
-procedure HookSurface(var my: TMySurface; psurf: pptr);
-begin
-  if pint(@BaseVMT)^ = 0 then
-    InitBaseVMT(psurf^);
-  my.PVMT:= @my.VMT;
-  my.VMT:= BaseVMT;
-  my.Original:= psurf^;
-  psurf^:= @my;
-  pptr(@my.VMT[$60])^:= @AnyBuffer_IsLost;
-end;
-
-procedure DrawSW;
-var
-  r: TRect;
-  dc: HDC;
-begin
-  GetClientRect(_MainWindow^, r);
-  dc:= GetDC(_MainWindow^);
-  SetStretchBltMode(dc, BLACKONWHITE);
-  StretchBlt(dc, 0, 0, r.Right, r.Bottom, ScreenBmp.Canvas.Handle, 0, 0, SW, SH, cmSrcCopy);
-  ReleaseDC(_MainWindow^, dc);
-end;
-
-function FrontBuffer_Blt(this: ptr; dest: PRect; surf: ptr; r: PRect; flags: uint; fx: ptr): HRESULT; stdcall;
-begin
-//  Assert(ptr(surf) = @BackBuffer);
-  DrawSW;
-  Result:= DD_OK;
-end;
-
-function FrontBuffer_BltFast(this: ptr; X, Y: int; surf: ptr; r: PRect; flags: uint; fx: ptr): HRESULT; stdcall;
-begin
-//  Assert(ptr(surf) = @BackBuffer);
-  DrawSW;
-  Result:= DD_OK;
-end;
-
-function FrontBuffer_Lock(this: ptr; dest: PRect; out info: TDDSurfaceDesc2; flags: uint; hEvent: THandle): HRESULT; stdcall;
-begin
-//  Assert(false);
-  Result:= DD_OK;
-end;
-
-function FrontBuffer_Unlock(this: ptr; dest: PRect): HRESULT; stdcall;
-begin
-//  Assert(false);
-  Result:= DD_OK;
-end;
-
-function BackBuffer_Blt(this: ptr; dest: PRect; surf: ptr; r: PRect; flags: uint; fx: ptr): HRESULT; stdcall;
-begin
-//  Assert(surf = nil);
-  Result:= DD_OK;
-end;
-
-function BackBuffer_BltFast(this: ptr; X, Y: int; surf: ptr; r: PRect; flags: uint; fx: ptr): HRESULT; stdcall;
-begin
-//  Assert(surf = nil);
-  Result:= DD_OK;
-end;
-
-function BackBuffer_Lock(this: ptr; dest: PRect; out info: TDDSurfaceDesc2; flags: uint; hEvent: THandle): HRESULT; stdcall;
-begin
-  with info do
-  begin
-    dwWidth:= SW;
-    dwHeight:= SH;
-    lPitch:= SW*2;
-    lpSurface:= ScreenScanline;
-    with ddpfPixelFormat do
-    begin
-      dwRGBBitCount:= 16;
-      dwRBitMask:= $F800;
-      dwGBitMask:= $7E0;
-      dwBBitMask:= $1F;
-      dwRGBAlphaBitMask:= 0;
-    end;
-  end;
-  Result:= DD_OK;
-end;
-
-function BackBuffer_Unlock(this: ptr; dest: PRect): HRESULT; stdcall;
-begin
-  Result:= DD_OK;
-end;
-
-procedure TrueColorSW;
-const
-  PFrontBuffer = pptr($F01A10);
-  PBackBuffer = pptr($F01A14);
-  Blt = $14;
-  BltFast = $1C;
-  Lock = $64;
-  Unlock = $80;
-begin
-  if _IsD3D^ or ((GetDeviceCaps(GetDC(0), BITSPIXEL) = 16) and (GetDeviceCaps(GetDC(0), PLANES) = 1)) then
-    exit;
-
-  if ScreenBmp = nil then
-  begin
-    NeedScreenWH;
-    ScreenBmp:= TBitmap.Create;
-    with ScreenBmp do
-    begin
-      PixelFormat:= pf16bit;
-      HandleType:= bmDIB;
-      Width:= SW;
-      Height:= -SH;
-      ScreenScanline:= ptr(min(uint(Scanline[SH - 1]), uint(Scanline[0])));
-    end;
-    ZeroMemory(ScreenScanline, SW*SH*2);
-  end;
-  HookSurface(FrontBuffer, PFrontBuffer);
-  HookSurface(BackBuffer, PBackBuffer);
-  pptr(@FrontBuffer.VMT[Blt])^:= @FrontBuffer_Blt;
-  pptr(@FrontBuffer.VMT[BltFast])^:= @FrontBuffer_BltFast;
-  pptr(@FrontBuffer.VMT[Lock])^:= @FrontBuffer_Lock;
-  pptr(@FrontBuffer.VMT[Unlock])^:= @FrontBuffer_Unlock;
-  pptr(@BackBuffer.VMT[Blt])^:= @BackBuffer_Blt;
-  pptr(@BackBuffer.VMT[BltFast])^:= @BackBuffer_BltFast;
-  pptr(@BackBuffer.VMT[Lock])^:= @BackBuffer_Lock;
-  pptr(@BackBuffer.VMT[Unlock])^:= @BackBuffer_Unlock;
-end;
-
-//----- 32 bit color support (General)
-
-var
-  TrueColorPixelFormatStd: procedure(var fmt: DDPIXELFORMAT); stdcall;
-
-procedure TrueColorPixelFormat(var fmt: DDPIXELFORMAT); stdcall;
-const
-  str = #32#0#0#0#64#0#0#0#0#0#0#0#16#0#0#0#0#248#0#0#224#7#0#0#31#0#0#0#0#0#0#0;
-begin
-  TrueColorPixelFormatStd(fmt);
-  if fmt.dwRGBBitCount <> 16 then
-    CopyMemory(@fmt, PChar(str), length(str));
-end;
-
-{procedure Test;
-asm
-  mov eax, 1
-  mov [esp], $49E08F
-end;
-
-function TrueColorDrawBuffer(eax, _2: ptr; var desc: DDSURFACEDESC2): ptr;
-const
-  str = #32#0#0#0#64#0#0#0#0#0#0#0#16#0#0#0#0#248#0#0#224#7#0#0#31#0#0#0#0#0#0#0;
-begin
-  Result:= eax;
-  desc.dwFlags:= desc.dwFlags or DDSD_PIXELFORMAT;
-  CopyMemory(@desc.ddpfPixelFormat, PChar(str), length(str));
-end;}
 
 //----- HooksList
 
 var
-  HooksList: array[1..312] of TRSHookInfo = (
+  HooksList: array[1..296] of TRSHookInfo = (
     (p: $458E18; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $463862; old: $450493; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave/quicksave filenames localization
     (p: $4CD509; t: RShtNop; size: 12), // Fix Save/Load Slots: it resets SaveSlot, SaveScroll
@@ -4273,58 +3977,14 @@ var
     (p: $4BC9C7; old: $49F377; newp: @BinkDrawHook2; t: RShtCallStore; Querry: hqFixSmackDraw), // Compatible movie render
     (p: $4BDB07; newp: @BinkLoadHook; t: RShtBefore; size: 6; Querry: hqFixSmackDraw), // Compatible movie render
     (p: $4A383A; newp: @TrueColorHook; t: RShtAfter; size: 6; Querry: hqTrueColor), // 32 bit color support
-    //(p: $4A37CA; newp: @TrueColorHookNew; t: RShtCall; Querry: hqTrueColor), // 32 bit color support
     (p: $49C862; new: $49C881; t: RShtJmp; size: 6; Querry: hqTrueColor), // 32 bit color support
     (p: $45BDA1; newp: @TrueColorShotHook; t: RShtBefore; size: 6; Querry: hqTrueColor), // 32 bit color support
     (p: $49C46B; old: $49E9C0; backup: @@LockSurface; newp: @TrueColorLloydHook; t: RShtCall; Querry: hqTrueColor), // 32 bit color support
-//    (p: $49E052; newp: @TrueColorSW; t: RShtBefore; size: 6; Querry: hqTrueColor), // 32 bit color support
-//    (p: $49B3AF; old: $74; new: $EB; t: RSht1; Querry: hqTrueColor), // 32 bit color support
     (p: $461B7F; size: 6; Querry: hqTrueColor), // 32 bit color support
     (p: $4635BA; size: 2; Querry: hqTrueColor), // 32 bit color support
-//    (p: $49F05A; backup: @@TrueColorPixelFormatStd; newp: @TrueColorPixelFormat; t: RShtFunctionStart; size: 7; Querry: hqTrueColor), // 32 bit color support
-//    (p: $49E0F5; newp: @TrueColorDrawBuffer; t: RShtAfter; size: 10; Querry: hqTrueColor), // 32 bit color support
-//    (p: $49E095; size: 2; Querry: hqTrueColor), // 32 bit color support
-  // trying to do hi-res
-  {
-    // bigger back buffer
-    (p: $49B406; old: 640; new: 640*2; t: RSht4),
-    (p: $49B410; old: 480; new: 480*2; t: RSht4),
-    (p: $49B4A6; old: 640; new: 640*2; t: RSht4),
-    (p: $49B4B0; old: 480; new: 480*2; t: RSht4),
-    (p: $49B7D3; old: 640; new: 640*2; t: RSht4), // also effects full screen
-    (p: $49B7DA; old: 480; new: 480*2; t: RSht4), // also effects full screen
-    (p: $49E109; old: 640; new: 640*2; t: RSht4),
-    (p: $49E113; old: 480; new: 480*2; t: RSht4),
-    // render whole back buffer
-    (p: $49B9C6; old: 640; new: 640*2; t: RSht4),
-    (p: $49B9BF; old: 480; new: 480*2; t: RSht4),
-    // IDirect3DViewport3->Clear2
-    (p: $49B984; old: 640; new: 640*2; t: RSht4),
-    (p: $49B98B; old: 480; new: 480*2; t: RSht4),
-    // ViewPort
-//    (p: $464B89; old: 640; new: 640*2; t: RSht4),
-//    (p: $464B84; old: 366; new: 366*2; t: RSht4),
-    (),
-}
-    //(),
     (p: $4E801C; newp: @MyDirectDrawCreate; t: RSht4; Querry: hqTrueColor), // 32 bit color support + HD
-    (),
-    (),
-    (),
-    (),
-    (),
-    (),
-    (),
-    (),
-    (),
-    (),
-    (),
-    (),
-    (),
-    (),
-    (),
-    (),
-    (),
+    (p: $4A2C58; newp: @NeedMipmapsHook; t: RShtCall; size: $4A2C75 - $4A2C58; Querry: hqMipmaps), // Generate mipmaps
+    //(p: int(@DXScaleMipmaps); old: 0; new: 2; t: RSht4; Querry: hqMipmaps), // upscale first mipmap
     ()
   );
 
@@ -4379,6 +4039,8 @@ begin
     RSApplyHooks(HooksList, hqWindowSize);
   if BorderlessFullscreen then
     RSApplyHooks(HooksList, hqBorderless);
+  if MipmapsScale > 0 then
+    RSApplyHooks(HooksList, hqMipmaps);
 
   RSDebugUseDefaults;
   LastDebugHook:= DebugHook;

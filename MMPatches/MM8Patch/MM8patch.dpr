@@ -142,7 +142,7 @@ Version 2.0:
 
 Version 2.1:
 (MM6 - MM8)
-[+] SupportTrueColor
+[+] SupportTrueColor, RenderLimitX, RenderLimitY, ScalingParam1, ScalingParam2
 [+] WindowWidth, WindowHeight
 [+] BorderlessWindowed
 [+] CompatibleMovieRender, SmoothMovieScaling

@@ -4,7 +4,7 @@ interface
 
 uses
   Forms, Windows, Messages, SysUtils, Classes, IniFiles, RSSysUtils, RSQ, Math,
-  RSCodeHook, DirectDraw, Direct3D, TypInfo, Common, RSResample;
+  RSCodeHook, DirectDraw, Direct3D, TypInfo, Common, RSResample, RSResample15;
 
 {$I MMPatchVer.inc}
 
@@ -12,16 +12,14 @@ function MyDirectDrawCreate(lpGUID: PGUID; out lplpDD: IDirectDraw;
     const pUnkOuter: IUnknown): HResult; stdcall;
 function DXProxyScaleRect(const r: TRect): TRect;
 procedure DXProxyOnResize;
-procedure DXProxyDraw;
 procedure DXProxyScale(SrcBuf: ptr; info: PDDSurfaceDesc2);
 
 var
   DXProxyRenderW, DXProxyRenderH: int;
   DXProxyActive: Boolean;
+  DXProxyLastLoadedTexture: PHwlBitmap;
 
 implementation
-
-//{$WARN HIDDEN_VIRTUAL OFF}
 
 var
   RenderLimX, RenderLimY: int;
@@ -128,7 +126,6 @@ type
     function SetDisplayMode(dwWidth: DWORD; dwHeight: DWORD;
         dwBpp: DWORD): HResult stdcall; overload;
     function GetCaps(lpDDDriverCaps: PDDCaps; lpDDHELCaps: PDDCaps): HResult stdcall;
-    procedure CreateScaleSurface;
   end;
 
 
@@ -402,6 +399,23 @@ type
   end;
 
 
+  TMyScaleMipmapSurface = class(TMySurface, IDirectDrawSurface4)
+  protected
+    MainSurf: IDirectDrawSurface4;
+    RealDesc: TDDSurfaceDesc2;
+    MyBuf: array of Word;
+  public
+    SurfPtr: ^IDirectDrawSurface4;
+    Bmp: PHwlBitmap;
+    function Lock(lpDestRect: PRect; out desc: TDDSurfaceDesc2; flags: DWORD;
+        hEvent: THandle): HResult stdcall; reintroduce;
+    function Unlock(lpRect: PRect): HResult stdcall; reintroduce;
+    function GetAttachedSurface(const lpDDSCaps: TDDSCaps2;
+        out lplpDDAttachedSurface: IDirectDrawSurface4): HResult stdcall; reintroduce;
+    function QueryInterface(const IID: TGUID; out Obj): HResult stdcall; reintroduce;
+  end;
+
+
 { functions }
 
 function GetRaw(const p: IUnknown):ptr;
@@ -480,9 +494,6 @@ function MyDirectDrawCreate(lpGUID: PGUID; out lplpDD: IDirectDraw;
     const pUnkOuter: IUnknown): HResult; stdcall;
 begin
   Result:= DirectDrawCreate(lpGUID, lplpDD, pUnkOuter);
-  //IDirectDraw4(lplpDD):= lplpDD as IDirectDraw4;
-  //Result:= DirectDrawCreateEx(lpGUID, IDirectDraw7(lplpDD), IID_IDirectDraw7, pUnkOuter);
-  //TMyDirectDraw_VMT.Hook(@lplpDD);
   DXProxyActive:= (GetWindowLong(_MainWindow^, GWL_STYLE) and WS_BORDER <> 0) or
      BorderlessFullscreen or not _Windowed^;
   DXProxyActive:= DXProxyActive and (GetDeviceCaps(GetDC(0), BITSPIXEL) = 32);
@@ -492,7 +503,7 @@ end;
 
 procedure DXProxyOnResize;
 begin
-  if RenderLimX <> 0 then
+  if DXProxyActive and (RenderLimX <> 0) then
     CalcRenderSize;
   if Viewport_Def.dwSize <> 0 then
     Viewport.SetViewport2(Viewport_Def);
@@ -519,8 +530,7 @@ procedure DXProxyScale(SrcBuf: ptr; info: PDDSurfaceDesc2);
 var
   r: TRect;
 begin
-  FPS;
-  if Options.TmpNoIntf then  exit;
+  //FPS;
   if (scale.DestW <> RenderW) or (scale.DestH <> RenderH) then
   begin
     RSSetResampleParams(ScalingParam1, ScalingParam2);
@@ -547,22 +557,6 @@ begin
   {$ENDIF}
     RSResample16(scale, SrcBuf, _ScreenW^*2, info.lpSurface, info.lPitch);
 end;
-
-procedure DXProxyDraw;
-{var
-  info: TDDSurfaceDesc2;
-  r: TRect;}
-begin
-{  FillChar(info, SizeOf(info), 0);
-  info.dwSize:= SizeOf(info);
-  if not _LockSurface(ScaleBuffer, info) then  exit;
-  DXProxyScale(_ScreenBuffer^, @info);
-  ScaleBuffer.Unlock(nil);
-  r:= Rect(0, 0, RenderW, RenderH);
-  BackBuffer.Blt(@r, ScaleBuffer, @r, DDBLT_WAIT, nil);}
-end;
-
-//function CheckGUID
 
 { THookedObject }
 
@@ -658,39 +652,6 @@ begin
     TMyDevice.Hook(lplpD3DDevice);
 end;
 
-procedure TMyDirectDraw.CreateScaleSurface;
-var
-  d: TDDSurfaceDesc2;
-begin
-  //if _IsD3D^ then
-    exit;
-
-  FillChar(d, SizeOf(d), 0);
-
-  with d do
-  begin
-    dwSize:= SizeOf(d);
-    dwWidth:= RenderLimX;
-    dwHeight:= RenderLimY;
-    dwFlags:= DDSD_CAPS or DDSD_WIDTH or DDSD_HEIGHT or DDSD_PIXELFORMAT;
-    ddsCaps.dwCaps:= DDSCAPS_TEXTURE or DDSCAPS_SYSTEMMEMORY;
-    //dwAlphaBitDepth:= 8;
-    with ddpfPixelFormat do
-    begin
-      dwSize:= SizeOf(ddpfPixelFormat);
-      dwFlags:= DDPF_ALPHAPIXELS or DDPF_RGB;
-{      dwRGBBitCount:= 32;
-      dwRBitMask:= $FF0000;
-      dwGBitMask:= $FF00;
-      dwBBitMask:= $FF;
-      dwRGBAlphaBitMask:= $FF000000;}
-      dwRGBBitCount:= 16;
-    end;
-  end;
-  //msgz(DDraw.CreateSurface(d, ScaleBuffer, nil));
-  Assert(DDraw.CreateSurface(d, ScaleBuffer, nil) = DD_OK);
-end;
-
 function TMyDirectDraw.CreateSurface(var lpDDSurfaceDesc: TDDSurfaceDesc;
   out lplpDDSurface: IDirectDrawSurface; pUnkOuter: IInterface): HResult;
 var
@@ -712,15 +673,40 @@ var
   desc: TDDSurfaceDesc2;
   NeedScaling: Boolean;
 begin
-  {with lpDDSurfaceDesc do
-    if (ddsCaps.dwCaps <> $401008) or (dwFlags <> $21007) then
-      zM(ddsCaps.dwCaps, dwFlags);}
-  {DXProxyActive:= _Windowed^;
-  if not DXProxyActive then
-  begin
-    Result:= DDraw.CreateSurface(lpDDSurfaceDesc, lplpDDSurface, pUnkOuter);
-    exit;
-  end;}
+  with lpDDSurfaceDesc do
+    if (DXProxyLastLoadedTexture <> nil) and (dwFlags and DDSD_MIPMAPCOUNT <> 0) then
+    begin
+      desc:= lpDDSurfaceDesc;
+      desc.dwMipMapCount:= 3;
+      {desc.dwWidth:= desc.dwWidth*uint(MipmapsScale);
+      desc.dwHeight:= desc.dwHeight*uint(MipmapsScale);
+      desc.dwMipMapCount:= 4;
+      with desc.ddpfPixelFormat do
+      begin
+        dwRGBBitCount:= 32;
+        dwRBitMask:= $FF0000;
+        dwGBitMask:= $FF00;
+        dwBBitMask:= $FF;
+        dwRGBAlphaBitMask:= $FF000000;
+      end;}
+      Result:= DDraw.CreateSurface(desc, lplpDDSurface, pUnkOuter);
+      {if Result = DD_OK then
+        with TMyScaleMipmapSurface(TMyScaleMipmapSurface.Hook(lplpDDSurface)) do
+        begin
+          SurfPtr:= @lplpDDSurface;
+          Bmp:= DXProxyLastLoadedTexture;
+        end;}
+      DXProxyLastLoadedTexture:= nil;
+      exit;
+    end;
+
+{  with lpDDSurfaceDesc do
+    if (dwFlags and DDSD_MIPMAPCOUNT <> 0) and (int(dwMipMapCount) <= 1) then
+      if int(dwMipMapCount) < 0 then
+        pint(@dwMipMapCount)^:= 1
+      else
+        zD;}
+    //if (ddsCaps.dwCaps and DDSCAPS_MIPMAP <> 0) and
 
   // back buffer or Z buffer
   with lpDDSurfaceDesc do
@@ -748,16 +734,12 @@ begin
         TMyBackBufferSW.Hook(lplpDDSurface);
       MyBackBuffer:= lplpDDSurface;
       IsMain:= true;
-      CreateScaleSurface;
     end else if not _IsD3D^ and (Result = DD_OK) then
       TMySurfaceSW.Hook(lplpDDSurface);
     exit;
   end;
 
   Result:= DDraw.CreateSurface(lpDDSurfaceDesc, lplpDDSurface, pUnkOuter);
-  {if Result = DD_OK then
-    TMySurface.Hook(lplpDDSurface);}
-  // draw buffer: (ddsCaps.dwCaps = $840) and (dwFlags = $10007)
 
   // front buffer
   if (lpDDSurfaceDesc.ddsCaps.dwCaps and DDSCAPS_PRIMARYSURFACE <> 0) and (Result = DD_OK) then
@@ -1144,6 +1126,128 @@ end;
 function TMyBackBufferSW.Unlock(lpRect: PRect): HResult;
 begin
   Result:= DD_OK;
+end;
+
+{ TMyScaleMipmapSurface }
+
+function GetPixel15(c: uint): uint;
+begin
+  // r,b components - 5 bit: *(2^5 + 1) shr 2
+  Result:= (c and $1F)*33 shr 2 + (c and $7B00)*33 shr 12 shl 16 + $FF000000;
+  inc(Result, (c and $3E0)*33 shr 7 shl 8);  // g component - 5 bit
+  if c < $8000 then
+    Result:= 0;
+end;
+
+var
+  ToTrueColor15: array[0..$FFFF] of uint;
+
+procedure RawCopy15(w, h: int; Src: PWord; SrcPitch: int; Dest: puint; DestPitch: int);
+var
+  x, y: uint;
+begin
+  if ToTrueColor15[$FFFF] = 0 then
+    for x:= 0 to high(ToTrueColor15) do
+      ToTrueColor15[x]:= GetPixel15(x);
+  dec(SrcPitch, w*SizeOf(Src^));
+  dec(DestPitch, w*SizeOf(Dest^));
+  for y:= 0 to h - 1 do
+  begin
+    for x:= 0 to w - 1 do
+    begin
+      Dest^:= ToTrueColor15[Src^];
+      inc(Src);
+      inc(Dest);
+    end;
+    inc(PChar(Src), SrcPitch);
+    inc(PChar(Dest), DestPitch);
+  end;
+end;
+
+function GetLn2(v: uint): int;
+begin
+  Result:= 0;
+  while (v <> 0) and (v and 1 = 0) do
+  begin
+    v:= v shr 1;
+    inc(Result);
+  end;
+  Assert(v = 1);
+end;
+
+var
+  Scale15: array of TRSResampleInfo;
+
+procedure Resample15(sw, sh, dw, dh: int; Src: PWord; SrcPitch: int; Dest: puint; DestPitch: int);
+var
+  i: int;
+begin
+  if scale15 = nil then
+    SetLength(scale15, GetLn2(MipmapsScale)*32*32);
+  i:= (GetLn2(dw div sw) - 1)*32*32 + GetLn2(sh)*32 + GetLn2(sw);
+  if Scale15[i].SrcW = 0 then
+  begin
+    RSSetResampleParams(3.5, 0.8);
+    Scale15[i].Init(sw, sh, dw, dh);
+  end;
+  RSResampleTrans15(Scale15[i], Src, SrcPitch, Dest, DestPitch, 0);
+end;
+
+function TMyScaleMipmapSurface.GetAttachedSurface(const lpDDSCaps: TDDSCaps2;
+  out lplpDDAttachedSurface: IDirectDrawSurface4): HResult;
+begin
+  Result:= Surf.GetAttachedSurface(lpDDSCaps, lplpDDAttachedSurface);
+  if MainSurf = nil then
+    MainSurf:= Surf;
+  if Result = DD_OK then
+  begin
+    Surf:= nil;
+    ptr(Surf):= ptr(lplpDDAttachedSurface);
+    ptr(lplpDDAttachedSurface):= pptr(SurfPtr)^;
+  end else
+    SurfPtr^:= MainSurf;  // scaling is done - restore the real surface
+end;
+
+function TMyScaleMipmapSurface.Lock(lpDestRect: PRect;
+   out desc: TDDSurfaceDesc2; flags: DWORD; hEvent: THandle): HResult;
+begin
+  Result:= Surf.Lock(lpDestRect, desc, flags, hEvent);
+  //exit;
+  if Result <> DD_OK then  exit;
+  // scale down in my buffer, will write on unlock
+  if desc.dwWidth < uint(Bmp.BufW) then
+  begin
+    MyBuf:= nil;
+    SetLength(MyBuf, desc.dwWidth*desc.dwHeight);
+    RealDesc:= desc;
+    desc.lPitch:= desc.dwWidth*2;
+    desc.lpSurface:= ptr(MyBuf);
+    exit;
+  end;
+  Result:= int($88760096); // DDERR_INVALIDRECT and DDERR_SURFACEBUSY are silently ignored by MM
+  Assert(desc.dwWidth*uint(Bmp.BufH) = desc.dwHeight*uint(Bmp.BufW)); // both W and H must be scaled by the same factor
+  if desc.dwWidth > uint(Bmp.BufW) then
+    Resample15(Bmp.BufW, Bmp.BufH, desc.dwWidth, desc.dwHeight, Bmp.Buffer,
+       Bmp.BufW*2, desc.lpSurface, desc.lPitch)
+  else
+    RawCopy15(Bmp.BufW, Bmp.BufH, Bmp.Buffer, Bmp.BufW*2,
+       desc.lpSurface, desc.lPitch);
+  Surf.Unlock(lpDestRect);
+end;
+
+function TMyScaleMipmapSurface.QueryInterface(const IID: TGUID;
+  out Obj): HResult;
+begin
+  Result:= inherited QueryInterface(IID, Obj);
+  if Result <> 0 then
+    Result:= Surf.QueryInterface(IID, Obj);
+end;
+
+function TMyScaleMipmapSurface.Unlock(lpRect: PRect): HResult;
+begin
+  with RealDesc do
+    RawCopy15(dwWidth, dwHeight, ptr(MyBuf), dwWidth*2, lpSurface, lPitch);
+  Result:= Surf.Unlock(lpRect);
 end;
 
 end.
