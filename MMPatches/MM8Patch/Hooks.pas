@@ -3113,6 +3113,57 @@ asm
   push $4411FD
 end;
 
+//----- Read/Write ddm/dlv files
+
+procedure ReadMapData(p, p2: PChar; Outdoor: Boolean);
+var
+  time: uint64;
+begin
+  time:= puint64(p)^;
+  inc(p, 56 + 30604);
+  if p2 - p < 8*3 then
+    ZeroMemory(@Options.LastWeeklyTimer, 8*3)
+  else
+    CopyMemory(@Options.LastWeeklyTimer, p, 8*3);
+  Options.LastWeeklyTimer:= max(time, Options.LastWeeklyTimer);
+  Options.LastMonthlyTimer:= max(time, Options.LastMonthlyTimer);
+  Options.LastYearlyTimer:= max(time, Options.LastYearlyTimer);
+end;
+
+procedure ReadDdmDataHook;
+asm
+  mov eax, [esp + 8]
+  mov edx, [ebp-$10] // DDMBuf
+  add edx, [ebp-$1C] // DDMSize
+  mov ecx, 1
+  call ReadMapData
+end;
+
+procedure ReadDlvDataHook;
+asm
+  mov eax, [esp + 8]
+  mov edx, [ebp-4] // DLVBuf
+  add edx, [ebp-$18] // DLVSize
+  mov ecx, 0
+  call ReadMapData
+end;
+
+function WriteMapData(p: PChar): int;
+var
+  time: uint64;
+begin
+  time:= puint64(p)^;
+  inc(p, 30604);
+  Result:= 8*3;
+end;
+
+procedure WriteMapDataHook;
+asm
+  mov eax, esi
+  call WriteMapData
+  add esi, eax
+end;
+
 //----- Town Portal wasting player's turn even if you cancel the dialog
 
 var
@@ -3676,13 +3727,6 @@ begin
   DoTrueColorShot(info, ptr(ShotBuf), SW, SH, Rect(0, 0, SW, SH));
 end;
 
-//----- Generate mipmaps
-
-procedure NeedMipmapsHook;
-asm
-  mov DXProxyLastLoadedTexture, esi
-end;
-
 //----- HooksList
 
 var
@@ -3983,8 +4027,10 @@ var
     (p: $461B7F; size: 6; Querry: hqTrueColor), // 32 bit color support
     (p: $4635BA; size: 2; Querry: hqTrueColor), // 32 bit color support
     (p: $4E801C; newp: @MyDirectDrawCreate; t: RSht4; Querry: hqTrueColor), // 32 bit color support + HD
-    (p: $4A2C58; newp: @NeedMipmapsHook; t: RShtCall; size: $4A2C75 - $4A2C58; Querry: hqMipmaps), // Generate mipmaps
-    //(p: int(@DXScaleMipmaps); old: 0; new: 2; t: RSht4; Querry: hqMipmaps), // upscale first mipmap
+    (p: $4A2C58; size: $4A2C75 - $4A2C58; Querry: hqMipmaps), // Generate mipmaps
+    (p: $47DF8F; newp: @ReadDdmDataHook; t: RShtBefore; Querry: 21), // Tix timers - read DDM
+    (p: $498039; newp: @ReadDlvDataHook; t: RShtBefore; Querry: 21), // Tix timers - read DDM
+    (p: $45D96F; newp: @WriteMapDataHook; t: RShtAfter; Querry: 21), // Tix timers - write data
     ()
   );
 
@@ -4039,7 +4085,7 @@ begin
     RSApplyHooks(HooksList, hqWindowSize);
   if BorderlessFullscreen then
     RSApplyHooks(HooksList, hqBorderless);
-  if MipmapsScale > 0 then
+  if (MipmapsCount > 1) or (MipmapsCount < 0) then
     RSApplyHooks(HooksList, hqMipmaps);
 
   RSDebugUseDefaults;
