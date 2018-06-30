@@ -413,9 +413,6 @@ begin
     CopyMemory(@fmt, PChar(str), length(str));
 end;
 
-var
-  ScaleRect_Rect: TRect;
-
 function DXProxyScaleRect(const r: TRect): TRect;
 var
   SW, SH: int;
@@ -430,6 +427,9 @@ begin
     Bottom:= r.Bottom*RenderH div SH;
   end;
 end;
+
+var
+  ScaleRect_Rect: TRect;
 
 procedure ScaleRect(var r: PRect);
 begin
@@ -516,16 +516,17 @@ begin
   if (scale.DestW <> RenderW) or (scale.DestH <> RenderH) then
   begin
     RSSetResampleParams(ScalingParam1, ScalingParam2);
-    scale.Init(_ScreenW^, _ScreenH^, RenderW, RenderH);
+    scale.Init(_ScreenW^, _ScreenH^, min(RenderW, (RenderH*_ScreenW^ + _ScreenH^ div 2) div _ScreenH^), RenderH);
+    scale.DestX:= (RenderW - min(RenderW, (RenderH*_ScreenW^ + _ScreenH^ div 2) div _ScreenH^)) div 2;
     with Options.RenderRect do
       r:= DXProxyScaleRect(Rect(max(0, Left - 1), max(0, Top - 1), Right + 1, Bottom + 1));
-    r.Right:= min(r.Right, RenderW);
+    r.Right:= min(r.Right, scale.DestW);
     r.Bottom:= min(r.Bottom, RenderH);
     scale3D:= scale.ScaleRect(r);
-    scaleT:= scale.ScaleRect(Rect(0, 0, RenderW, r.Top));
-    scaleB:= scale.ScaleRect(Rect(0, r.Bottom, RenderW, RenderH));
+    scaleT:= scale.ScaleRect(Rect(0, 0, scale.DestW, r.Top));
+    scaleB:= scale.ScaleRect(Rect(0, r.Bottom, scale.DestW, scale.DestH));
     scaleL:= scale.ScaleRect(Rect(0, r.Top, r.Left, r.Bottom));
-    scaleR:= scale.ScaleRect(Rect(r.Right, r.Top, RenderW, r.Bottom));
+    scaleR:= scale.ScaleRect(Rect(r.Right, r.Top, scale.DestW, r.Bottom));
   end;
   {$IFNDEF mm6}
   if _IsD3D^ then
@@ -834,7 +835,7 @@ begin
   CopyMemory(@VertexBuf[0], @lpvVertices, dwVertexCount*SizeOf(VertexBuf[0]));
   for i:= 0 to dwVertexCount - 1 do
   begin
-    VertexBuf[i].x:= VertexBuf[i].x*RenderW/_ScreenW^;
+    VertexBuf[i].x:= VertexBuf[i].x*RenderW/_ScreenW^*3/4;
     VertexBuf[i].y:= VertexBuf[i].y*RenderH/_ScreenH^;
   end;
   Result:= Obj.DrawPrimitive(dptPrimitiveType,

@@ -2017,7 +2017,7 @@ begin
     h:= h*SH;
   end else
     if w*SH >= h*SW then
-      w:= (h*SW + SH div 2) div SH
+      //w:= (h*SW + SH div 2) div SH
     else
       h:= (w*SH + SW div 2) div SW;
   dec(w, r.Right - r.Left);
@@ -2069,6 +2069,12 @@ var
   xy: TSmallPoint absolute lp;
   r: TRect;
 begin
+  if _Windowed^ and (msg = WM_ERASEBKGND) then
+  begin
+    GetClientRect(w, r);
+    Result:= FillRect(wp, r, GetStockObject(BLACK_BRUSH));
+    exit;
+  end;
   if _Windowed^ and (msg >= WM_MOUSEFIRST) and (msg <= WM_MOUSELAST) then
     with xy do
     begin
@@ -3050,72 +3056,56 @@ type
     _: int2;
   end;
 
-procedure ValidatePeriodicTimers;
-begin
-  with GetMapExtra^ do
-    if (LastVisitTime = 0) or (uint(LastVisitTime) <> LastVisitTimeCheck) then
-    begin
-      LastWeeklyTimer:= 0;
-      LastMonthlyTimer:= 0;
-      LastYearlyTimer:= 0;
-      LastVisitTimeCheck:= uint(LastVisitTime);
-    end;
-end;
+const
+  TimerPeriods: array[0..3] of uint = (123863040, 10321920, 2580480, 368640);
 
-function GetTimerPeriod(var t: TTimerStruct; var last: pint): int;
+function GetTimerKind(var t: TTimerStruct): int;
+var
+  i: int;
 begin
-  ValidatePeriodicTimers;
-  with GetMapExtra^ do
-    if t.EachYear <> 0 then
-    begin
-      Result:= 123863040;
-      last:= @LastYearlyTimer;
-    end
-    else if t.EachMonth <> 0 then
-    begin
-      Result:= 10321920;
-      last:= @LastMonthlyTimer;
-    end
-    else if t.EachWeek <> 0 then
-    begin
-      Result:= 2580480;
-      last:= @LastWeeklyTimer;
-    end else
-    begin
-      Result:= 368640;
-      last:= nil;
-    end;
+  for i:= 0 to 3 do
+  begin
+    Result:= i;
+    if PWordArray(@t.EachYear)[i] = 0 then
+      exit;
+  end;
 end;
 
 procedure TimerSetTriggerTime(time1, time2: int; var t: TTimerStruct);
 var
   time: int64;
-  last: pint;
-  period: int;
+  period: uint64;
+  i: int;
 begin
   time:= uint64(time2) shl 32 + time1;
-  period:= GetTimerPeriod(t, last);
-  if last = nil then  // daily timer
+  i:= GetTimerKind(t);
+  period:= TimerPeriods[i];
+  if t.CmdType = $26 then
+    t.TriggerTime:= GetMapExtra^.GetPeriodicTimer(i) + period
+  else if i = 3 then  // daily timer at fixed time
   begin
-    t.TriggerTime:= ((t.Hour*60 + t.Minute)*60 + t.Second)*256 div 60;
-    inc(t.TriggerTime, time - time mod period);
+    t.TriggerTime:= (t.Hour*60 + t.Minute)*256 + t.Second*256 div 60 +
+       time - time mod period;
     if t.TriggerTime <= time then
       inc(t.TriggerTime, period);
   end else
-    if t.CmdType = $26 then
-      t.TriggerTime:= GetMapExtra^.LastVisitTime + last^ + period
-    else
-      t.TriggerTime:= time + period;
+    t.TriggerTime:= time + period;
 end;
 
 function UpdatePeriodicTimer(eax, _: int; var t: TTimerStruct): int;
-var
-  last: pint;
 begin
   Result:= eax;
-  if t.CmdType <> $26 then  exit;
-  GetTimerPeriod(t, last);
-  uint(last^):= _Time^ - GetMapExtra^.LastVisitTime;
+  GetMapExtra^.LastPeriodicTimer[GetTimerKind(t)]:= _Time^;
+end;
+
+procedure FixTimerValidate;
+var
+  i: int;
+begin
+  with GetMapExtra^ do
+    for i:= 0 to 3 do
+      if (LastVisitTime = 0) or (LastVisitTime - GetPeriodicTimer(i, true) > TimerPeriods[i]) then
+        LastPeriodicTimer[i]:= LastVisitTime;
 end;
 
 procedure FixTimerRetriggerHook1;
@@ -3127,14 +3117,17 @@ end;
 
 procedure FixTimerRetriggerHook2;
 asm
-  cmp eax, $15180  // daily?
   lea ecx, [esi-$C]
-  jnz UpdatePeriodicTimer
+  cmp [ecx].TTimerStruct.CmdType, $26
+  jz UpdatePeriodicTimer
+  cmp eax, $15180  // daily?
+  jnz @std
 // Handle timer that triggers at specific time each day
   mov eax, dword ptr [$B20EBC]  // Game.Time
   mov edx, dword ptr [$B20EBC+4]
   call TimerSetTriggerTime
   mov [esp], $446080
+@std:
 end;
 
 procedure FixTimerSetupHook1;
@@ -3154,23 +3147,6 @@ asm
   call TimerSetTriggerTime
   mov ebx, [ebp - $14]
   push $4411FD
-end;
-
-//----- Tix timers - write last trigger times to DLV/DDM
-
-procedure FixTimerWrite;
-var
-  dt: int;
-begin
-  ValidatePeriodicTimers;
-  with GetMapExtra^ do
-  begin
-    uint(dt):= _Time^ - LastVisitTime;
-    LastVisitTimeCheck:= _Time^;
-    LastWeeklyTimer:= min(0, LastWeeklyTimer - dt);
-    LastMonthlyTimer:= min(0, LastMonthlyTimer - dt);
-    LastYearlyTimer:= min(0, LastYearlyTimer - dt);
-  end;
 end;
 
 //----- Town Portal wasting player's turn even if you cancel the dialog
@@ -3271,6 +3247,8 @@ procedure FixFullScreenBlink;
 asm
   jz @paint
   sub eax, 5  // ignore WM_ERASEBKGND
+  jnz @DefProc
+  cmp [__Windowed], eax
   jnz @DefProc
   mov [esp], $461AEC
   ret
@@ -3746,10 +3724,16 @@ asm
 @ok:
 end;
 
+procedure TestMe;
+asm
+  mov eax, 300
+  //sub [esp+4], eax
+end;
+
 //----- HooksList
 
 var
-  HooksList: array[1..299] of TRSHookInfo = (
+  HooksList: array[1..301] of TRSHookInfo = (
     (p: $458E18; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $463862; old: $450493; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave/quicksave filenames localization
     (p: $4CD509; t: RShtNop; size: 12), // Fix Save/Load Slots: it resets SaveSlot, SaveScroll
@@ -3975,7 +3959,7 @@ var
     (p: $44602D; newp: @FixTimerRetriggerHook2; t: RShtBefore; size: 7; Querry: 21), // Fix timers
     (p: $441036; newp: @FixTimerSetupHook1; t: RShtJmp; Querry: 21), // Fix timers
     (p: $441156; newp: @FixTimerSetupHook2; t: RShtJmp; size: 7; Querry: 21), // Fix timers
-    (p: $45D01E; newp: @FixTimerWrite; t: RShtBefore; Querry: 21), // Tix timers - write last trigger times to DLV/DDM
+    (p: $440E0C; newp: @FixTimerValidate; t: RShtBefore; size: 6; Querry: 21), // Tix timers - validate last timers
     (p: $4296C8; newp: @TPDelayHook1; t: RShtJmp), // Town Portal wasting player's turn even if you cancel the dialog
     (p: $43129A; newp: @TPDelayHook2; t: RShtCall), // Town Portal wasting player's turn even if you cancel the dialog
     (p: $471D1A; newp: @FixMovementNerf; t: RShtCall; Querry: 23), // Fix movement rounding problems - nerf jump
@@ -3984,7 +3968,7 @@ var
     (p: $47314B; t: RShtNop; size: 3; Querry: 23), // Fix movement rounding problems - nerf jump
     (p: $46E51B; newp: @NoMonsterJumpDown1; t: RShtCall; size: 8), // Prevent monsters from jumping into lava etc.
     (p: $46EACA; newp: @NoMonsterJumpDown2; t: RShtCall), // Prevent monsters from jumping into lava etc.
-    (p: $461953; newp: @FixFullScreenBlink; t: RShtCall; size: 6), // Light gray blinking in full screen
+    (p: $461953; newp: @FixFullScreenBlink; t: RShtCall; size: 6; Querry: -100), // Light gray blinking in full screen
     (p: $40ECAD; newp: @FixBlitCopy; t: RShtCall; size: 6), // Draw buffer overflow in Arcomage
     (p: $40B15B; t: RShtNop; size: 2;), // Hang in Arcomage
     (p: $44D675; newp: @FixMonsterSummon; t: RShtJmp; size: 7), // Monsters summoned by other monsters had wrong monster as their ally
@@ -4050,6 +4034,11 @@ var
     (p: $4A2C58; size: $4A2C75 - $4A2C58; Querry: hqMipmaps), // Generate mipmaps
     (p: $41DE32; newp: @FixSpritesInMonInfo; t: RShtBefore; size: 6), // Fix sprites with non-zero transparent colors in monster info dialog
     (p: $41DF2F; newp: @FixSpritesInMonInfo; t: RShtBefore; size: 8), // Fix sprites with non-zero transparent colors in monster info dialog
+//    (p: $421D80; newp: @TestMe; t: RShtBefore),
+    (p: $464B89; old: 640; new: 640*4 div 3; t: RSht4),
+    (p: $464B8E; old: $1D; new: 0; t: RSht1),
+//    (p: $464B95; newp: @TestMe; t: RShtBefore),
+    //(),//(),
     ()
   );
 
