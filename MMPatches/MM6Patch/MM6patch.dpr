@@ -175,7 +175,7 @@ Version 2.0:
 
 Version 2.1:
 (MM6 - MM8)
-[+] SupportTrueColor
+[+] SupportTrueColor, HD in D3D, RenderMaxWidth, RenderMaxHeight, ScalingParam1, ScalingParam2
 [+] WindowWidth, WindowHeight
 [+] BorderlessWindowed
 [+] CompatibleMovieRender, SmoothMovieScaling

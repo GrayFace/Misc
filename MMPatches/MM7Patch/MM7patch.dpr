@@ -144,7 +144,7 @@ Version 2.0:
 
 Version 2.1:
 (MM6 - MM8)
-[+] SupportTrueColor
+[+] SupportTrueColor, HD in D3D, RenderMaxWidth, RenderMaxHeight, ScalingParam1, ScalingParam2
 [+] WindowWidth, WindowHeight
 [+] BorderlessWindowed
 [+] CompatibleMovieRender, SmoothMovieScaling
@@ -172,6 +172,7 @@ Version 2.1:
 [-] Shops were buying blasters
 [*] Now left click (while holding right button) not only cancels right button menu, but also performs action
 (MM7, MM8)
+[-] Black border around sprites and sea shore in D3D
 [-] Broken but unidentified items were green instead of red if you go to a shop to repair them.
 [-] Casting Telepathy spell or stealing from a monster used to prevent you from finding random items in its corpses
 [-] Light gray blinking in full screen on some computers

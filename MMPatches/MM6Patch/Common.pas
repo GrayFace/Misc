@@ -59,6 +59,8 @@ const
   _GreenColorBits = pint($9B1118);
   _RightButtonPressed = pbool($4D50EC);
   _WindowedGWLStyle = pint($6107B0);
+  _IndoorOrOutdoor = pint($6107D4);
+  _Time = puint64($908D08);
 
   _PauseTime: procedure(a1: int = 0; a2: int = 0; this: int = $4D5180) = ptr($420DB0);
   _ReleaseMouse: TProcedure = ptr($42FAC0); 
@@ -119,5 +121,13 @@ const
 
 {$DEFINE mm6}
 {$I MMPatch.inc}
+
+function GetMapExtra: PMapExtra;
+begin
+  if _IndoorOrOutdoor^ = 1 then
+    Result:= ptr($5F7D74)
+  else
+    Result:= ptr($689C78);
+end;
 
 end.

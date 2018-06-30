@@ -1362,6 +1362,7 @@ begin
             inc(p, x2 - a2);
           end else
             inc(p, BufW);
+      PropagateIntoTransparent(Buffer, BufW, BufH);
     end;
   end;
 end;
@@ -1687,6 +1688,8 @@ begin
     // Render
     for i := BmpSize - 1 downto 0 do
       p[i]:= pal[p1[i]];
+    if pal[0] = 0 then
+      PropagateIntoTransparent(p, w, h);
   end;
 end;
 
@@ -3047,51 +3050,91 @@ type
     _: int2;
   end;
 
+procedure ValidatePeriodicTimers;
+begin
+  with GetMapExtra^ do
+    if (LastVisitTime = 0) or (uint(LastVisitTime) <> LastVisitTimeCheck) then
+    begin
+      LastWeeklyTimer:= 0;
+      LastMonthlyTimer:= 0;
+      LastYearlyTimer:= 0;
+      LastVisitTimeCheck:= uint(LastVisitTime);
+    end;
+end;
+
+function GetTimerPeriod(var t: TTimerStruct; var last: pint): int;
+begin
+  ValidatePeriodicTimers;
+  with GetMapExtra^ do
+    if t.EachYear <> 0 then
+    begin
+      Result:= 123863040;
+      last:= @LastYearlyTimer;
+    end
+    else if t.EachMonth <> 0 then
+    begin
+      Result:= 10321920;
+      last:= @LastMonthlyTimer;
+    end
+    else if t.EachWeek <> 0 then
+    begin
+      Result:= 2580480;
+      last:= @LastWeeklyTimer;
+    end else
+    begin
+      Result:= 368640;
+      last:= nil;
+    end;
+end;
+
 procedure TimerSetTriggerTime(time1, time2: int; var t: TTimerStruct);
 var
   time: int64;
-  period, start: int;
+  last: pint;
+  period: int;
 begin
   time:= uint64(time2) shl 32 + time1;
-  start:= 0;
-  if t.EachYear <> 0 then
-    period:= 123863040
-  else if t.EachMonth <> 0 then
-    period:= 10321920
-  else if t.EachWeek <> 0 then
-    period:= 2580480
-  else begin
-    period:= 368640;
-    start:= ((t.Hour*60 + t.Minute)*60 + t.Second)*256 div 60;
-  end;
-  t.TriggerTime:= time - time mod period + start;
-  if t.TriggerTime <= time then
-    inc(t.TriggerTime, period);
+  period:= GetTimerPeriod(t, last);
+  if last = nil then  // daily timer
+  begin
+    t.TriggerTime:= ((t.Hour*60 + t.Minute)*60 + t.Second)*256 div 60;
+    inc(t.TriggerTime, time - time mod period);
+    if t.TriggerTime <= time then
+      inc(t.TriggerTime, period);
+  end else
+    if t.CmdType = $26 then
+      t.TriggerTime:= GetMapExtra^.LastVisitTime + last^ + period
+    else
+      t.TriggerTime:= time + period;
+end;
+
+function UpdatePeriodicTimer(eax, _: int; var t: TTimerStruct): int;
+var
+  last: pint;
+begin
+  Result:= eax;
+  if t.CmdType <> $26 then  exit;
+  GetTimerPeriod(t, last);
+  uint(last^):= _Time^ - GetMapExtra^.LastVisitTime;
 end;
 
 procedure FixTimerRetriggerHook1;
 asm
-  cmp word ptr [esi+16], $26  // RefillTimer?
-  jz @fixExactTime
   mov [esi-$C], ecx
   mov [esi-8], eax
-@fixExactTime:
   push $445FE0  // add Period
 end;
 
 procedure FixTimerRetriggerHook2;
 asm
-  mov ax, [esi+8]
-  test ax, ax  // daily?
-  jnz @std
+  cmp eax, $15180  // daily?
+  lea ecx, [esi-$C]
+  jnz UpdatePeriodicTimer
 // Handle timer that triggers at specific time each day
   mov eax, dword ptr [$B20EBC]  // Game.Time
   mov edx, dword ptr [$B20EBC+4]
-  lea ecx, [esi-$C]
   call TimerSetTriggerTime
   mov [esp], $446080
-@std:
-  neg ax
 end;
 
 procedure FixTimerSetupHook1;
@@ -3113,55 +3156,21 @@ asm
   push $4411FD
 end;
 
-//----- Read/Write ddm/dlv files
+//----- Tix timers - write last trigger times to DLV/DDM
 
-procedure ReadMapData(p, p2: PChar; Outdoor: Boolean);
+procedure FixTimerWrite;
 var
-  time: uint64;
+  dt: int;
 begin
-  time:= puint64(p)^;
-  inc(p, 56 + 30604);
-  if p2 - p < 8*3 then
-    ZeroMemory(@Options.LastWeeklyTimer, 8*3)
-  else
-    CopyMemory(@Options.LastWeeklyTimer, p, 8*3);
-  Options.LastWeeklyTimer:= max(time, Options.LastWeeklyTimer);
-  Options.LastMonthlyTimer:= max(time, Options.LastMonthlyTimer);
-  Options.LastYearlyTimer:= max(time, Options.LastYearlyTimer);
-end;
-
-procedure ReadDdmDataHook;
-asm
-  mov eax, [esp + 8]
-  mov edx, [ebp-$10] // DDMBuf
-  add edx, [ebp-$1C] // DDMSize
-  mov ecx, 1
-  call ReadMapData
-end;
-
-procedure ReadDlvDataHook;
-asm
-  mov eax, [esp + 8]
-  mov edx, [ebp-4] // DLVBuf
-  add edx, [ebp-$18] // DLVSize
-  mov ecx, 0
-  call ReadMapData
-end;
-
-function WriteMapData(p: PChar): int;
-var
-  time: uint64;
-begin
-  time:= puint64(p)^;
-  inc(p, 30604);
-  Result:= 8*3;
-end;
-
-procedure WriteMapDataHook;
-asm
-  mov eax, esi
-  call WriteMapData
-  add esi, eax
+  ValidatePeriodicTimers;
+  with GetMapExtra^ do
+  begin
+    uint(dt):= _Time^ - LastVisitTime;
+    LastVisitTimeCheck:= _Time^;
+    LastWeeklyTimer:= min(0, LastWeeklyTimer - dt);
+    LastMonthlyTimer:= min(0, LastMonthlyTimer - dt);
+    LastYearlyTimer:= min(0, LastYearlyTimer - dt);
+  end;
 end;
 
 //----- Town Portal wasting player's turn even if you cancel the dialog
@@ -3727,10 +3736,20 @@ begin
   DoTrueColorShot(info, ptr(ShotBuf), SW, SH, Rect(0, 0, SW, SH));
 end;
 
+//----- Fix sprites with non-zero transparent colors in monster info dialog
+
+procedure FixSpritesInMonInfo;
+asm
+  test ax, ax
+  jl @ok
+  xor ax, ax
+@ok:
+end;
+
 //----- HooksList
 
 var
-  HooksList: array[1..296] of TRSHookInfo = (
+  HooksList: array[1..299] of TRSHookInfo = (
     (p: $458E18; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $463862; old: $450493; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave/quicksave filenames localization
     (p: $4CD509; t: RShtNop; size: 12), // Fix Save/Load Slots: it resets SaveSlot, SaveScroll
@@ -3953,9 +3972,10 @@ var
     (p: $44D9AC; newp: @FixChestSmartHook; t: RShtCall; size: 8; Querry: 19), // Fix chests: reorder to preserve important items
     (p: $455173; newp: @FixItemsTxtHook; t: RShtJmp), // Fix items.txt: make special items accept standard "of ..." strings
     (p: $44607A; newp: @FixTimerRetriggerHook1; t: RShtJmp; size: 6; Querry: 21), // Fix immediate timer re-trigger
-    (p: $44601A; newp: @FixTimerRetriggerHook2; t: RShtCall; size: 7; Querry: 21), // Fix timers
+    (p: $44602D; newp: @FixTimerRetriggerHook2; t: RShtBefore; size: 7; Querry: 21), // Fix timers
     (p: $441036; newp: @FixTimerSetupHook1; t: RShtJmp; Querry: 21), // Fix timers
     (p: $441156; newp: @FixTimerSetupHook2; t: RShtJmp; size: 7; Querry: 21), // Fix timers
+    (p: $45D01E; newp: @FixTimerWrite; t: RShtBefore; Querry: 21), // Tix timers - write last trigger times to DLV/DDM
     (p: $4296C8; newp: @TPDelayHook1; t: RShtJmp), // Town Portal wasting player's turn even if you cancel the dialog
     (p: $43129A; newp: @TPDelayHook2; t: RShtCall), // Town Portal wasting player's turn even if you cancel the dialog
     (p: $471D1A; newp: @FixMovementNerf; t: RShtCall; Querry: 23), // Fix movement rounding problems - nerf jump
@@ -4028,9 +4048,8 @@ var
     (p: $4635BA; size: 2; Querry: hqTrueColor), // 32 bit color support
     (p: $4E801C; newp: @MyDirectDrawCreate; t: RSht4; Querry: hqTrueColor), // 32 bit color support + HD
     (p: $4A2C58; size: $4A2C75 - $4A2C58; Querry: hqMipmaps), // Generate mipmaps
-    (p: $47DF8F; newp: @ReadDdmDataHook; t: RShtBefore; Querry: 21), // Tix timers - read DDM
-    (p: $498039; newp: @ReadDlvDataHook; t: RShtBefore; Querry: 21), // Tix timers - read DDM
-    (p: $45D96F; newp: @WriteMapDataHook; t: RShtAfter; Querry: 21), // Tix timers - write data
+    (p: $41DE32; newp: @FixSpritesInMonInfo; t: RShtBefore; size: 6), // Fix sprites with non-zero transparent colors in monster info dialog
+    (p: $41DF2F; newp: @FixSpritesInMonInfo; t: RShtBefore; size: 8), // Fix sprites with non-zero transparent colors in monster info dialog
     ()
   );
 

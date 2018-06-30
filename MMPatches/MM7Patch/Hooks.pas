@@ -1342,6 +1342,7 @@ begin
             inc(p, x2 - a2);
           end else
             inc(p, BufW);
+      PropagateIntoTransparent(Buffer, BufW, BufH);
     end;
   end;
 end;
@@ -1639,6 +1640,8 @@ begin
     // Render
     for i := BmpSize - 1 downto 0 do
       p[i]:= pal[p1[i]];
+    if pal[0] = 0 then
+      PropagateIntoTransparent(p, w, h);
   end;
 end;
 
@@ -3079,51 +3082,91 @@ type
     _: int2;
   end;
 
+procedure ValidatePeriodicTimers;
+begin
+  with GetMapExtra^ do
+    if (LastVisitTime = 0) or (uint(LastVisitTime) <> LastVisitTimeCheck) then
+    begin
+      LastWeeklyTimer:= 0;
+      LastMonthlyTimer:= 0;
+      LastYearlyTimer:= 0;
+      LastVisitTimeCheck:= uint(LastVisitTime);
+    end;
+end;
+
+function GetTimerPeriod(var t: TTimerStruct; var last: pint): int;
+begin
+  ValidatePeriodicTimers;
+  with GetMapExtra^ do
+    if t.EachYear <> 0 then
+    begin
+      Result:= 123863040;
+      last:= @LastYearlyTimer;
+    end
+    else if t.EachMonth <> 0 then
+    begin
+      Result:= 10321920;
+      last:= @LastMonthlyTimer;
+    end
+    else if t.EachWeek <> 0 then
+    begin
+      Result:= 2580480;
+      last:= @LastWeeklyTimer;
+    end else
+    begin
+      Result:= 368640;
+      last:= nil;
+    end;
+end;
+
 procedure TimerSetTriggerTime(time1, time2: int; var t: TTimerStruct);
 var
   time: int64;
-  period, start: int;
+  last: pint;
+  period: int;
 begin
   time:= uint64(time2) shl 32 + time1;
-  start:= 0;
-  if t.EachYear <> 0 then
-    period:= 123863040
-  else if t.EachMonth <> 0 then
-    period:= 10321920
-  else if t.EachWeek <> 0 then
-    period:= 2580480
-  else begin
-    period:= 368640;
-    start:= ((t.Hour*60 + t.Minute)*60 + t.Second)*256 div 60;
-  end;
-  t.TriggerTime:= time - time mod period + start;
-  if t.TriggerTime <= time then
-    inc(t.TriggerTime, period);
+  period:= GetTimerPeriod(t, last);
+  if last = nil then  // daily timer
+  begin
+    t.TriggerTime:= ((t.Hour*60 + t.Minute)*60 + t.Second)*256 div 60;
+    inc(t.TriggerTime, time - time mod period);
+    if t.TriggerTime <= time then
+      inc(t.TriggerTime, period);
+  end else
+    if t.CmdType = $26 then
+      t.TriggerTime:= GetMapExtra^.LastVisitTime + last^ + period
+    else
+      t.TriggerTime:= time + period;
+end;
+
+function UpdatePeriodicTimer(eax, _: int; var t: TTimerStruct): int;
+var
+  last: pint;
+begin
+  Result:= eax;
+  if t.CmdType <> $26 then  exit;
+  GetTimerPeriod(t, last);
+  uint(last^):= _Time^ - GetMapExtra^.LastVisitTime;
 end;
 
 procedure FixTimerRetriggerHook1;
 asm
-  cmp word ptr [esi+16], $26  // RefillTimer?
-  jz @fixExactTime
   mov [esi-$C], ebx
   mov [esi-8], edi
-@fixExactTime:
   push $448C43  // add Period
 end;
 
 procedure FixTimerRetriggerHook2;
 asm
-  mov ax, [esi+8]
-  test ax, ax  // daily?
-  jnz @std
+  cmp eax, $15180  // daily?
+  lea ecx, [esi-$C]
+  jnz UpdatePeriodicTimer
 // Handle timer that triggers at specific time each day
   mov eax, ebx  // Game.Time
   mov edx, edi
-  lea ecx, [esi-$C]
   call TimerSetTriggerTime
   mov [esp], $448CCF
-@std:
-  neg ax
 end;
 
 procedure FixTimerSetupHook1;
@@ -3143,6 +3186,23 @@ asm
   call TimerSetTriggerTime
   mov ebx, [ebp - $28]
   push $444323
+end;
+
+//----- Tix timers - write last trigger times to DLV/DDM
+
+procedure FixTimerWrite;
+var
+  dt: int;
+begin
+  ValidatePeriodicTimers;
+  with GetMapExtra^ do
+  begin
+    uint(dt):= _Time^ - LastVisitTime;
+    LastVisitTimeCheck:= _Time^;
+    LastWeeklyTimer:= min(0, LastWeeklyTimer - dt);
+    LastMonthlyTimer:= min(0, LastMonthlyTimer - dt);
+    LastYearlyTimer:= min(0, LastYearlyTimer - dt);
+  end;
 end;
 
 //----- Town Portal wasting player's turn even if you cancel the dialog
@@ -3636,63 +3696,15 @@ end;
 
 //----- 32 bit color support (Direct3D)
 
-function GetPixel16(c: uint): uint;
-begin
-  Result:= (c and $F81F)*33 shr 2;  // r,b components - 5 bit: *(2^5 + 1) shr 2
-  Result:= byte(Result) + Result shr 11 shl 16;
-  inc(Result, (c and $7E0)*65 shr 9 shl 8);  // g component - 6 bit: *(2^6 + 1) shr 4
-end;
-
-var
-  ToTrueColor: array[0..$FFFF] of int;
-
-procedure Prepare16to32;
-var
-  i: int;
-begin
-  for i:= 0 to $FFFF do
-    ToTrueColor[i]:= GetPixel16(i);
-end;
-
-procedure TrueColorProc(SrcBuf: ptr; info: PDDSurfaceDesc2);
-var
-  ps: PWord; pd: pint;
-  trans: Word;
-  x, y, dpitch: int;
-begin
-  DXProxyScale(SrcBuf, info);
-  exit;
-
-  if ToTrueColor[1] = 0 then
-    Prepare16to32;
-  NeedScreenWH;
-  ps:= SrcBuf;
-  pd:= info.lpSurface;
-  dpitch:= info.lPitch - SW*4;
-  trans:= _GreenMask^ + _BlueMask^;
-  for y:= 1 to SH do
-  begin
-    for x:= 1 to SW do
-    begin
-      if ps^ <> trans then
-        pd^:= ToTrueColor[ps^];
-      inc(ps);
-      inc(pd);
-    end;
-    inc(PChar(pd), dpitch);
-  end;
-end;
-
 procedure TrueColorHook;
 asm
   lea edx, [ebp - $98]
   cmp dword ptr [edx + $54], 32
   jnz @std
   mov dword ptr [esp], $4A5AE7
-  jmp TrueColorProc
+  jmp DXProxyScale
 @std:
 end;
-
 
 function MakePixel16(c32: int): Word;
 asm
@@ -3744,9 +3756,6 @@ asm
 end;
 
 function TrueColorLloydHook(surf: ptr; info: PDDSurfaceDesc2; param: int): LongBool; stdcall;
-var
-  ps: PWord; pd: pint;
-  x, y, dpitch: int;
 begin
   Result:= LockSurface(surf, info, param);
   if not Result or (info.ddpfPixelFormat.dwRGBBitCount <> 32) then  exit;
@@ -3755,187 +3764,14 @@ begin
   DoTrueColorShot(info, ptr(ShotBuf), SW, SH, Rect(0, 0, SW, SH));
 end;
 
-//----- 32 bit color support (Software)
+//----- Fix sprites with non-zero transparent colors in monster info dialog
 
-type
-  VMTDirectDrawSurface4 = array[0..$B4-1] of byte;
-  TMySurface = record
-    PVMT: ^VMTDirectDrawSurface4;
-    Original: ptr;
-    VMT: VMTDirectDrawSurface4;
-  end;
-
-var
-  BaseVMT: VMTDirectDrawSurface4;
-  FrontBuffer, BackBuffer: TMySurface;
-  ScreenBmp: TBitmap; ScreenScanline: ptr;
-
-procedure PassThrough;
+procedure FixSpritesInMonInfo;
 asm
-  mov ecx, [esp + 4]
-  mov ecx, [ecx + 4]
-  mov [esp + 4], ecx
-  jmp eax
-end;
-
-procedure InitBaseVMT(surf: pptr);
-const
-  HookBase: TRSHookInfo = (newp: @PassThrough; t: RShtCodePtrStore);
-var
-  hook: TRSHookInfo;
-  i: int;
-begin
-  CopyMemory(@BaseVMT, surf^, SizeOf(VMTDirectDrawSurface4));
-  hook:= HookBase;
-  hook.p:= int(@BaseVMT);
-  for i:= 1 to SizeOf(VMTDirectDrawSurface4) div 4 do
-  begin
-    RSApplyHook(hook);
-    inc(hook.p, 4);
-  end;
-end;
-
-function AnyBuffer_IsLost(this: ptr): HRESULT; stdcall;
-begin
-  Result:= DD_OK;
-end;
-
-procedure HookSurface(var my: TMySurface; psurf: pptr);
-begin
-  if pint(@BaseVMT)^ = 0 then
-    InitBaseVMT(psurf^);
-  my.PVMT:= @my.VMT;
-  my.VMT:= BaseVMT;
-  my.Original:= psurf^;
-  psurf^:= @my;
-  pptr(@my.VMT[$60])^:= @AnyBuffer_IsLost;
-end;
-
-procedure DrawSW;
-var
-  r: TRect;
-  dc: HDC;
-begin
-  GetClientRect(_MainWindow^, r);
-  dc:= GetDC(_MainWindow^);
-  SetStretchBltMode(dc, BLACKONWHITE);
-  StretchBlt(dc, 0, 0, r.Right, r.Bottom, ScreenBmp.Canvas.Handle, 0, 0, SW, SH, cmSrcCopy);
-  ReleaseDC(_MainWindow^, dc);
-end;
-
-function FrontBuffer_Blt(this: ptr; dest: PRect; surf: ptr; r: PRect; flags: uint; fx: ptr): HRESULT; stdcall;
-begin
-//  Assert(ptr(surf) = @BackBuffer);
-  DrawSW;
-  Result:= DD_OK;
-end;
-
-function FrontBuffer_BltFast(this: ptr; X, Y: int; surf: ptr; r: PRect; flags: uint; fx: ptr): HRESULT; stdcall;
-begin
-//  Assert(ptr(surf) = @BackBuffer);
-  DrawSW;
-  Result:= DD_OK;
-end;
-
-function FrontBuffer_Lock(this: ptr; dest: PRect; out info: TDDSurfaceDesc2; flags: uint; hEvent: THandle): HRESULT; stdcall;
-begin
-//  Assert(false);
-  Result:= DD_OK;
-end;
-
-function FrontBuffer_Unlock(this: ptr; dest: PRect): HRESULT; stdcall;
-begin
-//  Assert(false);
-  Result:= DD_OK;
-end;
-
-function BackBuffer_Blt(this: ptr; dest: PRect; surf: ptr; r: PRect; flags: uint; fx: ptr): HRESULT; stdcall;
-begin
-//  Assert(surf = nil);
-  Result:= DD_OK;
-end;
-
-function BackBuffer_BltFast(this: ptr; X, Y: int; surf: ptr; r: PRect; flags: uint; fx: ptr): HRESULT; stdcall;
-begin
-//  Assert(surf = nil);
-  Result:= DD_OK;
-end;
-
-function BackBuffer_Lock(this: ptr; dest: PRect; out info: TDDSurfaceDesc2; flags: uint; hEvent: THandle): HRESULT; stdcall;
-begin
-  with info do
-  begin
-    dwWidth:= SW;
-    dwHeight:= SH;
-    lPitch:= SW*2;
-    lpSurface:= ScreenScanline;
-    with ddpfPixelFormat do
-    begin
-      dwRGBBitCount:= 16;
-      dwRBitMask:= $F800;
-      dwGBitMask:= $7E0;
-      dwBBitMask:= $1F;
-      dwRGBAlphaBitMask:= 0;
-    end;
-  end;
-  Result:= DD_OK;
-end;
-
-function BackBuffer_Unlock(this: ptr; dest: PRect): HRESULT; stdcall;
-begin
-  Result:= DD_OK;
-end;
-
-procedure TrueColorSW;
-const
-  PFrontBuffer = pptr($E31AF8);
-  PBackBuffer = pptr($E31AFC);
-  Blt = $14;
-  BltFast = $1C;
-  Lock = $64;
-  Unlock = $80;
-begin
-  if _IsD3D^ or ((GetDeviceCaps(GetDC(0), BITSPIXEL) = 16) and (GetDeviceCaps(GetDC(0), PLANES) = 1)) then
-    exit;
-
-  if ScreenBmp = nil then
-  begin
-    NeedScreenWH;
-    ScreenBmp:= TBitmap.Create;
-    with ScreenBmp do
-    begin
-      PixelFormat:= pf16bit;
-      HandleType:= bmDIB;
-      Width:= SW;
-      Height:= -SH;
-      ScreenScanline:= ptr(min(uint(Scanline[SH - 1]), uint(Scanline[0])));
-    end;
-    ZeroMemory(ScreenScanline, SW*SH*2);
-  end;
-  HookSurface(FrontBuffer, PFrontBuffer);
-  HookSurface(BackBuffer, PBackBuffer);
-  pptr(@FrontBuffer.VMT[Blt])^:= @FrontBuffer_Blt;
-  pptr(@FrontBuffer.VMT[BltFast])^:= @FrontBuffer_BltFast;
-  pptr(@FrontBuffer.VMT[Lock])^:= @FrontBuffer_Lock;
-  pptr(@FrontBuffer.VMT[Unlock])^:= @FrontBuffer_Unlock;
-  pptr(@BackBuffer.VMT[Blt])^:= @BackBuffer_Blt;
-  pptr(@BackBuffer.VMT[BltFast])^:= @BackBuffer_BltFast;
-  pptr(@BackBuffer.VMT[Lock])^:= @BackBuffer_Lock;
-  pptr(@BackBuffer.VMT[Unlock])^:= @BackBuffer_Unlock;
-end;
-
-//----- 32 bit color support (General)
-
-var
-  TrueColorPixelFormatStd: procedure(var fmt: DDPIXELFORMAT); stdcall;
-
-procedure TrueColorPixelFormat(var fmt: DDPIXELFORMAT); stdcall;
-const
-  str = #32#0#0#0#64#0#0#0#0#0#0#0#16#0#0#0#0#248#0#0#224#7#0#0#31#0#0#0#0#0#0#0;
-begin
-  TrueColorPixelFormatStd(fmt);
-  if fmt.dwRGBBitCount <> 16 then
-    CopyMemory(@fmt, PChar(str), length(str));
+  test ax, ax
+  jl @ok
+  xor ax, ax
+@ok:
 end;
 
 //----- Buka localization
@@ -3946,7 +3782,7 @@ var
 //----- HooksList
 
 var
-  HooksList: array[1..282] of TRSHookInfo = (
+  HooksList: array[1..284] of TRSHookInfo = (
     (p: $45B0D1; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $4655FE; old: $452C75; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave file name localization
     (p: $45E5A4; old: $45E2D0; backup: @FillSaveSlotsStd; newp: @FillSaveSlotsHook; t: RShtCall), // Fix Save/Load Slots
@@ -4153,9 +3989,10 @@ var
     (p: $48FE51; newp: @FixGMStaffHook; t: RShtJmp; Querry: 20), // Fix GM Staff ignoring Armsmaster bonus to Damage
     (p: $4578E7; newp: @FixItemsTxtHook; t: RShtJmp), // Fix items.txt: make special items accept standard "of ..." strings
     (p: $448CC9; newp: @FixTimerRetriggerHook1; t: RShtJmp; size: 6; Querry: 21), // Fix timers
-    (p: $448C77; newp: @FixTimerRetriggerHook2; t: RShtCall; size: 7; Querry: 21), // Fix timers
+    (p: $448C8A; newp: @FixTimerRetriggerHook2; t: RShtBefore; size: 7; Querry: 21), // Fix timers
     (p: $444133; newp: @FixTimerSetupHook1; t: RShtJmp; Querry: 21), // Fix timers
     (p: $44427C; newp: @FixTimerSetupHook2; t: RShtJmp; size: 7; Querry: 21), // Fix timers
+    (p: $45F557; newp: @FixTimerWrite; t: RShtBefore; Querry: 21), // Tix timers - write last trigger times to DLV/DDM
     (p: $42B535; newp: @TPDelayHook1; t: RShtJmp), // Town Portal wasting player's turn even if you cancel the dialog
     (p: $4339CB; newp: @TPDelayHook2; t: RShtCall), // Town Portal wasting player's turn even if you cancel the dialog
     (p: $473005; newp: @FixMovementNerf; t: RShtCall; Querry: 23), // Fix movement rounding problems - nerf jump
@@ -4223,34 +4060,12 @@ var
     (p: $49F1EE; new: $49F20D; t: RShtJmp; size: 6; Querry: hqTrueColor), // 32 bit color support
     (p: $45E14D; newp: @TrueColorShotHook; t: RShtBefore; size: 6; Querry: hqTrueColor), // 32 bit color support
     (p: $49EDF7; old: $4A0ED0; backup: @@LockSurface; newp: @TrueColorLloydHook; t: RShtCall; Querry: hqTrueColor), // 32 bit color support
-//    (p: $4A09A6; newp: @TrueColorSW; t: RShtBefore; size: 6; Querry: hqTrueColor), // 32 bit color support
-//    (p: $49DEE7; old: $74; new: $EB; t: RSht1; Querry: hqTrueColor), // 32 bit color support
     (p: $463AA8; size: 6; Querry: hqTrueColor), // 32 bit color support
     (p: $465333; size: 2; Querry: hqTrueColor), // 32 bit color support
-//    (p: $4A1568; backup: @@TrueColorPixelFormatStd; newp: @TrueColorPixelFormat; t: RShtFunctionStart; size: 7; Querry: hqTrueColor), // 32 bit color support
     (p: $4D801C; newp: @MyDirectDrawCreate; t: RSht4; Querry: hqTrueColor), // 32 bit color support + HD
-    // (p: $4A03F8; size: 6),  // direct
-    // (p: $4A09EB; size: 6),  // direct
-{    (p: $49E0DC; old: 640; new: 1920; t: RSht4),
-    (p: $49E0D7; old: 480; new: 1080; t: RSht4),
-{
-    (p: $4A039F; old: 640; new: 1920; t: RSht4),
-    (p: $4A046B; old: 640; new: 1920; t: RSht4),
-    (p: $4A0520; old: 640; new: 1920; t: RSht4),  // ?
-    (p: $4A0475; old: 480; new: 1080; t: RSht4),
-    (p: $4A039A; old: 480; new: 1080; t: RSht4),
-    (p: $49DF3D; old: 640; new: 1920; t: RSht4),
-    (p: $49DFDE; old: 640; new: 1920; t: RSht4),
-    (p: $49E1BE; old: 640; new: 1920; t: RSht4),
-    (p: $49E309; old: 640; new: 1920; t: RSht4),
-    (p: $49E0DC; old: 640; new: 1920; t: RSht4),
-    (p: $49DF47; old: 480; new: 1080; t: RSht4),
-    (p: $49DFE8; old: 480; new: 1080; t: RSht4),
-    (p: $49E1C8; old: 480; new: 1080; t: RSht4),
-    (p: $49E310; old: 480; new: 1080; t: RSht4),
-    (p: $49E0D7; old: 480; new: 1080; t: RSht4),}
-    (),
-    (),
+    (p: $4A4DA5; size: $4A4DC2 - $4A4DA5; Querry: hqMipmaps), // generate mipmaps
+    (p: $41E84B; newp: @FixSpritesInMonInfo; t: RShtBefore; size: 6), // Fix sprites with non-zero transparent colors in monster info dialog
+    (p: $41E948; newp: @FixSpritesInMonInfo; t: RShtBefore; size: 5), // Fix sprites with non-zero transparent colors in monster info dialog
     ()
   );
 
@@ -4305,6 +4120,8 @@ begin
     RSApplyHooks(HooksList, hqWindowSize);
   if BorderlessFullscreen then
     RSApplyHooks(HooksList, hqBorderless);
+  if (MipmapsCount > 1) or (MipmapsCount < 0) then
+    RSApplyHooks(HooksList, hqMipmaps);
 
   RSDebugUseDefaults;
   LastDebugHook:= DebugHook;

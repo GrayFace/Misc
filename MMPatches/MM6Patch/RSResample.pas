@@ -16,7 +16,7 @@ type
   end;
 
 // 1.11 for linear scaling, 2 is good for interface to preserve pixels
-procedure RSSetResampleParams(Sigma: ext = 2.5; MiddleShift: ext = 0.7);
+procedure RSSetResampleParams(Sigma: ext = 3; MiddleShift: ext = 0.2);
 procedure RSResample16(const info: TRSResampleInfo; Src: ptr; SrcPitch: IntPtr; Dest: ptr; DestPitch: IntPtr); overload;
 procedure RSResample16(const info: TRSResampleInfo; Src, Dest: TBitmap); overload;
 procedure RSResample16(Src, Dest: TBitmap); overload;
@@ -45,7 +45,7 @@ var
 procedure RSSetResampleParams(Sigma, MiddleShift: ext);
 begin
   isigma:= Sigma;
-  mshift:= MiddleShift;
+  mshift:= 1 - MiddleShift;
 end;
 
 // errf approximation with precision 1.5E-7
@@ -150,7 +150,6 @@ begin
 end;
 
 var
-  //ToTrueColor: array[0..$FFFF] of int;
   ToBits: array[0..$FFFF] of array[0..1] of uint;
   TransMix: array[0..MaxMix*MaxMix*MaxMix*4 - 1] of uint;
 
@@ -385,9 +384,8 @@ begin
     end;
 end;
 
-procedure ResampleTransV(p, p2: puint; v: uint; pc, pl: puint);
-const
-  AlphaFF = ($FF000000 div MaxMix) and $FF000000;
+// I forgot alpha is opacity, thought it's transparency, so I have to XOR it
+procedure ResampleTransV_Alpha(p, p2: puint; v: uint; pc, pl: puint);
 var
   tr: PIntegerArray;
   c, a: uint;
@@ -398,7 +396,7 @@ begin
     begin
       c:= pc^*MaxMix;
       inc(pc);
-      p^:= c + pc^;
+      p^:= (c + pc^) xor $FF000000;
       inc(pc);
       inc(p);
     end
@@ -412,7 +410,8 @@ begin
       c:= pc^*v + pl^*(MaxMix - v);
       inc(pl, 2);
       inc(pc);
-      p^:= (c + pc^) and $FFFFFF + a;
+      //p^:= (c + pc^) and $FFFFFF + a;
+      p^:= ((c + pc^) or $FF000000) xor a;
       inc(pc);
       inc(p);
     end;
@@ -455,7 +454,7 @@ begin
         c:= pc^*v + pl^*(MaxMix - v);
         inc(pl, 2);
         inc(pc);
-        p^:= (c + pc^) and $FFFFFF;
+        p^:= c + pc^;
         inc(pc);
         inc(p);
       end else
@@ -523,7 +522,7 @@ begin
       if NoAlpha then
         ResampleTransV_NoAlpha(Dest, p2, v, pc, pl)
       else
-        ResampleTransV(Dest, p2, v, pc, pl)
+        ResampleTransV_Alpha(Dest, p2, v, pc, pl)
     else
       ResampleV(Dest, p2, v, pc, pl);
     inc(PChar(Dest), DestPitch);

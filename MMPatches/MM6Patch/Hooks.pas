@@ -2919,30 +2919,77 @@ type
     TriggerTime: int64;
   end;
 
+procedure ValidatePeriodicTimers;
+begin
+  with GetMapExtra^ do
+    if (LastVisitTime = 0) or (uint(LastVisitTime) <> LastVisitTimeCheck) then
+    begin
+      LastWeeklyTimer:= 0;
+      LastMonthlyTimer:= 0;
+      LastYearlyTimer:= 0;
+      LastVisitTimeCheck:= uint(LastVisitTime);
+    end;
+end;
+
+function GetTimerPeriod(var t: TTimerStruct; var last: pint): int;
+begin
+  ValidatePeriodicTimers;
+  with GetMapExtra^ do
+    if t.EachYear <> 0 then
+    begin
+      Result:= 123863040;
+      last:= @LastYearlyTimer;
+    end
+    else if t.EachMonth <> 0 then
+    begin
+      Result:= 10321920;
+      last:= @LastMonthlyTimer;
+    end
+    else if t.EachWeek <> 0 then
+    begin
+      Result:= 2580480;
+      last:= @LastWeeklyTimer;
+    end else
+    begin
+      Result:= 368640;
+      last:= nil;
+    end;
+end;
+
 procedure TimerSetTriggerTime(time1, time2: int; var t: TTimerStruct);
 var
   time: int64;
-  period, start: int;
+  last: pint;
+  period: int;
 begin
   time:= uint64(time2) shl 32 + time1;
-  start:= 0;
-  if t.EachYear <> 0 then
-    period:= 123863040
-  else if t.EachMonth <> 0 then
-    period:= 10321920
-  else if t.EachWeek <> 0 then
-    period:= 2580480
-  else begin
-    period:= 368640;
-    start:= ((t.Hour*60 + t.Minute)*60 + t.Second)*256 div 60;
-  end;
-  t.TriggerTime:= time - time mod period + start;
-  if t.TriggerTime <= time then
-    inc(t.TriggerTime, period);
+  period:= GetTimerPeriod(t, last);
+  if last = nil then  // daily timer
+  begin
+    t.TriggerTime:= ((t.Hour*60 + t.Minute)*60 + t.Second)*256 div 60;
+    inc(t.TriggerTime, time - time mod period);
+    if t.TriggerTime <= time then
+      inc(t.TriggerTime, period);
+  end else
+    if t.CmdType = $26 then
+      t.TriggerTime:= GetMapExtra^.LastVisitTime + last^ + period
+    else
+      t.TriggerTime:= time + period;
+end;
+
+function UpdatePeriodicTimer(eax, _: int; var t: TTimerStruct): int;
+var
+  last: pint;
+begin
+  Result:= eax;
+  if t.CmdType <> $26 then  exit;
+  GetTimerPeriod(t, last);
+  uint(last^):= _Time^ - GetMapExtra^.LastVisitTime;
 end;
 
 procedure FixTimerRetriggerHook;
 asm
+  lea ecx, [esi-4]
   cmp [esi+4], ebp  // check EachYear = 0, EachMonth = 0, EachWeek = 0
   jnz @start
   cmp [esi+8], bp
@@ -2950,21 +2997,20 @@ asm
 // Handle timer that triggers at specific time each day
   mov eax, dword ptr [$908D08]  // Game.Time
   mov edx, dword ptr [$908D08+4]
-  lea ecx, [esi-4]
   call TimerSetTriggerTime
   ret
 @start:
+  push edx
+  call UpdatePeriodicTimer
+  pop edx
   cmp edx, dword ptr [$908D08+4]  // NextTrigger < Game.Time?
   ja @std
   jb @fix
   cmp eax, dword ptr [$908D08]
   jnb @std
 @fix:
-  cmp word ptr [esi+16], $26  // RefillTimer?
-  jz @fixExactTime
   mov eax, dword ptr [$908D08]  // set to Game.Time
   mov edx, dword ptr [$908D08+4]
-@fixExactTime:
   mov [esp], $43E939  // Add Period again
 @std:
   mov [esi+14h], eax
@@ -2994,6 +3040,23 @@ asm
   mov ecx, esi
   call TimerSetTriggerTime
   push $439DB3
+end;
+
+//----- Tix timers - write last trigger times to DLV/DDM
+
+procedure FixTimerWrite;
+var
+  dt: int;
+begin
+  ValidatePeriodicTimers;
+  with GetMapExtra^ do
+  begin
+    uint(dt):= _Time^ - LastVisitTime;
+    LastVisitTimeCheck:= _Time^;
+    LastWeeklyTimer:= min(0, LastWeeklyTimer - dt);
+    LastMonthlyTimer:= min(0, LastMonthlyTimer - dt);
+    LastYearlyTimer:= min(0, LastYearlyTimer - dt);
+  end;
 end;
 
 //----- Place items vertically like in 7 and 8
@@ -3392,154 +3455,6 @@ asm
 @std:
 end;
 
-//----- 32 bit color support (Software)
-
-type
-  VMTDirectDrawSurface = array[0..$90-1] of byte;
-  TMySurface = record
-    PVMT: ^VMTDirectDrawSurface;
-    Original: ptr;
-    VMT: VMTDirectDrawSurface;
-  end;
-
-const
-  _BackBuffer = pptr($9B10EC);
-  _FrontBuffer = pptr($9B10E8);
-var
-  BaseVMT: VMTDirectDrawSurface;
-  FrontBuffer: TMySurface;
-  ScreenScale: TRSResampleInfo;
-
-procedure PassThrough;
-asm
-  mov ecx, [esp + 4]
-  mov ecx, [ecx + 4]
-  mov [esp + 4], ecx
-  jmp eax
-end;
-
-procedure InitBaseVMT(surf: pptr);
-const
-  HookBase: TRSHookInfo = (newp: @PassThrough; t: RShtCodePtrStore);
-var
-  hook: TRSHookInfo;
-  i: int;
-begin
-  CopyMemory(@BaseVMT, surf^, SizeOf(VMTDirectDrawSurface));
-  hook:= HookBase;
-  hook.p:= int(@BaseVMT);
-  for i:= 1 to SizeOf(VMTDirectDrawSurface) div 4 do
-  begin
-    RSApplyHook(hook);
-    inc(hook.p, 4);
-  end;
-end;
-
-function AnyBuffer_GetPixelFormat(this, fmt: ptr): HRESULT; stdcall;
-const
-  str = #32#0#0#0#64#0#0#0#0#0#0#0#16#0#0#0#0#248#0#0#224#7#0#0#31#0#0#0#0#0#0#0;
-begin
-  CopyMemory(fmt, PChar(str), length(str));
-  Result:= DD_OK;
-end;
-
-function AnyBuffer_IsLost(this: ptr): HRESULT; stdcall;
-begin
-  Result:= DD_FALSE; //DD_OK;
-end;
-
-procedure HookSurface(var my: TMySurface; psurf: pptr);
-begin
-  if pint(@BaseVMT)^ = 0 then
-    InitBaseVMT(psurf^);
-  my.PVMT:= @my.VMT;
-  my.VMT:= BaseVMT;
-  my.Original:= psurf^;
-  psurf^:= @my;
-  pptr(@my.VMT[$54])^:= @AnyBuffer_GetPixelFormat;
-  pptr(@my.VMT[$60])^:= @AnyBuffer_IsLost;
-end;
-
-//var
-//  fps: int;
-//  fpsNext: uint;
-
-procedure DrawSW;
-//var
-//  i: int;
-var
-  info: TDDSurfaceDesc;
-begin
-//  if timeGetTime > fpsNext then
-//  begin
-//    zM(fps);
-//    fpsNext:= timeGetTime + 1000;
-//    fps:= 0;
-//  end;
-//  inc(fps);
-  info.dwSize:= SizeOf(info);
-  info.dwFlags:= 0;
-  Assert(IDirectDrawSurface3(_BackBuffer^).Lock(nil, info, DDLOCK_WAIT or DDLOCK_NOSYSLOCK, 0) = DD_OK);
-  //DrawScaled(ScreenScale, SW, SH, ScreenScanline, SW*2);
-  RSSetResampleParams(3.5, 0.8);
-  DrawScaled(ScreenScale, info.dwWidth, info.dwHeight, info.lpSurface, info.lPitch);
-  IDirectDrawSurface3(_BackBuffer^).Unlock(nil);
-end;
-
-function FrontBuffer_Blt(this: ptr; dest: PRect; surf: ptr; r: PRect; flags: uint; fx: ptr): HRESULT; stdcall;
-begin
-  Result:= DD_OK;
-  if surf <> _BackBuffer^ then  exit;
-  Assert(surf = _BackBuffer^);//@BackBuffer);
-  DrawSW;
-end;
-
-function FrontBuffer_BltFast(this: ptr; X, Y: int; surf: ptr; r: PRect; flags: uint; fx: ptr): HRESULT; stdcall;
-begin
-  Result:= DD_OK;
-  if surf <> _BackBuffer^ then  exit;
-  Assert(surf = _BackBuffer^);//@BackBuffer);
-  DrawSW;
-end;
-
-function FrontBuffer_Lock(this: ptr; dest: PRect; out info: TDDSurfaceDesc2; flags: uint; hEvent: THandle): HRESULT; stdcall;
-begin
-  Assert(false);
-  Result:= DD_OK;
-end;
-
-function FrontBuffer_Unlock(this: ptr; dest: PRect): HRESULT; stdcall;
-begin
-  Assert(false);
-  Result:= DD_OK;
-end;
-
-procedure TrueColorSW;
-const
-  Blt = $14;
-  BltFast = $1C;
-  Lock = $64;
-  Unlock = $80;
-begin
-  if (GetDeviceCaps(GetDC(0), BITSPIXEL) = 16) and (GetDeviceCaps(GetDC(0), PLANES) = 1) then
-    exit;
-
-  HookSurface(FrontBuffer, _FrontBuffer);
-  pptr(@FrontBuffer.VMT[Blt])^:= @FrontBuffer_Blt;
-  pptr(@FrontBuffer.VMT[BltFast])^:= @FrontBuffer_BltFast;
-  pptr(@FrontBuffer.VMT[Lock])^:= @FrontBuffer_Lock;
-  pptr(@FrontBuffer.VMT[Unlock])^:= @FrontBuffer_Unlock;
-end;
-
-function TrueColorSWHook(var desc: DDSURFACEDESC): ptr;
-const
-  str = #32#0#0#0#64#0#0#0#0#0#0#0#16#0#0#0#0#248#0#0#224#7#0#0#31#0#0#0#0#0#0#0;
-begin
-  Result:= @desc;
-  desc.dwFlags:= desc.dwFlags or DDSD_PIXELFORMAT;
-  CopyMemory(@desc.ddpfPixelFormat, PChar(str), length(str));
-end;
-
 //----- Buka localization
 
 var
@@ -3653,7 +3568,6 @@ var
     (p: $4675F7; newp: @FacetCheckHook; t: RShtCall), // Fix facet ray interception checking out-of-bounds
     (p: $48C4E8; newp: @NoVertexFacetHook; t: RShtCall), // There may be facets without vertexes
     (p: $43FCBA; newp: @DoorStateSwitchHook; t: RShtCall), // Correct door state switching: param = 3
-    //(p: $48E594; newp: @FreeSoundsHook; t: RShtCall), // Crash when moving between maps
     (p: $453F9A; size: 5), // no need to clear level twice
     (p: $453C4A; size: 5), // no need to clear level twice
     (p: $4566EF; newp: @FreeSoundsHook; t: RShtCall), // Crash when moving between maps
@@ -3758,6 +3672,7 @@ var
     (p: $43E9AC; newp: @FixTimerRetriggerHook; t: RShtCall; size: 6; Querry: 21), // Fix timers
     (p: $439B0D; newp: @FixTimerSetupHook1; t: RShtJmp; size: 8; Querry: 21), // Fix timers
     (p: $439CE0; newp: @FixTimerSetupHook2; t: RShtJmp; size: 8; Querry: 21), // Fix timers
+    (p: $44F45A; newp: @FixTimerWrite; t: RShtAfter; size: 6; Querry: 21), // Tix timers - write last trigger times to DLV/DDM
     (p: $486FA1; newp: @PlaceItemsVerticallyHook; t: RShtCall; size: 7; Querry: 22), // Place items vertically like in 7 and 8
     (p: $47D75E; newp: @PlaceItemsVerticallyHook; t: RShtCall; size: 7; Querry: 22), // Place items vertically like in 7 and 8
     (p: $425E08; newp: @TPDelayHook1; t: RShtJmp), // Town Portal wasting player's turn even if you cancel the dialog
@@ -3815,11 +3730,8 @@ var
     (p: $4A5EB5; newp: @SmackDrawHook1; t: RShtBefore; Querry: hqFixSmackDraw), // Compatible movie render
     (p: $4A604A; newp: @SmackDrawHook2; t: RShtBefore; Querry: hqFixSmackDraw), // Compatible movie render
     (p: $4A66A3; newp: @SmackLoadHook; t: RShtAfter; size: 6; Querry: hqFixSmackDraw), // Compatible movie render
-//    (p: $48DC27; newp: @TrueColorSW; t: RShtBefore; size: 8; Querry: hqTrueColor), // 32 bit color support
-//    (p: $48DBF5; newp: @TrueColorSWHook; t: RShtAfter; size: 8; Querry: hqTrueColor), // 32 bit color support
     (p: $4573C6; size: 2; Querry: hqTrueColor), // 32 bit color support
-    (p: $4B9018; newp: @MyDirectDrawCreate; t: RSht4; Querry: hqTrueColor), // 32 bit color support + HD
-    (),
+    (p: $4B9018; newp: @MyDirectDrawCreate; t: RSht4; Querry: hqTrueColor), // 32 bit color support
     ()
   );
 

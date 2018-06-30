@@ -142,7 +142,7 @@ Version 2.0:
 
 Version 2.1:
 (MM6 - MM8)
-[+] SupportTrueColor, RenderLimitX, RenderLimitY, ScalingParam1, ScalingParam2
+[+] SupportTrueColor, HD in D3D, RenderMaxWidth, RenderMaxHeight, ScalingParam1, ScalingParam2
 [+] WindowWidth, WindowHeight
 [+] BorderlessWindowed
 [+] CompatibleMovieRender, SmoothMovieScaling
@@ -165,6 +165,7 @@ Version 2.1:
 [-] Evt commands couldn't operate on some skills
 [-] Crash on exit
 (MM7, MM8)
+[-] Black border around sprites and sea shore in D3D
 [-] Broken but unidentified items were green instead of red if you go to a shop to repair them.
 [-] Casting Telepathy spell or stealing from a monster used to prevent you from finding random items in its corpses
 [-] Light gray blinking in full screen on some computers

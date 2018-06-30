@@ -1,4 +1,4 @@
-{$IFNDEF RSResample15}unit RSResample;
+unit RSResample;
 
 interface
 
@@ -16,7 +16,7 @@ type
   end;
 
 // 1.11 for linear scaling, 2 is good for interface to preserve pixels
-procedure RSSetResampleParams(Sigma: ext = 2.5; MiddleShift: ext = 0.7);
+procedure RSSetResampleParams(Sigma: ext = 3; MiddleShift: ext = 0.2);
 procedure RSResample16(const info: TRSResampleInfo; Src: ptr; SrcPitch: IntPtr; Dest: ptr; DestPitch: IntPtr); overload;
 procedure RSResample16(const info: TRSResampleInfo; Src, Dest: TBitmap); overload;
 procedure RSResample16(Src, Dest: TBitmap); overload;
@@ -24,7 +24,6 @@ procedure RSResampleTrans16(const info: TRSResampleInfo; Src: ptr; SrcPitch: int
 procedure RSResampleTrans16_NoAlpha(const info: TRSResampleInfo; Src: ptr; SrcPitch: int; Dest: ptr; DestPitch: int; Trans: int);
 
 implementation
-{$ENDIF}
 
 {$I RSPak.inc}
 
@@ -46,7 +45,7 @@ var
 procedure RSSetResampleParams(Sigma, MiddleShift: ext);
 begin
   isigma:= Sigma;
-  mshift:= MiddleShift;
+  mshift:= 1 - MiddleShift;
 end;
 
 // errf approximation with precision 1.5E-7
@@ -143,14 +142,12 @@ end;
 
 //----- 16 bit color
 
-{$IFNDEF RSResample15}
 function GetPixel16(c: uint): uint;
 begin
   Result:= (c and $F81F)*33 shr 2;  // r,b components - 5 bit: *(2^5 + 1) shr 2
   Result:= byte(Result) + Result shr 11 shl 16;
   inc(Result, (c and $7E0)*65 shr 9 shl 8);  // g component - 6 bit: *(2^6 + 1) shr 4
 end;
-{$ENDIF}
 
 var
   ToBits: array[0..$FFFF] of array[0..1] of uint;
@@ -537,7 +534,6 @@ begin
   RSResample16_Any(info, Src, SrcPitch, Dest, DestPitch, 0, false, false);
 end;
 
-{$IFNDEF RSResample15}
 procedure RSResample16(const info: TRSResampleInfo; Src, Dest: TBitmap); overload;
 var
   s, d: PChar;
@@ -566,7 +562,6 @@ begin
   Dest.PixelFormat:= pf32bit;
   RSResample16(info, Src, Dest);
 end;
-{$ENDIF}
 
 procedure RSResampleTrans16(const info: TRSResampleInfo; Src: ptr; SrcPitch: int; Dest: ptr; DestPitch: int; Trans: int);
 begin
@@ -577,8 +572,6 @@ procedure RSResampleTrans16_NoAlpha(const info: TRSResampleInfo; Src: ptr; SrcPi
 begin
   RSResample16_Any(info, Src, SrcPitch, Dest, DestPitch, Trans, true, true);
 end;
-
-{$IFNDEF RSResample15}
 
 { TRSResampleInfo }
 
@@ -606,7 +599,5 @@ begin
   CmdX:= PrepareResampleArray(sW, dW);
   CmdY:= PrepareResampleArray(sH, dH);
 end;
-
-{$ENDIF}
 
 end.

@@ -60,6 +60,8 @@ const
   _RedMask = pint($E31B40);
   _GreenMask = pint($E31B44);
   _BlueMask = pint($E31B48);
+  _IndoorOrOutdoor = pint($6BE1E0);
+  _Time = puint64($ACCE64);
 
   _PauseTime: procedure(a1: int = 0; a2: int = 0; this: int = $50BA60) = ptr($4262F2);
   _ReleaseMouse: TProcedure = ptr($4356EE); 
@@ -114,84 +116,10 @@ const
   _MonOff_vy = $96;
   _MonOff_Size = $344;
 
-type
-  PHwlBitmap = ^THwlBitmap;
-  THwlBitmap = packed record
-    HwlName: array[1..$14] of byte;
-    HwlPalette: int;
-    FullW: int;
-    FullH: int;
-    AreaW: int;
-    AreaH: int;
-    BufW: int;
-    BufH: int;
-    AreaX: int;
-    AreaY: int;
-    Buffer: ptr;
-  end;
-  TSpriteLine = packed record
-    a1: int2;
-    a2: int2;
-    pos: PChar;
-  end;
-  PSpriteLines = ^TSpriteLines;
-  TSpriteLines = packed array[0..(MaxInt div SizeOf(TSpriteLine) div 2)] of TSpriteLine;
-
-  PSprite = ^TSprite;
-  TSprite = packed record
-    Name: array[1..12] of char;
-    Size: int;
-    w: int2;
-    h: int2;
-    Palette: int2;
-    unk_1: int2;
-    yskip: int2; // number of clear lines at bottom
-    unk_2: int2; // used in runtime only, for bits
-    UnpSize: int;
-    Lines: PSpriteLines;
-    buf: PChar;
-  end;
-
-  PSpriteD3D = ^TSpriteD3D;
-  TSpriteD3D = packed record
-    Name: PChar;
-    Pal: int;
-    Surface: ptr;
-    Texture: ptr;
-    AreaX: int;
-    AreaY: int;
-    BufW: int;
-    BufH: int;
-    AreaW: int;
-    AreaH: int;
-  end;
-
-  PLodBitmap = ^TLodBitmap;
-  TLodBitmap = packed record
-    FileName: array[1..16] of char;
-    BmpSize: int;
-    DataSize: int;
-    w: int2;
-    h: int2;
-    BmpWidthLn2: int2;  // textures: log2(BmpWidth)
-    BmpHeightLn2: int2;  // textures: log2(BmpHeight)
-    BmpWidthMinus1: int2;  // textures: BmpWidth - 1
-    BmpHeightMinus1: int2;  // textures: BmpHeight - 1
-    Palette: int2;
-    _unk: int2;
-    UnpSize: int;
-    Bits: int;  // Bits:  2 - multitexture,
-    // Data...
-    // Palette...
-  end;
-
 const
   _SpritesLod = $6E2048;
   _SpritesOld = _SpritesLod + $23C;
   SpritesMax = 10000;
-
-var
-  Sprites: array[0..SpritesMax-1] of TSprite;
 
 const
   SWrong: string = 'This is not a valid mm7.exe file. Check failed at address %X';
@@ -201,5 +129,13 @@ const
 
 {$DEFINE mm7}
 {$I MMPatch.inc}
+
+function GetMapExtra: PMapExtra;
+begin
+  if _IndoorOrOutdoor^ = 1 then
+    Result:= ptr($6BE534)
+  else
+    Result:= ptr($6A1160);
+end;
 
 end.

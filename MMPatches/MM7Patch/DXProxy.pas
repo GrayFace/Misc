@@ -12,7 +12,6 @@ function MyDirectDrawCreate(lpGUID: PGUID; out lplpDD: IDirectDraw;
     const pUnkOuter: IUnknown): HResult; stdcall;
 function DXProxyScaleRect(const r: TRect): TRect;
 procedure DXProxyOnResize;
-procedure DXProxyDraw;
 procedure DXProxyScale(SrcBuf: ptr; info: PDDSurfaceDesc2);
 
 var
@@ -20,8 +19,6 @@ var
   DXProxyActive: Boolean;
 
 implementation
-
-//{$WARN HIDDEN_VIRTUAL OFF}
 
 var
   RenderLimX, RenderLimY: int;
@@ -128,7 +125,6 @@ type
     function SetDisplayMode(dwWidth: DWORD; dwHeight: DWORD;
         dwBpp: DWORD): HResult stdcall; overload;
     function GetCaps(lpDDDriverCaps: PDDCaps; lpDDHELCaps: PDDCaps): HResult stdcall;
-    procedure CreateScaleSurface;
   end;
 
 
@@ -469,10 +465,10 @@ begin
       RenderLimX:= max(RenderLimX, Width);
       RenderLimY:= max(RenderLimY, Height);
     end;
-  if RenderLimitX >= 640 then
-    RenderLimX:= RenderLimitX;
-  if RenderLimitY >= 480 then
-    RenderLimY:= RenderLimitY;
+  if RenderMaxWidth >= 640 then
+    RenderLimX:= RenderMaxWidth;
+  if RenderMaxHeight >= 480 then
+    RenderLimY:= RenderMaxHeight;
   CalcRenderSize;
 end;
 
@@ -480,9 +476,6 @@ function MyDirectDrawCreate(lpGUID: PGUID; out lplpDD: IDirectDraw;
     const pUnkOuter: IUnknown): HResult; stdcall;
 begin
   Result:= DirectDrawCreate(lpGUID, lplpDD, pUnkOuter);
-  //IDirectDraw4(lplpDD):= lplpDD as IDirectDraw4;
-  //Result:= DirectDrawCreateEx(lpGUID, IDirectDraw7(lplpDD), IID_IDirectDraw7, pUnkOuter);
-  //TMyDirectDraw_VMT.Hook(@lplpDD);
   DXProxyActive:= (GetWindowLong(_MainWindow^, GWL_STYLE) and WS_BORDER <> 0) or
      BorderlessFullscreen or not _Windowed^;
   DXProxyActive:= DXProxyActive and (GetDeviceCaps(GetDC(0), BITSPIXEL) = 32);
@@ -492,7 +485,7 @@ end;
 
 procedure DXProxyOnResize;
 begin
-  if RenderLimX <> 0 then
+  if DXProxyActive and (RenderLimX <> 0) then
     CalcRenderSize;
   if Viewport_Def.dwSize <> 0 then
     Viewport.SetViewport2(Viewport_Def);
@@ -519,8 +512,7 @@ procedure DXProxyScale(SrcBuf: ptr; info: PDDSurfaceDesc2);
 var
   r: TRect;
 begin
-  FPS;
-  if Options.TmpNoIntf then  exit;
+  //FPS;
   if (scale.DestW <> RenderW) or (scale.DestH <> RenderH) then
   begin
     RSSetResampleParams(ScalingParam1, ScalingParam2);
@@ -547,22 +539,6 @@ begin
   {$ENDIF}
     RSResample16(scale, SrcBuf, _ScreenW^*2, info.lpSurface, info.lPitch);
 end;
-
-procedure DXProxyDraw;
-{var
-  info: TDDSurfaceDesc2;
-  r: TRect;}
-begin
-{  FillChar(info, SizeOf(info), 0);
-  info.dwSize:= SizeOf(info);
-  if not _LockSurface(ScaleBuffer, info) then  exit;
-  DXProxyScale(_ScreenBuffer^, @info);
-  ScaleBuffer.Unlock(nil);
-  r:= Rect(0, 0, RenderW, RenderH);
-  BackBuffer.Blt(@r, ScaleBuffer, @r, DDBLT_WAIT, nil);}
-end;
-
-//function CheckGUID
 
 { THookedObject }
 
@@ -658,39 +634,6 @@ begin
     TMyDevice.Hook(lplpD3DDevice);
 end;
 
-procedure TMyDirectDraw.CreateScaleSurface;
-var
-  d: TDDSurfaceDesc2;
-begin
-  //if _IsD3D^ then
-    exit;
-
-  FillChar(d, SizeOf(d), 0);
-
-  with d do
-  begin
-    dwSize:= SizeOf(d);
-    dwWidth:= RenderLimX;
-    dwHeight:= RenderLimY;
-    dwFlags:= DDSD_CAPS or DDSD_WIDTH or DDSD_HEIGHT or DDSD_PIXELFORMAT;
-    ddsCaps.dwCaps:= DDSCAPS_TEXTURE or DDSCAPS_SYSTEMMEMORY;
-    //dwAlphaBitDepth:= 8;
-    with ddpfPixelFormat do
-    begin
-      dwSize:= SizeOf(ddpfPixelFormat);
-      dwFlags:= DDPF_ALPHAPIXELS or DDPF_RGB;
-{      dwRGBBitCount:= 32;
-      dwRBitMask:= $FF0000;
-      dwGBitMask:= $FF00;
-      dwBBitMask:= $FF;
-      dwRGBAlphaBitMask:= $FF000000;}
-      dwRGBBitCount:= 16;
-    end;
-  end;
-  //msgz(DDraw.CreateSurface(d, ScaleBuffer, nil));
-  Assert(DDraw.CreateSurface(d, ScaleBuffer, nil) = DD_OK);
-end;
-
 function TMyDirectDraw.CreateSurface(var lpDDSurfaceDesc: TDDSurfaceDesc;
   out lplpDDSurface: IDirectDrawSurface; pUnkOuter: IInterface): HResult;
 var
@@ -712,15 +655,19 @@ var
   desc: TDDSurfaceDesc2;
   NeedScaling: Boolean;
 begin
-  {with lpDDSurfaceDesc do
-    if (ddsCaps.dwCaps <> $401008) or (dwFlags <> $21007) then
-      zM(ddsCaps.dwCaps, dwFlags);}
-  {DXProxyActive:= _Windowed^;
-  if not DXProxyActive then
-  begin
-    Result:= DDraw.CreateSurface(lpDDSurfaceDesc, lplpDDSurface, pUnkOuter);
-    exit;
-  end;}
+  with lpDDSurfaceDesc do
+    if (MipmapsCount > 1) and (dwMipMapCount > 1) and (dwFlags and DDSD_MIPMAPCOUNT <> 0) then
+    begin
+      desc:= lpDDSurfaceDesc;
+      desc.dwMipMapCount:= min(desc.dwMipMapCount, MipmapsCount);
+      Result:= DDraw.CreateSurface(desc, lplpDDSurface, pUnkOuter);
+      if Result <> DD_OK then
+      begin
+        desc.dwFlags:= desc.dwFlags and not DDSD_MIPMAPCOUNT;
+        Result:= DDraw.CreateSurface(desc, lplpDDSurface, pUnkOuter);
+      end;
+      exit;
+    end;
 
   // back buffer or Z buffer
   with lpDDSurfaceDesc do
@@ -748,16 +695,12 @@ begin
         TMyBackBufferSW.Hook(lplpDDSurface);
       MyBackBuffer:= lplpDDSurface;
       IsMain:= true;
-      CreateScaleSurface;
     end else if not _IsD3D^ and (Result = DD_OK) then
       TMySurfaceSW.Hook(lplpDDSurface);
     exit;
   end;
 
   Result:= DDraw.CreateSurface(lpDDSurfaceDesc, lplpDDSurface, pUnkOuter);
-  {if Result = DD_OK then
-    TMySurface.Hook(lplpDDSurface);}
-  // draw buffer: (ddsCaps.dwCaps = $840) and (dwFlags = $10007)
 
   // front buffer
   if (lpDDSurfaceDesc.ddsCaps.dwCaps and DDSCAPS_PRIMARYSURFACE <> 0) and (Result = DD_OK) then
