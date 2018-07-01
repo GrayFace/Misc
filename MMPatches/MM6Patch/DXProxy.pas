@@ -12,7 +12,7 @@ function MyDirectDrawCreate(lpGUID: PGUID; out lplpDD: IDirectDraw;
     const pUnkOuter: IUnknown): HResult; stdcall;
 function DXProxyScaleRect(const r: TRect): TRect;
 procedure DXProxyOnResize;
-procedure DXProxyScale(SrcBuf: ptr; info: PDDSurfaceDesc2);
+procedure DXProxyDraw(SrcBuf: ptr; info: PDDSurfaceDesc2);
 
 var
   DXProxyRenderW, DXProxyRenderH: int;
@@ -413,9 +413,6 @@ begin
     CopyMemory(@fmt, PChar(str), length(str));
 end;
 
-var
-  ScaleRect_Rect: TRect;
-
 function DXProxyScaleRect(const r: TRect): TRect;
 var
   SW, SH: int;
@@ -430,6 +427,9 @@ begin
     Bottom:= r.Bottom*RenderH div SH;
   end;
 end;
+
+var
+  ScaleRect_Rect: TRect;
 
 procedure ScaleRect(var r: PRect);
 begin
@@ -508,11 +508,11 @@ begin
   end;
 end;
 
-procedure DXProxyScale(SrcBuf: ptr; info: PDDSurfaceDesc2);
+procedure DXProxyDraw(SrcBuf: ptr; info: PDDSurfaceDesc2);
 var
   r: TRect;
 begin
-  //FPS;
+  FPS;
   if (scale.DestW <> RenderW) or (scale.DestH <> RenderH) then
   begin
     RSSetResampleParams(ScalingParam1, ScalingParam2);
@@ -1018,7 +1018,7 @@ begin
   info.dwSize:= SizeOf(info);
   Result:= BackBuffer.Lock(nil, info, DDLOCK_NOSYSLOCK or DDLOCK_WAIT, 0);
   if Result <> DD_OK then  exit;
-  DXProxyScale(ptr(DrawBufSW), @info);
+  DXProxyDraw(ptr(DrawBufSW), @info);
   BackBuffer.Unlock(nil);
   if lpDDSrcSurface <> MyBackBuffer then
     _NeedRedraw^:= 1;

@@ -1717,6 +1717,12 @@ var
   xy: TSmallPoint absolute lp;
   r: TRect;
 begin
+  if _Windowed^ and (msg = WM_ERASEBKGND) then
+  begin
+    GetClientRect(w, r);
+    Result:= FillRect(wp, r, GetStockObject(BLACK_BRUSH));
+    exit;
+  end;
   if _Windowed^ and (msg >= WM_MOUSEFIRST) and (msg <= WM_MOUSELAST) then
     with xy do
     begin
@@ -2919,77 +2925,64 @@ type
     TriggerTime: int64;
   end;
 
-procedure ValidatePeriodicTimers;
-begin
-  with GetMapExtra^ do
-    if (LastVisitTime = 0) or (uint(LastVisitTime) <> LastVisitTimeCheck) then
-    begin
-      LastWeeklyTimer:= 0;
-      LastMonthlyTimer:= 0;
-      LastYearlyTimer:= 0;
-      LastVisitTimeCheck:= uint(LastVisitTime);
-    end;
-end;
+const
+  TimerPeriods: array[0..3] of uint = (123863040, 10321920, 2580480, 368640);
 
-function GetTimerPeriod(var t: TTimerStruct; var last: pint): int;
+function GetTimerKind(var t: TTimerStruct): int;
+var
+  i: int;
 begin
-  ValidatePeriodicTimers;
-  with GetMapExtra^ do
-    if t.EachYear <> 0 then
-    begin
-      Result:= 123863040;
-      last:= @LastYearlyTimer;
-    end
-    else if t.EachMonth <> 0 then
-    begin
-      Result:= 10321920;
-      last:= @LastMonthlyTimer;
-    end
-    else if t.EachWeek <> 0 then
-    begin
-      Result:= 2580480;
-      last:= @LastWeeklyTimer;
-    end else
-    begin
-      Result:= 368640;
-      last:= nil;
-    end;
+  for i:= 0 to 3 do
+  begin
+    Result:= i;
+    if PWordArray(@t.EachYear)[i] <> 0 then
+      exit;
+  end;
 end;
 
 procedure TimerSetTriggerTime(time1, time2: int; var t: TTimerStruct);
 var
   time: int64;
-  last: pint;
-  period: int;
+  period: uint64;
+  i: int;
 begin
   time:= uint64(time2) shl 32 + time1;
-  period:= GetTimerPeriod(t, last);
-  if last = nil then  // daily timer
+  i:= GetTimerKind(t);
+  period:= TimerPeriods[i];
+  if t.CmdType = $26 then
+    t.TriggerTime:= GetMapExtra^.GetPeriodicTimer(i) + period
+  else if i = 3 then  // daily timer at fixed time
   begin
-    t.TriggerTime:= ((t.Hour*60 + t.Minute)*60 + t.Second)*256 div 60;
-    inc(t.TriggerTime, time - time mod period);
+    t.TriggerTime:= (t.Hour*60 + t.Minute)*256 + t.Second*256 div 60 +
+       time - time mod period;
     if t.TriggerTime <= time then
       inc(t.TriggerTime, period);
   end else
-    if t.CmdType = $26 then
-      t.TriggerTime:= GetMapExtra^.LastVisitTime + last^ + period
-    else
-      t.TriggerTime:= time + period;
+    t.TriggerTime:= time + period;
 end;
 
 function UpdatePeriodicTimer(eax, _: int; var t: TTimerStruct): int;
-var
-  last: pint;
 begin
   Result:= eax;
-  if t.CmdType <> $26 then  exit;
-  GetTimerPeriod(t, last);
-  uint(last^):= _Time^ - GetMapExtra^.LastVisitTime;
+  GetMapExtra^.LastPeriodicTimer[GetTimerKind(t)]:= _Time^;
+end;
+
+// 2 reasons: 1) game saved without patch 2) timer previously not present in EVT
+procedure FixTimerValidate;
+var
+  i: int;
+begin
+  with GetMapExtra^ do
+    for i:= 0 to 3 do
+      if (LastVisitTime = 0) or (LastVisitTime - GetPeriodicTimer(i, true) > TimerPeriods[i]) then
+        LastPeriodicTimer[i]:= LastVisitTime;
 end;
 
 procedure FixTimerRetriggerHook;
 asm
   lea ecx, [esi-4]
+  cmp [ecx].TTimerStruct.CmdType, $26
+  jz @update
   cmp [esi+4], ebp  // check EachYear = 0, EachMonth = 0, EachWeek = 0
   jnz @start
   cmp [esi+8], bp
@@ -2999,10 +2992,11 @@ asm
   mov edx, dword ptr [$908D08+4]
   call TimerSetTriggerTime
   ret
-@start:
+@update:
   push edx
   call UpdatePeriodicTimer
   pop edx
+@start:
   cmp edx, dword ptr [$908D08+4]  // NextTrigger < Game.Time?
   ja @std
   jb @fix
@@ -3040,23 +3034,6 @@ asm
   mov ecx, esi
   call TimerSetTriggerTime
   push $439DB3
-end;
-
-//----- Tix timers - write last trigger times to DLV/DDM
-
-procedure FixTimerWrite;
-var
-  dt: int;
-begin
-  ValidatePeriodicTimers;
-  with GetMapExtra^ do
-  begin
-    uint(dt):= _Time^ - LastVisitTime;
-    LastVisitTimeCheck:= _Time^;
-    LastWeeklyTimer:= min(0, LastWeeklyTimer - dt);
-    LastMonthlyTimer:= min(0, LastMonthlyTimer - dt);
-    LastYearlyTimer:= min(0, LastYearlyTimer - dt);
-  end;
 end;
 
 //----- Place items vertically like in 7 and 8
@@ -3455,6 +3432,49 @@ asm
 @std:
 end;
 
+//----- Test
+
+type
+  TRenderProc = procedure(_, __: int; PartyMoved: Bool);
+
+procedure SetRenderSize(const r: TRect);
+const
+  _SetRenderSize: procedure(_,__,this, vy2, vx2, vy1, vx1: int) = ptr($4A74F0);
+  _UpdateOutdoorSomething: procedure(_: int=0; __: int=0; this: int = $6296E0) = ptr($4789E0);
+  _SetGridBand: procedure(_,unk2, unk1, gridband2: int) = ptr($46ED10);
+  _SetFOV: procedure(_,__,this, h, w: int; fov: int = 65) = ptr($420D00);
+  LowQuality = pbyte($52D278);
+  LowRes = pbyte($52D278);
+  screen_vr = PRect($9DE398);
+begin
+  _SetFOV(0,0, $4D5150, r.Bottom - r.Top + 1, r.Right - r.Left + 1);
+  screen_vr^:= r;
+  LowRes^:= 0;
+  pint($62976C)^:= 10;
+  pint($629770)^:= 15;
+  pint($629774)^:= 20;
+  pint($6296EC)^:= $2000; // dist_mist
+  if _IndoorOrOutdoor^ = 2 then
+    _SetGridBand(0, 15, 10, 20);
+  //LowQuality^:= min(LowQuality^, 1);
+  with screen_vr^ do
+    _SetRenderSize(0,0, int(screen_vr), Bottom, Right, Top, Left);
+  //if _IndoorOrOutdoor^ = 2 then
+    _UpdateOutdoorSomething;
+end;
+
+procedure TestHD(old: TRenderProc; _, PartyMoved: Bool);
+const
+  vr = PRect($52D268);
+var
+  oldBuf: ptr;
+begin
+  SetRenderSize(Rect(1, 0, 640, 479));
+  old(0,0, PartyMoved);
+  SetRenderSize(vr^);
+  //vr^:= oldR;
+end;
+
 //----- Buka localization
 
 var
@@ -3463,7 +3483,7 @@ var
 //----- HooksList
 
 var
-  HooksList: array[1..269] of TRSHookInfo = (
+  HooksList: array[1..272] of TRSHookInfo = (
     (p: $42ADE7; newp: @RunWalkHook; t: RShtCall), // Run/Walk check
     (p: $453AD3; old: $42ADA0; newp: @KeysHook; t: RShtCall), // My keys handler
     (p: $45456E; old: $417F90; newp: @WindowProcCharHook; t: RShtCall), // Map Keys
@@ -3672,7 +3692,7 @@ var
     (p: $43E9AC; newp: @FixTimerRetriggerHook; t: RShtCall; size: 6; Querry: 21), // Fix timers
     (p: $439B0D; newp: @FixTimerSetupHook1; t: RShtJmp; size: 8; Querry: 21), // Fix timers
     (p: $439CE0; newp: @FixTimerSetupHook2; t: RShtJmp; size: 8; Querry: 21), // Fix timers
-    (p: $44F45A; newp: @FixTimerWrite; t: RShtAfter; size: 6; Querry: 21), // Tix timers - write last trigger times to DLV/DDM
+    (p: $439940; newp: @FixTimerValidate; t: RShtBefore; Querry: 21), // Tix timers - validate last timers
     (p: $486FA1; newp: @PlaceItemsVerticallyHook; t: RShtCall; size: 7; Querry: 22), // Place items vertically like in 7 and 8
     (p: $47D75E; newp: @PlaceItemsVerticallyHook; t: RShtCall; size: 7; Querry: 22), // Place items vertically like in 7 and 8
     (p: $425E08; newp: @TPDelayHook1; t: RShtJmp), // Town Portal wasting player's turn even if you cancel the dialog
@@ -3732,6 +3752,11 @@ var
     (p: $4A66A3; newp: @SmackLoadHook; t: RShtAfter; size: 6; Querry: hqFixSmackDraw), // Compatible movie render
     (p: $4573C6; size: 2; Querry: hqTrueColor), // 32 bit color support
     (p: $4B9018; newp: @MyDirectDrawCreate; t: RSht4; Querry: hqTrueColor), // 32 bit color support
+    //(p: $469FF0; newp: @TestHD; t: RShtFunctionStart),
+    //(p: $437199+4; old: 640; new: 800; t: RSht4),
+    //(p: $4371A1+4; old: 480; new: 300; t: RSht4),
+    //(p: $45816B; size: 2),
+    (),(),(),
     ()
   );
 
