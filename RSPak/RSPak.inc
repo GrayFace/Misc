@@ -139,6 +139,8 @@
 {$WARN SYMBOL_PLATFORM OFF}
 {$B-} { Complete Boolean Evaluation }
 {$R-} { Range-Checking }
+{$Q-} { Overflow checking }
+{$U-} { No support for prehistoric Pentium FDIV bug }
 {$T-} { Typed @ operator }
 {$X+} { Extended syntax }
 {$H+} { Use long strings }

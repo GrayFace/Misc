@@ -40,6 +40,7 @@ type
   puint2=^uint2;
   puint4=^uint4;
   puint=^uint;
+  puint64=^uint64;
 
   ptr=pointer;
   pptr=^pointer;

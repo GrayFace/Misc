@@ -48,7 +48,6 @@ type
     function GetPixels8(X, Y: Integer): TColor;
     function GetQPixels8(X, Y: Integer): LongInt;
     function GetPixels15(X, Y: Integer): TColor;
-    function GetQPixels15(X, Y: Integer): LongInt;
     function GetPixels16(X, Y: Integer): TColor;
     function GetQPixels16(X, Y: Integer): LongInt;
     function GetPixels24(X, Y: Integer): TColor;
@@ -63,7 +62,6 @@ type
     procedure SetPixels8(X, Y: Integer{; const Value: TColor});
     procedure SetQPixels8(X, Y: Integer{; const Value: LongInt});
     procedure SetPixels15(X, Y: Integer{; const Value: TColor});
-    procedure SetQPixels15(X, Y: Integer{; const Value: LongInt});
     procedure SetPixels16(X, Y: Integer{; const Value: TColor});
     procedure SetQPixels16(X, Y: Integer{; const Value: LongInt});
     procedure SetPixels24(X, Y: Integer{; const Value: TColor});
@@ -447,17 +445,6 @@ asm
   ret 4
 end;
 
-procedure TQuickPixels.SetQPixels15(X, Y: Integer{; const Value: LongInt});
-//PWord(FStart + FDelta * Y + (X Shl 1))^ :=  word(Value);
-asm
-  imul ecx,[eax].FDelta
-  add ecx,[eax].FStart
-  mov eax,[ebp+$08]  //Value
-  mov [ecx+edx*2],ax
-  pop ebp
-  ret 4
-end;
-
 procedure TQuickPixels.SetPixels16(X, Y: Integer{; const Value: TColor});
 //PWord(FStart + FDelta * Y + (X Shl 1))^ :=
 //((Value And $F8) Shl 8) or ((Value And $FC00) Shr 5)
@@ -615,12 +602,12 @@ begin
     end;
     15:
     begin
-      FSetQPixel := @TQuickPixels.SetQPixels15;
-      FGetQPixel := @TQuickPixels.GetQPixels15;
+      FSetQPixel := @TQuickPixels.SetQPixels16;
+      FGetQPixel := @TQuickPixels.GetQPixels16;
       FSetPixel := @TQuickPixels.SetPixels15;
       FGetPixel := @TQuickPixels.GetPixels15;
       GetPixel := GetPixels15;
-      GetQPixel := GetQPixels15;
+      GetQPixel := GetQPixels16;
     end;
     16:
     begin
@@ -720,13 +707,6 @@ asm
 
   or eax,ecx
   or eax,edx
-end;
-
-function TQuickPixels.GetQPixels15(X, Y: Integer): LongInt;
-asm
-  imul ecx,[eax].FDelta
-  add ecx,[eax].FStart
-  movzx eax,word ptr [ecx+2*edx]  //PWord(FStart + FDelta * Y + (X * 2))^
 end;
 
 function TQuickPixels.GetPixels16(X, Y: Integer): TColor;
