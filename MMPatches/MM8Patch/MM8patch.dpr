@@ -150,6 +150,7 @@ Version 2.1:
 [+] TurnBasedSpeed
 [+] MouseLookRememberTime
 [+] MouseLookWhileRightClick
+[+] PlayMP3 option now supports WAV files
 [+] Black potion isn't wasted if it has no effect
 [+] Infinite view distance in dungeons
 [+] FixInfiniteScrolls option controls corresponding fix
@@ -168,7 +169,7 @@ Version 2.1:
 [-] Black border around sprites and sea shore in D3D
 [-] Broken but unidentified items were green instead of red if you go to a shop to repair them.
 [-] Casting Telepathy spell or stealing from a monster used to prevent you from finding random items in its corpses
-[-] Light gray blinking in full screen on some computers
+[-] Light gray blinking in full screen (not on every system)
 [-] Arcomage crashing, hanging
 [-] Loading game while in turn based mode leading to inability to cast spells
 [-] Monsters summoned by other monsters had wrong monster as their ally
@@ -176,6 +177,7 @@ Version 2.1:
 [-] items.txt: now special items accept standard English "of ..." strings. This should fix a number of localizations
 [-] Shops were unable to fix some artifacts
 [-] Lava was hurting players in air
+[-] Memory leak in mipmaps generation code
 [*] ReputationNumber option now shows positive values for good reputation. Before it showed negative values, just like it's represented internally in the game.
 (MM8)
 [-] Sky bitmap getting reset each time the game is loaded. To turn off the fix, add FixSkyBitmap=0 line.

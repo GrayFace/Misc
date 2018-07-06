@@ -12,7 +12,7 @@ function MyDirectDrawCreate(lpGUID: PGUID; out lplpDD: IDirectDraw;
     const pUnkOuter: IUnknown): HResult; stdcall;
 function DXProxyScaleRect(const r: TRect): TRect;
 procedure DXProxyOnResize;
-procedure DXProxyScale(SrcBuf: ptr; info: PDDSurfaceDesc2);
+procedure DXProxyDraw(SrcBuf: ptr; info: PDDSurfaceDesc2);
 
 var
   DXProxyRenderW, DXProxyRenderH: int;
@@ -334,10 +334,6 @@ type
 
   TMyFrontBufferD3D = class(TMySurface, IDirectDrawSurface4)
   public
-    function Lock(lpDestRect: PRect;
-        out lpDDSurfaceDesc: TDDSurfaceDesc2; dwFlags: DWORD;
-        hEvent: THandle): HResult stdcall; reintroduce;
-    function Unlock(lpRect: PRect): HResult stdcall; reintroduce;
     function GetPixelFormat(out fmt: TDDPixelFormat): HResult stdcall; reintroduce;
     function Blt(lpDestRect: PRect;
         lpDDSrcSurface: IDirectDrawSurface4; lpSrcRect: PRect;
@@ -354,7 +350,7 @@ type
         lpDDSrcSurface: IDirectDrawSurface4; lpSrcRect: PRect;
         dwFlags: DWORD; lpDDBltFx: PDDBltFX): HResult stdcall; reintroduce;
     function BltBatch(const lpDDBltBatch: TDDBltBatch; dwCount: DWORD;
-        dwFlags: DWORD): HResult stdcall; reintroduce;
+        dwFlags: DWORD): HResult stdcall; reintroduce; virtual; abstract;
     function BltFast(dwX: DWORD; dwY: DWORD;
         lpDDSrcSurface: IDirectDrawSurface4; lpSrcRect: PRect;
         dwTrans: DWORD): HResult stdcall; reintroduce;
@@ -362,23 +358,13 @@ type
         HResult stdcall; reintroduce;
     function DeleteAttachedSurface(dwFlags: DWORD;
         lpDDSAttachedSurface: IDirectDrawSurface4): HResult stdcall; reintroduce;
-    function EnumAttachedSurfaces(lpContext: Pointer;
-        lpEnumSurfacesCallback: TDDEnumSurfacesCallback2): HResult stdcall; reintroduce;
-    function EnumOverlayZOrders(dwFlags: DWORD; lpContext: Pointer;
-        lpfnCallback: TDDEnumSurfacesCallback2): HResult stdcall; reintroduce;
     function Flip(lpDDSurfaceTargetOverride: IDirectDrawSurface4;
         dwFlags: DWORD): HResult stdcall; reintroduce;
-    function GetAttachedSurface(const lpDDSCaps: TDDSCaps2;
-        out lplpDDAttachedSurface: IDirectDrawSurface4): HResult stdcall; reintroduce;
   end;
 
 
   TMyFrontBufferSW = class(TMySurfaceSW, IDirectDrawSurface4)
   public
-    function Lock(lpDestRect: PRect;
-        out lpDDSurfaceDesc: TDDSurfaceDesc2; dwFlags: DWORD;
-        hEvent: THandle): HResult stdcall; reintroduce;
-    function Unlock(lpRect: PRect): HResult stdcall; reintroduce;
     function GetPixelFormat(out fmt: TDDPixelFormat): HResult stdcall; reintroduce;
     function Blt(lpDestRect: PRect;
         lpDDSrcSurface: IDirectDrawSurface4; lpSrcRect: PRect;
@@ -433,11 +419,9 @@ var
 
 procedure ScaleRect(var r: PRect);
 begin
-  if r <> nil then
-  begin
-    ScaleRect_Rect:= DXProxyScaleRect(r^);
-    r:= @ScaleRect_Rect;
-  end;
+  if r = nil then  exit;
+  ScaleRect_Rect:= DXProxyScaleRect(r^);
+  r:= @ScaleRect_Rect;
 end;
 
 procedure CalcRenderSize;
@@ -500,15 +484,13 @@ var
 begin
   inc(FPSUp);
   k:= GetTickCount;
-  if k >= FPSTime then
-  begin
-    zM(FPSUp);
-    FPSUp:= 0;
-    FPSTime:= k + 1000;
-  end;
+  if k < FPSTime then  exit;
+  zM(FPSUp);
+  FPSUp:= 0;
+  FPSTime:= k + 1000;
 end;
 
-procedure DXProxyScale(SrcBuf: ptr; info: PDDSurfaceDesc2);
+procedure DXProxyDraw(SrcBuf: ptr; info: PDDSurfaceDesc2);
 var
   r: TRect;
 begin
@@ -516,17 +498,16 @@ begin
   if (scale.DestW <> RenderW) or (scale.DestH <> RenderH) then
   begin
     RSSetResampleParams(ScalingParam1, ScalingParam2);
-    scale.Init(_ScreenW^, _ScreenH^, min(RenderW, (RenderH*_ScreenW^ + _ScreenH^ div 2) div _ScreenH^), RenderH);
-    scale.DestX:= (RenderW - min(RenderW, (RenderH*_ScreenW^ + _ScreenH^ div 2) div _ScreenH^)) div 2;
+    scale.Init(_ScreenW^, _ScreenH^, RenderW, RenderH);
     with Options.RenderRect do
       r:= DXProxyScaleRect(Rect(max(0, Left - 1), max(0, Top - 1), Right + 1, Bottom + 1));
-    r.Right:= min(r.Right, scale.DestW);
+    r.Right:= min(r.Right, RenderW);
     r.Bottom:= min(r.Bottom, RenderH);
     scale3D:= scale.ScaleRect(r);
-    scaleT:= scale.ScaleRect(Rect(0, 0, scale.DestW, r.Top));
-    scaleB:= scale.ScaleRect(Rect(0, r.Bottom, scale.DestW, scale.DestH));
+    scaleT:= scale.ScaleRect(Rect(0, 0, RenderW, r.Top));
+    scaleB:= scale.ScaleRect(Rect(0, r.Bottom, RenderW, RenderH));
     scaleL:= scale.ScaleRect(Rect(0, r.Top, r.Left, r.Bottom));
-    scaleR:= scale.ScaleRect(Rect(r.Right, r.Top, scale.DestW, r.Bottom));
+    scaleR:= scale.ScaleRect(Rect(r.Right, r.Top, RenderW, r.Bottom));
   end;
   {$IFNDEF mm6}
   if _IsD3D^ then
@@ -616,13 +597,6 @@ end;
 
 { TMyDirectDraw }
 
-{function TMyDirectDraw.CreateDevice(const rclsid: TRefClsID;
-  lpDDS: IDirectDrawSurface4; out lplpD3DDevice: IDirect3DDevice3;
-  pUnkOuter: IInterface): HResult;
-begin
-  Result:= D3D.CreateDevice(rclsid, IDirectDrawSurface4(GetRaw(lpDDS)), lplpD3DDevice, pUnkOuter);
-end;}
-
 function TMyDirectDraw.CreateDevice(const rclsid: TRefClsID;
   lpDDS: IDirectDrawSurface4; out lplpD3DDevice: IDirect3DDevice3;
   pUnkOuter: IInterface): HResult;
@@ -631,7 +605,7 @@ begin
     Result:= D3D.CreateDevice(rclsid, BackBuffer, lplpD3DDevice, pUnkOuter)
   else
     Result:= D3D.CreateDevice(rclsid, lpDDS, lplpD3DDevice, pUnkOuter);
-  if (Result = DD_OK) {and DXProxyActive} then
+  if Result = DD_OK then
     TMyDevice.Hook(lplpD3DDevice);
 end;
 
@@ -719,11 +693,9 @@ function TMyDirectDraw.CreateViewport(var lplpD3DViewport3: IDirect3DViewport3;
   pUnkOuter: IInterface): HResult;
 begin
   Result:= D3D.CreateViewport(lplpD3DViewport3, pUnkOuter);
-  if (Result = DD_OK) {and DXProxyActive} then
-  begin
-    TMyViewport.Hook(lplpD3DViewport3);
-    Viewport:= lplpD3DViewport3;
-  end;
+  if Result <> DD_OK then  exit;
+  TMyViewport.Hook(lplpD3DViewport3);
+  Viewport:= lplpD3DViewport3;
 end;
 
 destructor TMyDirectDraw.Destroy;
@@ -740,7 +712,7 @@ end;
 function TMyDirectDraw.GetCaps(lpDDDriverCaps, lpDDHELCaps: PDDCaps): HResult;
 begin
   Result:= DDraw.GetCaps(lpDDDriverCaps, lpDDHELCaps);
-  // Avoid MouseAsync usage:
+  // To use buffer instead of draw surface that's painted with 5 Blt's:
   // remove DDCAPS_BLT from dwSVBCaps or remove DDCKEYCAPS_SRCBLT from dwSVBCKeyCaps
   lpDDDriverCaps.dwSVBCKeyCaps:= lpDDDriverCaps.dwSVBCKeyCaps and not DDCKEYCAPS_SRCBLT;
 end;
@@ -827,19 +799,16 @@ function TMyDevice.DrawPrimitive(dptPrimitiveType: TD3DPrimitiveType;
 var
   i: int;
 begin
-  Result:= DD_OK;
-  if dptPrimitiveType <> D3DPT_TRIANGLEFAN then
-    exit;
   if int(dwVertexCount) > length(VertexBuf) then
     SetLength(VertexBuf, dwVertexCount*2);
   CopyMemory(@VertexBuf[0], @lpvVertices, dwVertexCount*SizeOf(VertexBuf[0]));
   for i:= 0 to dwVertexCount - 1 do
   begin
-    VertexBuf[i].x:= VertexBuf[i].x*RenderW/_ScreenW^*3/4;
+    VertexBuf[i].x:= VertexBuf[i].x*RenderW/_ScreenW^;
     VertexBuf[i].y:= VertexBuf[i].y*RenderH/_ScreenH^;
   end;
   Result:= Obj.DrawPrimitive(dptPrimitiveType,
-    dwVertexTypeDesc, VertexBuf[0], dwVertexCount, dwFlags)
+    dwVertexTypeDesc, VertexBuf[0], dwVertexCount, dwFlags);
 end;
 
 function TMyDevice.GetCurrentViewport(
@@ -897,18 +866,6 @@ begin
   Result:= DD_OK;
 end;
 
-function TMyFrontBufferD3D.Lock(lpDestRect: PRect;
-  out lpDDSurfaceDesc: TDDSurfaceDesc2; dwFlags: DWORD;
-  hEvent: THandle): HResult;
-begin
-  Result:= DDERR_GENERIC;
-end;
-
-function TMyFrontBufferD3D.Unlock(lpRect: PRect): HResult;
-begin
-  Result:= DDERR_GENERIC;
-end;
-
 { TMySurface }
 
 function TMySurfaceSW.AddAttachedSurface(
@@ -922,19 +879,10 @@ function TMySurfaceSW.Blt(lpDestRect: PRect; lpDDSrcSurface: IDirectDrawSurface4
 begin
   // ignore MM6 tricks with extra surfaces when an item is carried
   if GetRaw(lpDDSrcSurface) = ptr(FrontBuffer) then
-  begin
-    Result:= DD_OK;
-    exit;
-  end;
-  Result:= Surf.Blt(lpDestRect, IDirectDrawSurface4(GetRaw(lpDDSrcSurface)),
-    lpSrcRect, dwFlags, lpDDBltFx);
-end;
-
-function TMySurfaceSW.BltBatch(const lpDDBltBatch: TDDBltBatch; dwCount,
-  dwFlags: DWORD): HResult;
-begin
-  Assert(false, 'Not implemented');
-  Result:= DD_OK;
+    Result:= DD_OK
+  else
+    Result:= Surf.Blt(lpDestRect, IDirectDrawSurface4(GetRaw(lpDDSrcSurface)),
+      lpSrcRect, dwFlags, lpDDBltFx);
 end;
 
 function TMySurfaceSW.BltFast(dwX, dwY: DWORD;
@@ -951,31 +899,10 @@ begin
   Result:= Surf.DeleteAttachedSurface(dwFlags, IDirectDrawSurface4(GetRaw(lpDDSAttachedSurface)));
 end;
 
-function TMySurfaceSW.EnumAttachedSurfaces(lpContext: Pointer;
-  lpEnumSurfacesCallback: TDDEnumSurfacesCallback2): HResult;
-begin
-  Assert(false, 'Not implemented');
-  Result:= DD_OK;
-end;
-
-function TMySurfaceSW.EnumOverlayZOrders(dwFlags: DWORD; lpContext: Pointer;
-  lpfnCallback: TDDEnumSurfacesCallback2): HResult;
-begin
-  Assert(false, 'Not implemented');
-  Result:= DD_OK;
-end;
-
 function TMySurfaceSW.Flip(lpDDSurfaceTargetOverride: IDirectDrawSurface4;
   dwFlags: DWORD): HResult;
 begin
   Result:= Surf.Flip(IDirectDrawSurface4(GetRaw(lpDDSurfaceTargetOverride)), dwFlags);
-end;
-
-function TMySurfaceSW.GetAttachedSurface(const lpDDSCaps: TDDSCaps2;
-  out lplpDDAttachedSurface: IDirectDrawSurface4): HResult;
-begin
-  Assert(false, 'Not implemented');
-  Result:= DD_OK;
 end;
 
 function TMySurfaceSW.Lock(lpDestRect: PRect;
@@ -1010,16 +937,13 @@ var
   info: TDDSurfaceDesc2;
   r: TRect;
 begin
-  if DrawBufSW = nil then
-  begin
-    Result:= DD_OK;
-    exit;
-  end;
+  Result:= DD_OK;
+  if DrawBufSW = nil then  exit;
   FillChar(info, SizeOf(info), 0);
   info.dwSize:= SizeOf(info);
   Result:= BackBuffer.Lock(nil, info, DDLOCK_NOSYSLOCK or DDLOCK_WAIT, 0);
   if Result <> DD_OK then  exit;
-  DXProxyScale(ptr(DrawBufSW), @info);
+  DXProxyDraw(ptr(DrawBufSW), @info);
   BackBuffer.Unlock(nil);
   if lpDDSrcSurface <> MyBackBuffer then
     _NeedRedraw^:= 1;
@@ -1033,18 +957,6 @@ begin
   Result:= DD_OK;
 end;
 
-function TMyFrontBufferSW.Lock(lpDestRect: PRect;
-  out lpDDSurfaceDesc: TDDSurfaceDesc2; dwFlags: DWORD;
-  hEvent: THandle): HResult;
-begin
-  Result:= DDERR_GENERIC;
-end;
-
-function TMyFrontBufferSW.Unlock(lpRect: PRect): HResult;
-begin
-  Result:= DDERR_GENERIC;
-end;
-
 { TMyBackBufferSW }
 
 function TMyBackBufferSW.Blt(lpDestRect: PRect;
@@ -1054,8 +966,6 @@ begin
   if (lpDDSrcSurface = nil) and (DrawBufSW <> nil) then
     FillChar(DrawBufSW[0], length(DrawBufSW)*2, 0);
   Result:= DD_OK;
-  {else
-    Result:= inherited Blt(lpDestRect, lpDDSrcSurface, lpSrcRect, dwFlags, lpDDBltFx);}
 end;
 
 function TMyBackBufferSW.Lock(lpDestRect: PRect;

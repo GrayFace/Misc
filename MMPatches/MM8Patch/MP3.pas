@@ -48,10 +48,17 @@ begin
 end;
 
 procedure AIL_redbook_play_Hook(this, pos, track: int); stdcall;
+var
+  s: string;
 begin
   AIL_redbook_stop_Hook(0);
   if MSSHandle^ <> nil then
-    mp3stream:= AIL_open_stream(MSSHandle^, ptr(Format('Music\%d.mp3', [track])), false);
+  begin
+    s:= Format('Music\%d.wav', [track]);
+    if not FileExists(s) then
+      s:= Format('Music\%d.mp3', [track]);
+    mp3stream:= AIL_open_stream(MSSHandle^, ptr(s), false);
+  end;
 
   if mp3stream <> nil then
   begin

@@ -2017,7 +2017,7 @@ begin
     h:= h*SH;
   end else
     if w*SH >= h*SW then
-      //w:= (h*SW + SH div 2) div SH
+      w:= (h*SW + SH div 2) div SH
     else
       h:= (w*SH + SW div 2) div SW;
   dec(w, r.Right - r.Left);
@@ -2096,10 +2096,8 @@ begin
     case msg of
       WM_ACTIVATEAPP:
         if wp = 0 then
-        begin
-          ClipCursor(nil);
-//          ShowWindow(_MainWindow^, SW_MINIMIZE);
-        end else
+          ClipCursor(nil)
+        else
           MyClipCursor;
       WM_SYSCOMMAND:
         if wp and $FFF0 = SC_RESTORE then
@@ -3066,7 +3064,7 @@ begin
   for i:= 0 to 3 do
   begin
     Result:= i;
-    if PWordArray(@t.EachYear)[i] = 0 then
+    if PWordArray(@t.EachYear)[i] <> 0 then
       exit;
   end;
 end;
@@ -3119,7 +3117,7 @@ procedure FixTimerRetriggerHook2;
 asm
   lea ecx, [esi-$C]
   cmp [ecx].TTimerStruct.CmdType, $26
-  jz UpdatePeriodicTimer
+  jz @update
   cmp eax, $15180  // daily?
   jnz @std
 // Handle timer that triggers at specific time each day
@@ -3127,6 +3125,11 @@ asm
   mov edx, dword ptr [$B20EBC+4]
   call TimerSetTriggerTime
   mov [esp], $446080
+  ret
+@update:
+  push edx
+  call UpdatePeriodicTimer
+  pop edx
 @std:
 end;
 
@@ -3644,7 +3647,7 @@ asm
   cmp dword ptr [edx + $54], 32
   jnz @std
   mov dword ptr [esp], $4A3978
-  jmp DXProxyScale
+  jmp DXProxyDraw
 @std:
 end;
 
@@ -3714,6 +3717,21 @@ begin
   DoTrueColorShot(info, ptr(ShotBuf), SW, SH, Rect(0, 0, SW, SH));
 end;
 
+//----- Mipmaps generation code not calling surface->Release
+
+procedure FixMipmapsMemLeak;
+asm
+  mov ecx, [ebp + $10]
+  cmp edi, [ecx]
+  jz @keep
+  push eax
+  mov eax, [edi]
+  push edi
+  call dword ptr [eax + 8]
+  pop eax
+@keep:
+end;
+
 //----- Fix sprites with non-zero transparent colors in monster info dialog
 
 procedure FixSpritesInMonInfo;
@@ -3724,16 +3742,86 @@ asm
 @ok:
 end;
 
-procedure TestMe;
+//----- Fix int overflow crash in editor
+
+procedure FixDivCrash1;
+const
+  down = -$10;
+  up = -$C;
 asm
-  mov eax, 300
-  //sub [esp+4], eax
+  // std code
+  sar edx, 15  // 15 instead of 16, cause it's idiv, EDX must be 2 times smaller
+  // (edx < C) <> (-edx < C) means overflow, equality means overflow
+  cmp edx, [ebp + down]
+  jg @g
+  jz @bad
+  // edx < C
+  neg edx
+  cmp edx, [ebp + down]
+  jl @good
+  jmp @bad
+@g: // edx > C
+  neg edx
+  cmp edx, [ebp + down]
+  jle @bad
+
+@good:
+  neg edx
+  sar edx, 1
+  // std code
+  idiv [ebp + down]
+  ret
+
+@bad:
+  // return $7FFFFFFF or -$7FFFFFFF
+  mov eax, [ebp + up]
+  xor eax, [ebp + down]
+  shr eax, 31
+  add eax, $7FFFFFFF
+  or eax, 1
+end;
+
+procedure FixDivCrash2; // copy of FixDivCrash1 with different constants
+const
+  down = -$2C;
+  up = -$C;
+asm
+  // std code
+  sar edx, 15  // 15 instead of 16, cause it's idiv, EDX must be 2 times smaller
+  // (edx < C) <> (-edx < C) means overflow, equality means overflow
+  cmp edx, [ebp + down]
+  jg @g
+  jz @bad
+  // edx < C
+  neg edx
+  cmp edx, [ebp + down]
+  jl @good
+  jmp @bad
+@g: // edx > C
+  neg edx
+  cmp edx, [ebp + down]
+  jle @bad
+
+@good:
+  neg edx
+  sar edx, 1
+  // std code
+  idiv [ebp + down]
+  ret
+
+@bad:
+  // return $7FFFFFFF or -$7FFFFFFF
+  mov eax, [ebp + up]
+  xor eax, [ebp + down]
+  shr eax, 31
+  add eax, $7FFFFFFF
+  or eax, 1
 end;
 
 //----- HooksList
 
 var
-  HooksList: array[1..301] of TRSHookInfo = (
+  HooksList: array[1..303] of TRSHookInfo = (
     (p: $458E18; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $463862; old: $450493; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave/quicksave filenames localization
     (p: $4CD509; t: RShtNop; size: 12), // Fix Save/Load Slots: it resets SaveSlot, SaveScroll
@@ -4032,13 +4120,12 @@ var
     (p: $4635BA; size: 2; Querry: hqTrueColor), // 32 bit color support
     (p: $4E801C; newp: @MyDirectDrawCreate; t: RSht4; Querry: hqTrueColor), // 32 bit color support + HD
     (p: $4A2C58; size: $4A2C75 - $4A2C58; Querry: hqMipmaps), // Generate mipmaps
+    (p: $4A2D8A; newp: @FixMipmapsMemLeak; t: RShtAfter), // Mipmaps generation code not calling surface->Release
     (p: $41DE32; newp: @FixSpritesInMonInfo; t: RShtBefore; size: 6), // Fix sprites with non-zero transparent colors in monster info dialog
     (p: $41DF2F; newp: @FixSpritesInMonInfo; t: RShtBefore; size: 8), // Fix sprites with non-zero transparent colors in monster info dialog
-//    (p: $421D80; newp: @TestMe; t: RShtBefore),
-    (p: $464B89; old: 640; new: 640*4 div 3; t: RSht4),
-    (p: $464B8E; old: $1D; new: 0; t: RSht1),
-//    (p: $464B95; newp: @TestMe; t: RShtBefore),
-    //(),//(),
+    (p: $484B8A; newp: @FixDivCrash1; t: RShtCall; size: 6), // Fix int overflow crash in editor
+    (p: $478FFD; newp: @FixDivCrash2; t: RShtCall; size: 6), // Fix int overflow crash in editor
+    (p: $479341; newp: @FixDivCrash2; t: RShtCall; size: 6), // Fix int overflow crash in editor
     ()
   );
 
