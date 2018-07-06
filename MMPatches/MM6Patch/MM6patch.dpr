@@ -183,6 +183,7 @@ Version 2.1:
 [+] TurnBasedSpeed
 [+] MouseLookRememberTime
 [+] MouseLookWhileRightClick
+[+] PlayMP3 option now supports WAV files
 [+] Black potion isn't wasted if it has no effect
 [+] Infinite view distance in dungeons
 [+] FixInfiniteScrolls option controls corresponding fix
@@ -204,7 +205,7 @@ Version 2.1:
 [*] Now left click (while holding right button) not only cancels right button menu, but also performs action
 (MM6)
 [+] NoIntro option, just like in other patches. I figured this can be more convenient than "-nomovie" cmd line switch.
-[+] PlayMP3 option now supports tracks in Sounds folder, like in GOG version
+[+] PlayMP3 option now supports MP3 tracks in Sounds folder, as they are in GOG version
 [+] Items stack vertically, like in MM7 and MM8 (controlled by hidden PlaceItemsVertically option)
 [-] Scholar NPC not giving +5% exp
 [-] +2/+3 weapon skill NPCs didn't effect weapon delay

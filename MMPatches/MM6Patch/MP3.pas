@@ -54,9 +54,13 @@ begin
   AIL_redbook_stop_Hook(0);
   if MSSHandle^ <> nil then
   begin
-    s:= Format('Music\%d.mp3', [track]);
+    s:= Format('Music\%d.wav', [track]);
     if not FileExists(s) then
-      s:= Format('Sounds\%d.mp3', [track]);
+    begin
+      s:= Format('Music\%d.mp3', [track]);
+      if not FileExists(s) then
+        s:= Format('Sounds\%d.mp3', [track]);
+    end;
     mp3stream:= AIL_open_stream(MSSHandle^, ptr(s), false);
   end;
 

@@ -3432,49 +3432,6 @@ asm
 @std:
 end;
 
-//----- Test
-
-type
-  TRenderProc = procedure(_, __: int; PartyMoved: Bool);
-
-procedure SetRenderSize(const r: TRect);
-const
-  _SetRenderSize: procedure(_,__,this, vy2, vx2, vy1, vx1: int) = ptr($4A74F0);
-  _UpdateOutdoorSomething: procedure(_: int=0; __: int=0; this: int = $6296E0) = ptr($4789E0);
-  _SetGridBand: procedure(_,unk2, unk1, gridband2: int) = ptr($46ED10);
-  _SetFOV: procedure(_,__,this, h, w: int; fov: int = 65) = ptr($420D00);
-  LowQuality = pbyte($52D278);
-  LowRes = pbyte($52D278);
-  screen_vr = PRect($9DE398);
-begin
-  _SetFOV(0,0, $4D5150, r.Bottom - r.Top + 1, r.Right - r.Left + 1);
-  screen_vr^:= r;
-  LowRes^:= 0;
-  pint($62976C)^:= 10;
-  pint($629770)^:= 15;
-  pint($629774)^:= 20;
-  pint($6296EC)^:= $2000; // dist_mist
-  if _IndoorOrOutdoor^ = 2 then
-    _SetGridBand(0, 15, 10, 20);
-  //LowQuality^:= min(LowQuality^, 1);
-  with screen_vr^ do
-    _SetRenderSize(0,0, int(screen_vr), Bottom, Right, Top, Left);
-  //if _IndoorOrOutdoor^ = 2 then
-    _UpdateOutdoorSomething;
-end;
-
-procedure TestHD(old: TRenderProc; _, PartyMoved: Bool);
-const
-  vr = PRect($52D268);
-var
-  oldBuf: ptr;
-begin
-  SetRenderSize(Rect(1, 0, 640, 479));
-  old(0,0, PartyMoved);
-  SetRenderSize(vr^);
-  //vr^:= oldR;
-end;
-
 //----- Buka localization
 
 var
@@ -3483,7 +3440,7 @@ var
 //----- HooksList
 
 var
-  HooksList: array[1..272] of TRSHookInfo = (
+  HooksList: array[1..269] of TRSHookInfo = (
     (p: $42ADE7; newp: @RunWalkHook; t: RShtCall), // Run/Walk check
     (p: $453AD3; old: $42ADA0; newp: @KeysHook; t: RShtCall), // My keys handler
     (p: $45456E; old: $417F90; newp: @WindowProcCharHook; t: RShtCall), // Map Keys
@@ -3752,11 +3709,6 @@ var
     (p: $4A66A3; newp: @SmackLoadHook; t: RShtAfter; size: 6; Querry: hqFixSmackDraw), // Compatible movie render
     (p: $4573C6; size: 2; Querry: hqTrueColor), // 32 bit color support
     (p: $4B9018; newp: @MyDirectDrawCreate; t: RSht4; Querry: hqTrueColor), // 32 bit color support
-    //(p: $469FF0; newp: @TestHD; t: RShtFunctionStart),
-    //(p: $437199+4; old: 640; new: 800; t: RSht4),
-    //(p: $4371A1+4; old: 480; new: 300; t: RSht4),
-    //(p: $45816B; size: 2),
-    (),(),(),
     ()
   );
 
