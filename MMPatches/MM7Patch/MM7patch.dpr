@@ -152,6 +152,7 @@ Version 2.1:
 [+] TurnBasedSpeed
 [+] MouseLookRememberTime
 [+] MouseLookWhileRightClick
+[+] PlayMP3 option now supports WAV files
 [+] Black potion isn't wasted if it has no effect
 [+] Infinite view distance in dungeons
 [+] FixInfiniteScrolls option controls corresponding fix
@@ -183,6 +184,7 @@ Version 2.1:
 [-] items.txt: now special items accept standard English "of ..." strings. This should fix a number of localizations
 [-] Shops were unable to fix some artifacts
 [-] Lava was hurting players in air
+[-] Memory leak in mipmaps generation code
 [*] ReputationNumber option now shows positive values for good reputation. Before it showed negative values, just like it's represented internally in the game.
 (MM7)
 [-] My bug: Axe skill adding damage at expert level instead of master
@@ -196,11 +198,17 @@ Version 2.1:
 
 [!] help, site: partial Black Phantom patch
 
+[!!] *.wav files instead of *.mp3
 [!!] Make smarter 'Inactive character can't act' fix
 [!!] What about adding a right-click option that lets you exit conversations and houses?
 [!!] Different configs for mouse look/no mouse look?
 [!!] Configurable key for mouse look
 [!!] textures from bitmaps (and option to change their gamma or not to change??)
+
+- if whole party dies Zombies lose "zombie" status, but portrait gets stuck
+
+- walking in turn-based mode - Macros the Black: I think we're supposed to be able
+ to take 5 individual steps instead of just leaping in one direction
 
 - anisatropic & antialiasing
 

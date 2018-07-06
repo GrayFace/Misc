@@ -12,8 +12,6 @@ procedure ApplyDeferredHooks;
 
 implementation
 
-uses Types;
-
 var
   QuickSaveUndone, Autorun, SkipMouseLook: Boolean;
   DoubleSpeed: BOOL;
@@ -2029,6 +2027,12 @@ var
   xy: TSmallPoint absolute lp;
   r: TRect;
 begin
+  if _Windowed^ and (msg = WM_ERASEBKGND) then
+  begin
+    GetClientRect(w, r);
+    Result:= FillRect(wp, r, GetStockObject(BLACK_BRUSH));
+    exit;
+  end;
   if _Windowed^ and (msg >= WM_MOUSEFIRST) and (msg <= WM_MOUSELAST) then
     with xy do
     begin
@@ -2397,35 +2401,77 @@ asm
   idiv [ebp-$C]
 end;
 
+//----- Fix int overflow crash in editor
+
 procedure FixDivCrash1;
+const
+  down = -$10;
+  up = -$C;
 asm
   // std code
-  sar edx, 15  // 15 instead of 16, cause it's idiv, EDX must be 2 times smaller 
+  sar edx, 15  // 15 instead of 16, cause it's idiv, EDX must be 2 times smaller
   // (edx < C) <> (-edx < C) means overflow, equality means overflow
-  cmp edx, [ebp - $10]
+  cmp edx, [ebp + down]
   jg @g
   jz @bad
   // edx < C
   neg edx
-  cmp edx, [ebp - $10]
+  cmp edx, [ebp + down]
   jl @good
   jmp @bad
 @g: // edx > C
   neg edx
-  cmp edx, [ebp - $10]
+  cmp edx, [ebp + down]
   jle @bad
 
 @good:
   neg edx
   sar edx, 1
   // std code
-  idiv [ebp - 10h]
+  idiv [ebp + down]
   ret
 
 @bad:
   // return $7FFFFFFF or -$7FFFFFFF
-  mov eax, [ebp - $C]
-  xor eax, [ebp - $10]
+  mov eax, [ebp + up]
+  xor eax, [ebp + down]
+  shr eax, 31
+  add eax, $7FFFFFFF
+  or eax, 1
+end;
+
+procedure FixDivCrash2; // copy of FixDivCrash1 with different constants
+const
+  down = -$2C;
+  up = -$C;
+asm
+  // std code
+  sar edx, 15  // 15 instead of 16, cause it's idiv, EDX must be 2 times smaller
+  // (edx < C) <> (-edx < C) means overflow, equality means overflow
+  cmp edx, [ebp + down]
+  jg @g
+  jz @bad
+  // edx < C
+  neg edx
+  cmp edx, [ebp + down]
+  jl @good
+  jmp @bad
+@g: // edx > C
+  neg edx
+  cmp edx, [ebp + down]
+  jle @bad
+
+@good:
+  neg edx
+  sar edx, 1
+  // std code
+  idiv [ebp + down]
+  ret
+
+@bad:
+  // return $7FFFFFFF or -$7FFFFFFF
+  mov eax, [ebp + up]
+  xor eax, [ebp + down]
   shr eax, 31
   add eax, $7FFFFFFF
   or eax, 1
@@ -3082,72 +3128,56 @@ type
     _: int2;
   end;
 
-procedure ValidatePeriodicTimers;
-begin
-  with GetMapExtra^ do
-    if (LastVisitTime = 0) or (uint(LastVisitTime) <> LastVisitTimeCheck) then
-    begin
-      LastWeeklyTimer:= 0;
-      LastMonthlyTimer:= 0;
-      LastYearlyTimer:= 0;
-      LastVisitTimeCheck:= uint(LastVisitTime);
-    end;
-end;
+const
+  TimerPeriods: array[0..3] of uint = (123863040, 10321920, 2580480, 368640);
 
-function GetTimerPeriod(var t: TTimerStruct; var last: pint): int;
+function GetTimerKind(var t: TTimerStruct): int;
+var
+  i: int;
 begin
-  ValidatePeriodicTimers;
-  with GetMapExtra^ do
-    if t.EachYear <> 0 then
-    begin
-      Result:= 123863040;
-      last:= @LastYearlyTimer;
-    end
-    else if t.EachMonth <> 0 then
-    begin
-      Result:= 10321920;
-      last:= @LastMonthlyTimer;
-    end
-    else if t.EachWeek <> 0 then
-    begin
-      Result:= 2580480;
-      last:= @LastWeeklyTimer;
-    end else
-    begin
-      Result:= 368640;
-      last:= nil;
-    end;
+  for i:= 0 to 3 do
+  begin
+    Result:= i;
+    if PWordArray(@t.EachYear)[i] <> 0 then
+      exit;
+  end;
 end;
 
 procedure TimerSetTriggerTime(time1, time2: int; var t: TTimerStruct);
 var
   time: int64;
-  last: pint;
-  period: int;
+  period: uint64;
+  i: int;
 begin
   time:= uint64(time2) shl 32 + time1;
-  period:= GetTimerPeriod(t, last);
-  if last = nil then  // daily timer
+  i:= GetTimerKind(t);
+  period:= TimerPeriods[i];
+  if t.CmdType = $26 then
+    t.TriggerTime:= GetMapExtra^.GetPeriodicTimer(i) + period
+  else if i = 3 then  // daily timer at fixed time
   begin
-    t.TriggerTime:= ((t.Hour*60 + t.Minute)*60 + t.Second)*256 div 60;
-    inc(t.TriggerTime, time - time mod period);
+    t.TriggerTime:= (t.Hour*60 + t.Minute)*256 + t.Second*256 div 60 +
+       time - time mod period;
     if t.TriggerTime <= time then
       inc(t.TriggerTime, period);
   end else
-    if t.CmdType = $26 then
-      t.TriggerTime:= GetMapExtra^.LastVisitTime + last^ + period
-    else
-      t.TriggerTime:= time + period;
+    t.TriggerTime:= time + period;
 end;
 
 function UpdatePeriodicTimer(eax, _: int; var t: TTimerStruct): int;
-var
-  last: pint;
 begin
   Result:= eax;
-  if t.CmdType <> $26 then  exit;
-  GetTimerPeriod(t, last);
-  uint(last^):= _Time^ - GetMapExtra^.LastVisitTime;
+  GetMapExtra^.LastPeriodicTimer[GetTimerKind(t)]:= _Time^;
+end;
+
+procedure FixTimerValidate;
+var
+  i: int;
+begin
+  with GetMapExtra^ do
+    for i:= 0 to 3 do
+      if (LastVisitTime = 0) or (LastVisitTime - GetPeriodicTimer(i, true) > TimerPeriods[i]) then
+        LastPeriodicTimer[i]:= LastVisitTime;
 end;
 
 procedure FixTimerRetriggerHook1;
@@ -3159,14 +3189,25 @@ end;
 
 procedure FixTimerRetriggerHook2;
 asm
+  cmp [esi-$C].TTimerStruct.CmdType, $26
+  jz @update
   cmp eax, $15180  // daily?
-  lea ecx, [esi-$C]
-  jnz UpdatePeriodicTimer
+  jnz @std
 // Handle timer that triggers at specific time each day
+  lea ecx, [esi-$C]
   mov eax, ebx  // Game.Time
   mov edx, edi
   call TimerSetTriggerTime
   mov [esp], $448CCF
+  ret
+@update:
+  push ecx
+  push edx
+  lea ecx, [esi-$C]
+  call UpdatePeriodicTimer
+  pop edx
+  pop ecx
+@std:
 end;
 
 procedure FixTimerSetupHook1;
@@ -3186,23 +3227,6 @@ asm
   call TimerSetTriggerTime
   mov ebx, [ebp - $28]
   push $444323
-end;
-
-//----- Tix timers - write last trigger times to DLV/DDM
-
-procedure FixTimerWrite;
-var
-  dt: int;
-begin
-  ValidatePeriodicTimers;
-  with GetMapExtra^ do
-  begin
-    uint(dt):= _Time^ - LastVisitTime;
-    LastVisitTimeCheck:= _Time^;
-    LastWeeklyTimer:= min(0, LastWeeklyTimer - dt);
-    LastMonthlyTimer:= min(0, LastMonthlyTimer - dt);
-    LastYearlyTimer:= min(0, LastYearlyTimer - dt);
-  end;
 end;
 
 //----- Town Portal wasting player's turn even if you cancel the dialog
@@ -3702,7 +3726,7 @@ asm
   cmp dword ptr [edx + $54], 32
   jnz @std
   mov dword ptr [esp], $4A5AE7
-  jmp DXProxyScale
+  jmp DXProxyDraw
 @std:
 end;
 
@@ -3764,6 +3788,21 @@ begin
   DoTrueColorShot(info, ptr(ShotBuf), SW, SH, Rect(0, 0, SW, SH));
 end;
 
+//----- Mipmaps generation code not calling surface->Release
+
+procedure FixMipmapsMemLeak;
+asm
+  mov ecx, [ebp + $10]
+  cmp edi, [ecx]
+  jz @keep
+  push eax
+  mov eax, [edi]
+  push edi
+  call dword ptr [eax + 8]
+  pop eax
+@keep:
+end;
+
 //----- Fix sprites with non-zero transparent colors in monster info dialog
 
 procedure FixSpritesInMonInfo;
@@ -3782,7 +3821,7 @@ var
 //----- HooksList
 
 var
-  HooksList: array[1..284] of TRSHookInfo = (
+  HooksList: array[1..287] of TRSHookInfo = (
     (p: $45B0D1; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $4655FE; old: $452C75; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave file name localization
     (p: $45E5A4; old: $45E2D0; backup: @FillSaveSlotsStd; newp: @FillSaveSlotsHook; t: RShtCall), // Fix Save/Load Slots
@@ -3940,6 +3979,8 @@ var
     (p: $47E60A; old: 0; new: 1; t: RSht1), // Fix DDM search in games.lod
     (p: $4798BA; newp: @FixSkyCrash; t: RShtCall; size: 6), // Fix crash when looking too low (lower than game allows)
     (p: $485220; newp: @FixDivCrash1; t: RShtCall; size: 6), // Fix int overflow crash in editor
+    (p: $479DEA; newp: @FixDivCrash2; t: RShtCall; size: 6), // Fix int overflow crash in editor
+    (p: $47A12E; newp: @FixDivCrash2; t: RShtCall; size: 6), // Fix int overflow crash in editor
     (p: $4615BD; newp: @FindInLodAndSeekHook; t: RShtCall), // Custom LODs
     (p: $461659; newp: @FindInLodHook; t: RShtCall), // Custom LODs
     (p: $4655FE; backup: @@LoadLodsOld; newp: @LoadLodsHook; t: RShtCall), // Custom LODs
@@ -3992,7 +4033,7 @@ var
     (p: $448C8A; newp: @FixTimerRetriggerHook2; t: RShtBefore; size: 7; Querry: 21), // Fix timers
     (p: $444133; newp: @FixTimerSetupHook1; t: RShtJmp; Querry: 21), // Fix timers
     (p: $44427C; newp: @FixTimerSetupHook2; t: RShtJmp; size: 7; Querry: 21), // Fix timers
-    (p: $45F557; newp: @FixTimerWrite; t: RShtBefore; Querry: 21), // Tix timers - write last trigger times to DLV/DDM
+    (p: $444008; newp: @FixTimerValidate; t: RShtBefore; size: 6; Querry: 21), // Tix timers - validate last timers
     (p: $42B535; newp: @TPDelayHook1; t: RShtJmp), // Town Portal wasting player's turn even if you cancel the dialog
     (p: $4339CB; newp: @TPDelayHook2; t: RShtCall), // Town Portal wasting player's turn even if you cancel the dialog
     (p: $473005; newp: @FixMovementNerf; t: RShtCall; Querry: 23), // Fix movement rounding problems - nerf jump
@@ -4064,6 +4105,7 @@ var
     (p: $465333; size: 2; Querry: hqTrueColor), // 32 bit color support
     (p: $4D801C; newp: @MyDirectDrawCreate; t: RSht4; Querry: hqTrueColor), // 32 bit color support + HD
     (p: $4A4DA5; size: $4A4DC2 - $4A4DA5; Querry: hqMipmaps), // generate mipmaps
+    (p: $4A4ED7; newp: @FixMipmapsMemLeak; t: RShtAfter), // Mipmaps generation code not calling surface->Release
     (p: $41E84B; newp: @FixSpritesInMonInfo; t: RShtBefore; size: 6), // Fix sprites with non-zero transparent colors in monster info dialog
     (p: $41E948; newp: @FixSpritesInMonInfo; t: RShtBefore; size: 5), // Fix sprites with non-zero transparent colors in monster info dialog
     ()
