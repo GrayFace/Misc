@@ -1,3 +1,0 @@
-222	2	30	Dungeon Ent	10	157	Tunnels to Eeofol
-223	2	31	Dungeon Ent	10	151	Thunderfist Mountain
-224	2	32	Dungeon Ent	10	151	Nighon Tunnels

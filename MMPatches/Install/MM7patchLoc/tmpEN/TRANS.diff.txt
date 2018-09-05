@@ -1,0 +1,3 @@
+221	2	A thunderous howl pierces your ears, provoking a feeling of dread. Whatever produced that sound is drawing near, with each step rocking the earth beneath your feet.	Tunnels to Eeofol
+222	2	As you go deeper into this vast network of tunnels, your instinct tells you that many dangerous creatures dwell within. You vow to remain vigilant.	Thunderfist Mountain
+223	2	This tunnel leads to Stone City.	Nighon Tunnels

@@ -1,0 +1,2 @@
+192	2	%s shoots %s for %lu points
+598	2	Wand
