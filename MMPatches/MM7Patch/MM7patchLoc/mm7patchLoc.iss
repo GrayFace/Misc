@@ -49,6 +49,8 @@ DragonTask=Make "Mega-Dragon" in The Dragon Caves in Eeofol a real mega-dragon i
 ru.DragonTask=Заменить ослабленного обычного дракона с именем "Мегадракон" в Пещерах драконов в Эофоле на настоящего магадракона
 RussianGameVersion=Russian version of the game
 ru.RussianGameVersion=Русская версия игры
+dgVoodooTask=Deactivate DirectX replacement DLLs by adding .bak extension. The DLLs are probably from dgVoodoo, which only slows down rendering, because the patch now incorporates HD resolution support by itself.
+ru.dgVoodooTask=Отключить заменители библиотек DirectX, добавив расширение .bak. Скорее всего, это dgVoodoo, который только замедляет отрисовку, т.к. патч теперь сам поддерживает рендеринг в HD.
 
 [Tasks]
 Name: RusFiles1; Description: {cm:RussianGameVersion}; Check: RussianTaskCheck(true);
@@ -59,6 +61,7 @@ Name: tun1; Description: {cm:TunnelsTask}; GroupDescription: {cm:LodGroup}; Chec
 Name: tun2; Description: {cm:TunnelsTask}; GroupDescription: {cm:LodGroup}; Flags: unchecked; Check: TunnelTaskCheck(false);
 Name: dragon1; Description: {cm:DragonTask}; GroupDescription: {cm:LodGroup}; Check: DragonTaskCheck(true);
 Name: dragon2; Description: {cm:DragonTask}; GroupDescription: {cm:LodGroup}; Flags: unchecked; Check: DragonTaskCheck(false);
+Name: dgVoodoo; Description: {cm:dgVoodooTask}; Check: dgVoodooCheck;
 
 ; Delete SafeDisk files
 [InstallDelete]
@@ -178,8 +181,50 @@ begin
 end;
 
 
+{Pascal Script is insanely stupid, can't even do this:
+const
+  dgVoodooFiles: array[0..2] of string = ('D3D8.dll', 'D3DImm.dll', 'DDraw.dll');
+}
+
+function dgVoodooDoCheck(const a: array of string): Boolean;
+var
+  i: integer;
+begin
+  Result:= false;
+  for i:= 0 to 2 do
+    Result:= Result or FileExists(ExpandConstant('{app}\' + a[i]));
+end;
+  
+function dgVoodooCheck: Boolean;
+begin
+  Result:= dgVoodooDoCheck(['D3D8.dll', 'D3DImm.dll', 'DDraw.dll']);
+end;
+
+
+procedure dgVoodooDoRename(const a: array of string);
+var
+  s: string;
+  i: integer;
+begin
+  for i:= 0 to 2 do
+  begin
+    s:= ExpandConstant('{app}\' + a[i]);
+    if not FileExists(s) then  continue;
+    DeleteFile(s + '.bak');
+    RenameFile(s, s + '.bak');
+  end;
+end;
+
+procedure dgVoodooRename;
+begin
+  dgVoodooDoRename(['D3D8.dll', 'D3DImm.dll', 'DDraw.dll']);
+end;
+
+
 procedure AfterInst;
 begin
   if GetIniString('Install', 'PatchLods', #13#10, ExpandConstant('{app}\{#m}.ini')) <> #13#10 then 
     DeleteIniEntry('Install', 'PatchLods', ExpandConstant('{app}\{#m}.ini'))
+  if IsTaskSelected('dgVoodoo') then
+    dgVoodooRename;
 end;
