@@ -1,0 +1,96 @@
+var
+  SpriteCache: TStringList;
+
+function LoadSpriteD3DHook(Name: PChar; PalIndex: int): PHwlBitmap; stdcall;
+var
+  str: string;
+  sprite: PSprite;
+  i, j, x1, x2, y1, y2: int;
+  pal: array[0..255] of word;
+  p: pword;
+begin
+  Result:= nil;
+  if SpriteCache = nil then
+  begin
+    SpriteCache:= TStringList.Create;
+    SpriteCache.Sorted:= true;
+  end;
+  str:= Format('%d %s', [PalIndex, Name]);
+  if SpriteCache.Find(str, i) then
+  begin
+    Result:= ptr(SpriteCache.Objects[i]);
+    exit;
+  end;
+  sprite:= FindSprite(Name);
+  if sprite = nil then
+    exit;
+
+  Result:= _new(SizeOf(THwlBitmap));
+  SpriteCache.AddObject(str, ptr(Result));
+  with sprite^ do
+  begin
+    //ZeroMemory(Result, SizeOf(THwlBitmap)); // now done always
+    // Find area bounds
+    x1:= w;
+    x2:= -1;
+    y1:= -1;
+    y2:= -1;
+    for i := 0 to h - 1 do
+      with Lines[i] do
+        if a1 >= 0 then
+        begin
+          if y1 < 0 then  y1:= i;
+          y2:= i;
+          if a1 < x1 then  x1:= a1;
+          if a2 > x2 then  x2:= a2;
+        end;
+    with Result^ do
+    begin
+      FullW:= w;
+      FullH:= h;
+      if y1 < 0 then  exit;
+      // Area dimensions must be powers of 2
+      inc(x2);
+      inc(y2);
+      BufW:= Power2(x2 - x1);
+      BufH:= Power2(y2 - y1);
+      AreaW:= BufW;
+      AreaH:= BufH;
+      x1:= (x1 + x2 - BufW) div 2;
+      //x1:= IntoRange(x1, 0, w - BufW);
+      x2:= x1 + BufW - 1;
+      y1:= (y1 + y2 - BufH) div 2;
+      //y1:= IntoRange(y1, 0, h - BufH);
+      y2:= y1 + BufH - 1;
+      AreaX:= x1;
+      AreaY:= y1;
+
+      // Get Palette
+      LoadPaletteD3D(pal, PalIndex);
+      pal[0]:= 0;
+
+      // Render
+      Buffer:= _new(BufW*BufH*2);
+      //ZeroMemory(Buffer, BufW*BufH*2); // now done always
+      p:= Buffer;
+      for i := y1 to y2 do
+        with Lines[i] do
+          if (i >= 0) and (i < h) and (a1 >= 0) then
+          begin
+            inc(p, a1 - x1);
+            for j := 0 to a2 - a1 do
+            begin
+              p^:= pal[ord((pos + j)^)];
+              inc(p);
+            end;
+            inc(p, x2 - a2);
+          end else
+            inc(p, BufW);
+      PropagateIntoTransparent(Buffer, BufW, BufH);
+    end;
+  end;
+end;
+
+
+    (p: $4A2FBC; size: 5), // Sprites cache
+    (p: $4A2FC2; size: 5), // Sprites cache
