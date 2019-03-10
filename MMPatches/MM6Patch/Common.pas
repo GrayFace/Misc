@@ -59,11 +59,16 @@ const
   _GreenColorBits = pint($9B1118);
   _RightButtonPressed = pbool($4D50EC);
   _WindowedGWLStyle = pint($6107B0);
+  _RedMask = pint($9B1120);
+  _GreenMask = pint($9B1124);
+  _BlueMask = pint($9B1128);
   _IndoorOrOutdoor = pint($6107D4);
   _Time = puint64($908D08);
+  _IsMoviePlaying = pbool($9DE364);
+  _AbortMovie = pbool($9DE338);
 
   _PauseTime: procedure(a1: int = 0; a2: int = 0; this: int = $4D5180) = ptr($420DB0);
-  _ReleaseMouse: TProcedure = ptr($42FAC0); 
+  _ReleaseMouse: TProcedure = ptr($42FAC0);
   _SaveGameToSlot: procedure(n1,n2, slot:int) = ptr($44FEF0);
   _DoSaveGame: procedure(n1,unk, autosave: int) = ptr($44F320);
   _DoLoadGame: procedure(n1,n2, slot: int) = ptr($44EE50);
@@ -83,6 +88,8 @@ const
   _PlaySoundStruct = $9CF598;
   _HasNPCProf: function(n1,n2, prof: int): LongBool = ptr($467F30);
   _DrawInventory: procedure(n1,n2, member: int) = ptr($4165E0);
+  _ExitMovie: procedure(_1: int = 0; _2: int = 0; _3: int = $9DE330) = ptr($4A5D10);
+  _StopAllSounds: procedure(_: int = 0; __: int = 0; _3: int = $9CF598; _4: int = -1; _5: int = -1) = ptr($48FB40);
 
   _Chest_CanPlaceItem: function(n1, itemType, pos, chest: int): BOOL = ptr($41DE90);
   _Chest_PlaceItem: procedure(n1, itemIndex, pos, chest: int) = ptr($41E210);

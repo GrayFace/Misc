@@ -3,8 +3,19 @@ By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
 Official patches, Mok's patch and Black Phantom's patch are included.
+Save files are, of course, fully compatible with the unpatched game in both directions.
+The patch has no uninstaller to make things simpler.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
+
+New in version 2.2:
+  << MM7 >>
+[-] My bug: Russian (Buka) version contained a broken NPC greetings file.
+[-] My bug: Russian description in installer had a wrong encoding.
+  << Fixes in maps >>
+[-] Hall of the Pit (t04): Teleporters were rotating the party to the right.
+[-] Nighon (out10): Right side of tavern door didn't react to clicks.
+[-] My bug: Fixes for Avlee (out14), Barrow II (mdk03) and some for Nighon (out10) weren't included.
 
 New in version 2.1:
   << MM6 - MM8 >>
@@ -37,7 +48,7 @@ New in version 2.1:
 [-] Shops were buying blasters.
   << MM7, MM8 >>
 [+] Mipmapping in D3D, controlled by "MipmapsCount" option. Value of 3 is optimal. Bigger values lead to less flickering at distance, but reduce resolution too much. Set to 1 to disable, as it was in original game. Set to -1 to generate a lot of mipmaps.
-[-] There's was a small semi-transparent black contour around sprites and sea shore in Hardware 3D mode.
+[-] There was a small semi-transparent black contour around sprites and sea shore in Hardware 3D mode.
 [-] Broken but unidentified items were green instead of red if you go to a shop to repair them.
 [-] Casting Telepathy spell or stealing from a monster used to prevent you from finding random items in its corpse.
 [-] Light gray blinking in full screen (not on every system).
@@ -63,18 +74,18 @@ New in version 2.1:
 [-] The Titans' Stronghold, The Breeding Zone, The Tidewater Caverns, Barrow II (d09, d10, d17, mdk03): Better handling of chests with quest items.
 [-] The Wine Cellar (d16): Exit door hint changed from "Leave the Vampire Family House" to "Leave the Wine Cellar".
 [-] Celeste (d25): Central fountain only worked once.
-[-] Nighon (out10): Warlocks were killing 2 peasants. Half of training building door not clickable.
+[-] Nighon (out10): Warlocks were killing 2 peasants. Half of training building door wasn't clickable.
 [-] Harmondale (out02): Beacons weren't shown fired up after reloading.
 [-] William Setag's Tower, The Hall of the Pit (mdt10, t04): "Door" was set as hint for chests.
 [-] Barrow II (mdk03): Rat was often spawning in a wall.
 [-] Avlee (out14): Flying rock at x:-15088 y:-4288.
 [-] The Land of the Giants (out12): A well at coordinates x:14972 y:3968 was meant to cost 5000, but was usable without paying, thus becoming a cheat when used with Protection from Magic.
 [-] Fixes of Black Phantom patch (with additional improvements):
-- The Maze (d02): "Haldar's Remains" quest item was disappearing if not taken the first time the chest opened.
+- The Maze (d02): "Haldar's Remains" quest item was disappearing if not taken the first time the chest is opened.
 - Stone City (d24): when resting there was a chance of dwarves attacking the party.
 - Emerald Island (out01): Anvil was called "Button". Autonote "2 points of permanent Luck from the well on the western edge of Emerald Island" wasn't used.
 - Castle Harmondale (d29): Quest "0" no longer appears in Quest Log. Under some circumstances no human/elf/neutral flags were placed in the castle after delivering the artifact. Good/evil flags didn't always match the alignment. Golem was appearing before you complete the quest (and animate it) if you found all parts.
-- The Wine Cellar (d16): Unique vampire possesing Vampire's Cape item wasn't appearing in the location. Now a Light path quest requires not just entering the Win Cellar, but killing this vampire as it was planned by developers.
+- The Wine Cellar (d16): Unique vampire possesing Vampire's Cape item wasn't appearing in the location. Now a Light path quest requires not just entering the Wine Cellar, but killing this vampire as it was planned by developers.
 - The Pit (d26): "Breeding Zone" entrance animation wasn't used.
 - Colony Zod (d27): Archibald trial movie was played each time you exit the colony after killing Xenofex. Roland was giving the key each time you click on his cell.
 - The Dragon Caves (mdt12): A dragon was often spawning inside a wall.

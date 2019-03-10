@@ -189,7 +189,6 @@ Version 2.1:
 [-] My bug: Since some version of my patch movies were again immediately cancelled when shown from a dialog.
 [-] My bug: ProgressiveDaggerTrippleDamage fix didn't work in MM8
 
-
 Version ?:
 !!! Bad asserts: 4662BA, 44C39D
 ????[+] ExitOnException

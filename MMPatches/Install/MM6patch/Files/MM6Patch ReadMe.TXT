@@ -3,6 +3,8 @@ By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
 Official patches, Mok's patch and Angel's patch are included.
+Save files are, of course, fully compatible with the unpatched game in both directions.
+The patch has no uninstaller to make things simpler.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
 

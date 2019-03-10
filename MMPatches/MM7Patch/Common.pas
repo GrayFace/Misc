@@ -53,15 +53,17 @@ const
   __Windowed = $E31AC0;
   _Windowed = pbool(__Windowed);
   _GreenColorBits = pint($E31B38);
+  _RedMask = pint($E31B40);
+  _GreenMask = pint($E31B44);
+  _BlueMask = pint($E31B48);
   _MapName = $6BE1C4;
   _MapStats = $5CAA38;
   _RightButtonPressed = pbool($507A70);
   _WindowedGWLStyle = pint($6BE1B8);
-  _RedMask = pint($E31B40);
-  _GreenMask = pint($E31B44);
-  _BlueMask = pint($E31B48);
   _IndoorOrOutdoor = pint($6BE1E0);
   _Time = puint64($ACCE64);
+  _AbortMovie = pbool($F8B9F4);
+  __SpritesToDrawCount = $518660;
 
   _PauseTime: procedure(a1: int = 0; a2: int = 0; this: int = $50BA60) = ptr($4262F2);
   _ReleaseMouse: TProcedure = ptr($4356EE); 
@@ -83,6 +85,8 @@ const
   _LoadSprite: function(n1, n2, this: int; pal: int; name: PChar):int = ptr($4AC723);
   _strcmpi: function(const s1, s2: PChar): int cdecl = ptr($4CAAF0);
   _MapStats_Find: function(n1, n2, this: int; name: PChar): int = ptr($4547CF);
+  _IsMoviePlaying: function: Boolean = ptr($4BF35F);
+  _ExitMovie: procedure(_1: int = 0; _2: int = 0; _3: int = $F8B988) = ptr($4BEB3A);
 
   _LodFind: function(n1, n2, Lod, NoSort: int; Name: PChar): ptr = ptr($4615BD);
   _fread: function(var Buf; Size, Count: int; f: ptr): int cdecl = ptr($4CB8A5);
@@ -138,4 +142,6 @@ begin
     Result:= ptr($6A1160);
 end;
 
+exports
+  AddMipmapBase;
 end.

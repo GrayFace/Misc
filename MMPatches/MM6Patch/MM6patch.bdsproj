@@ -131,7 +131,7 @@
 		</Directories>
 		<Parameters>
 			<Parameters Name="RunParams"></Parameters>
-			<Parameters Name="HostApplication">C:\Games\mm6\MM6_.exe</Parameters>
+			<Parameters Name="HostApplication">C:\Games\mm6\MM6.exe</Parameters>
 			<Parameters Name="Launcher"></Parameters>
 			<Parameters Name="UseLauncher">False</Parameters>
 			<Parameters Name="DebugCWD"></Parameters>
@@ -169,10 +169,7 @@
 			<VersionInfoKeys Name="OriginalFilename"></VersionInfoKeys>
 			<VersionInfoKeys Name="ProductName">GrayFace MM6 Patch</VersionInfoKeys>
 			<VersionInfoKeys Name="ProductVersion">2.1.0.0</VersionInfoKeys>
-		</VersionInfoKeys>  
-    
-    
-    <Excluded_Packages>
+		</VersionInfoKeys>  <Excluded_Packages>
       <Excluded_Packages Name="C:\Documents and Settings\Serg\Мои документы\Borland Studio Projects\Bpl\dclrx2006.bpl">File C:\Documents and Settings\Serg\Мои документы\Borland Studio Projects\Bpl\dclrx2006.bpl not found</Excluded_Packages>
       <Excluded_Packages Name="C:\Documents and Settings\Serg\Мои документы\Borland Studio Projects\Bpl\dclrxbd2006.bpl">File C:\Documents and Settings\Serg\Мои документы\Borland Studio Projects\Bpl\dclrxbd2006.bpl not found</Excluded_Packages>
       <Excluded_Packages Name="C:\Documents and Settings\Serg\Мои документы\Borland Studio Projects\Bpl\dclrxdb2006.bpl">File C:\Documents and Settings\Serg\Мои документы\Borland Studio Projects\Bpl\dclrxdb2006.bpl not found</Excluded_Packages>

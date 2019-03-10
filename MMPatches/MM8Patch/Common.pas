@@ -65,8 +65,12 @@ const
   _BlueMask = pint($F01A60);
   _IndoorOrOutdoor = pint($6F39A0);
   _Time = puint64($B20EBC);
+  _AbortMovie = pbool($FFDDEC);
+  _ViewMulOutdoor = pint($6F300C);
+  _RenderRect = PRect($FFDE9C);
+  __SpritesToDrawCount = $529F40;
 
-  _ReleaseMouse: TProcedure = ptr($433136); 
+  _ReleaseMouse: TProcedure = ptr($433136);
   _DoSaveGame: procedure(n1,unk, autoquick: int) = ptr($45CF27);
   _DoLoadGame: procedure(n1,n2, slot: int) = ptr($45C906);
   _FindActiveMember: function(n1: int = 0; n2: int = 0; this: int = $B20E90):int = ptr($491A55);
@@ -138,4 +142,6 @@ begin
     Result:= ptr($6CF0CC);
 end;
 
+exports
+  AddMipmapBase;
 end.

@@ -5,15 +5,16 @@ interface
 uses
   Windows, Messages, SysUtils, Classes, RSSysUtils, RSQ, Common, RSCodeHook,
   Math, MP3, RSDebug, IniFiles, Direct3D, Graphics, MMSystem, RSStrUtils,
-  DirectDraw, DXProxy, RSResample;
+  DirectDraw, DXProxy, RSResample, RSGraphics;
 
 procedure HookAll;
 procedure ApplyDeferredHooks;
+procedure ApplyHooksD3D;
 
 implementation
 
 var
-  Autorun: Boolean;
+  Autorun, AllowMovieQuickLoad: Boolean;
   DoubleSpeed: BOOL;
 
 procedure ProcessMouseLook; forward;
@@ -121,6 +122,34 @@ begin
   if SH = 0 then  SH:= 480;
 end;
 
+var
+  MouseDX, MouseDY: Double;
+
+function TransformMouseCoord(x, sw, w: int; out dx: Double): int;
+begin
+  Result:= x*sw div w;
+  dx:= (x + 0.5)*sw/w - (Result + 0.5);
+end;
+
+function TransformMousePos(x, y: int; out x1: int): int;
+var
+  r: TRect;
+begin
+  NeedScreenWH;
+  GetClientRect(_MainWindow^, r);
+  x1:= TransformMouseCoord(x, SW, r.Right, MouseDX);
+  Result:= TransformMouseCoord(y, SH, r.Bottom, MouseDY);
+end;
+
+procedure QuickLoad;
+begin
+  _Paused^:= 1;
+  pint($6CAD00)^:= 1;
+  _SaveSlotsFiles[0]:= 'quiksave.dod';
+  _DoLoadGame(0, 0, 0);
+  pint($6CEB28)^:= 3;
+end;
+
 //----- Keys
 
 var
@@ -160,15 +189,6 @@ var
   nopause: Boolean;
   status, loops: int;
 begin
-  // Don't allow using inactive members
-  if (_Paused^=0) and (_CurrentScreen^ = 0) and (_CurrentMember^ <> 0) and
-     (pword(int(GetCurrentMember) + _CharOff_Recover)^ > 0) and
-     FixInactivePlayersActing then
-  begin
-    _CurrentMember^:= _FindActiveMember;
-    _NeedRedraw^:= 1;
-  end;
-
   // Fix TurnBasedPhase staying at 3 whle TurnBased is off
   if not _TurnBased^ then
     _TurnBasedPhase^:= 0;
@@ -192,13 +212,7 @@ begin
   // QuickLoad
   if (QuickSavesCount >= 0) and CheckKey(Options.QuickLoadKey) and nopause
      and FileExists('saves\quiksave.dod') then
-  begin
-    _Paused^:= 1;
-    pint($6CAD00)^:= 1;
-    _SaveSlotsFiles[0]:= 'quiksave.dod';
-    _DoLoadGame(0, 0, 0);
-    pint($6CEB28)^:= 3;
-  end;
+    QuickLoad;
 
   // InventoryKey
   if CheckKey(Options.InventoryKey) and nopause then
@@ -250,6 +264,10 @@ begin
   // Time isn't resumed when mouse exits, need to check if it's still pressed
   if _Windowed^ and _RightButtonPressed^ then
     CheckRightPressed;
+
+  // Select 1st player in shops if all are inactive
+  if FixInactivePlayersActing and (_CurrentMember^ = 0) and (_CurrentScreen^ = 13) then
+    _CurrentMember^:= 1;
 end;
 
 procedure KeysHook;
@@ -1254,7 +1272,7 @@ end;
 
 function Power2(n: int):int;
 begin
-  Result:= 1;
+  Result:= 4;
   while Result < n do
     Result:= Result*2;
 end;
@@ -1305,7 +1323,7 @@ begin
   with sprite^ do
   begin
     Result:= _new(SizeOf(THwlBitmap));
-    ZeroMemory(Result, SizeOf(THwlBitmap));
+    //ZeroMemory(Result, SizeOf(THwlBitmap)); // now done always
     // Find area bounds
     x1:= w;
     x2:= -1;
@@ -1362,7 +1380,15 @@ begin
             inc(p, x2 - a2);
           end else
             inc(p, BufW);
-      PropagateIntoTransparent(Buffer, BufW, BufH);
+      asm
+        mov eax, [ebp]
+        //mov eax, [eax]
+        mov eax, dword ptr [eax+4]
+        mov i, eax
+      end;
+      // Sparks spell ignores transparency bit, this check is to avoid interfering with it
+      if _MainMenuCode^ < 0 then
+        PropagateIntoTransparent(Buffer, BufW, BufH);
     end;
   end;
 end;
@@ -1622,6 +1648,18 @@ asm
   movzx esi, word ptr [ecx+esi+2]
 end;
 
+procedure FacetCheckHook3;
+asm
+  cmp edx, 19*4
+  jl @norm
+  movzx edi, word ptr [eax-76h-40]
+  jmp @std
+@norm:
+  movzx edi, word ptr [eax-76h]
+@std:
+  mov ebx, [esi+48h]
+end;
+
 //----- There is a facet without a single vertex in Necromancers' Guild!
 
 procedure NoVertexFacetHook;
@@ -1635,6 +1673,16 @@ asm
 @norm:
   mov al, [edi + $5C]
   cmp al, 3
+end;
+
+procedure NoVertexFacetHook2;
+asm
+  mov al, [esi + $5d]
+  test al, al
+  jnz @norm
+  mov eax, 1
+  mov [esp], $433DBC
+@norm:
 end;
 
 //----- No HWL for bitmaps
@@ -1659,6 +1707,11 @@ begin
   ZeroMemory(Result, SizeOf(THwlBitmap));
   with bmp, Result^ do
   begin
+    if BmpSize <> w*h then  // bitmapshd.lod support
+    begin
+      w:= PowerOf2[BmpWidthLn2];
+      h:= PowerOf2[BmpHeightLn2];
+    end;
     FullW:= w;
     FullH:= h;
     AreaW:= w;
@@ -1791,17 +1844,15 @@ begin
   // compatibility with resolution patches like mmtool's one
   MiddleX:= (SW - MLSideX) div 2;
   MiddleY:= (SH - MLSideY) div 2;
-  // compatibility with Angel's resolution mod
+  // compatibility with high resolution
   MWndPos.X:= (MiddleX*r.Right + SW - 1) div SW;
   MWndPos.Y:= (MiddleY*r.Bottom + SH - 1) div SH;
 
-  if ArrowCur = 0 then
-    ArrowCur:= LoadCursor(GetModuleHandle(nil), 'Arrow');
   if EmptyCur = 0 then
     EmptyCur:= CreateCursor(GetModuleHandle(nil), 0, 0, 1, 1, @myAnd, @myXor);
   cur:= GetClassLong(_MainWindow^, -12);
   with Options do
-    MouseLookOn:= MouseLook and (_CurrentScreen^ = 0) and (_MainMenuCode^ = -1) and
+    MouseLookOn:= MouseLook and (_CurrentScreen^ = 0) and (_MainMenuCode^ < 0) and
        ((cur = EmptyCur) or (cur = ArrowCur)) and not MLookRightPressed^ and
        ( (GetAsyncKeyState(MouseLookTempKey) and $8000 = 0) xor
           MouseLookChanged xor MouseLookUseAltMode xor
@@ -1895,27 +1946,22 @@ var
   MouseLookHook3Std: procedure(a1, a2, this: ptr);
   MLookBmp: TBitmap;
 
-procedure MLookLoad;
-const
-  CurFile = 'Data\MouseLookCursor.bmp';
+function LoadMLookBmp(const fname: string; fmt: TPixelFormat): TBitmap;
 var
   b: TBitmap;
   exist: Boolean;
 begin
-  MLookBmp:= TBitmap.Create;
-  with MLookBmp, Canvas do
+  Result:= TBitmap.Create;
+  with Result, Canvas do
   begin
-    if _GreenColorBits^ = 5 then
-      PixelFormat:= pf15bit
-    else
-      PixelFormat:= pf16bit;
+    PixelFormat:= fmt;
     HandleType:= bmDIB;
     b:= nil;
-    exist:= FileExists(CurFile);
+    exist:= FileExists(fname);
     if exist then
       try
         b:= TBitmap.Create;
-        b.LoadFromFile(CurFile);
+        b.LoadFromFile(fname);
         Width:= b.Width;
         Height:= b.Height;
         CopyRect(ClipRect, b.Canvas, ClipRect);
@@ -1930,13 +1976,19 @@ begin
     Height:= 64;
     Brush.Color:= $F0A0B0;
     FillRect(ClipRect);
-    DrawIconEx(Handle, 32, 32, ArrowCur, 0, 0, 0, 0, DI_DEFAULTSIZE or DI_NORMAL);
-    if not exist then
-      try
-        SaveToFile(CurFile);
-      except
-      end;
+    DrawIconEx(Handle, 32, 32, ArrowCur, 0, 0, 0, 0, DI_NORMAL);
   end;
+end;
+
+procedure MLookLoad;
+var
+  fmt: TPixelFormat;
+begin
+  if _GreenColorBits^ = 5 then
+    fmt:= pf15bit
+  else
+    fmt:= pf16bit;
+  MLookBmp:= LoadMLookBmp('Data\MouseLookCursor.bmp', fmt);
 end;
 
 procedure MLookDraw;
@@ -1969,11 +2021,22 @@ begin
   end;
 end;
 
+procedure MLookDrawHD;
+begin
+  if DXProxyCursorBmp = nil then
+    DXProxyCursorBmp:= LoadMLookBmp('Data\MouseLookCursorHD.bmp', pf32bit);
+  DXProxyCursorX:= (MiddleX*DXProxyRenderW + SW div 2) div SW - DXProxyCursorBmp.Width div 2;
+  DXProxyCursorY:= (MiddleY*DXProxyRenderH + SH div 2) div SH - DXProxyCursorBmp.Height div 2;
+end;
+
 procedure MouseLookHook3(a1, a2, this: ptr);
 begin
   CheckMouseLook;
   if MouseLookOn and not MLookIsTemp then
-    MLookDraw;
+    if MouseLookCursorHD and DXProxyActive and ((DXProxyRenderW > SW) or (DXProxyRenderH > SH)) then
+      MLookDrawHD
+    else
+      MLookDraw;
 
   MouseLookHook3Std(nil, nil, this);
 end;
@@ -2002,63 +2065,15 @@ end;
 var
   WindowProcStd: function(w: HWND; msg: uint; wp: WPARAM; lp: LPARAM):HRESULT; stdcall;
 
-procedure CalcClientRect(var r: TRect);
-var
-  w, h: int;
-begin
-  w:= r.Right - r.Left;
-  h:= r.Bottom - r.Top;
-  NeedScreenWH;
-  if BorderlessProportional then
-  begin
-    w:= w div SW;
-    h:= min(w, h div SH);
-    w:= h*SW;
-    h:= h*SH;
-  end else
-    if w*SH >= h*SW then
-      w:= (h*SW + SH div 2) div SH
-    else
-      h:= (w*SH + SW div 2) div SW;
-  dec(w, r.Right - r.Left);
-  dec(r.Left, w div 2);
-  dec(r.Right, w div 2 - w);
-  dec(h, r.Bottom - r.Top);
-  dec(r.Top, h div 2);
-  dec(r.Bottom, h div 2 - h);
-end;
-
-procedure PaintBorders(wnd: HWND; wp: int);
-var
-  dc: HDC;
-  r, rc, r1: TRect;
-begin
-  GetWindowRect(wnd, r);
-  GetClientRect(wnd, rc);
-  MapWindowPoints(wnd, 0, rc, 2);
-  OffsetRect(rc, -r.Left, -r.Top);
-  OffsetRect(r, -r.Left, -r.Top);
-  dc:= GetWindowDC(wnd);//GetDCEx(wnd, wp, DCX_WINDOW or DCX_INTERSECTRGN);
-
-  r1:= Rect(0, 0, r.Right, rc.Top); // top
-  FillRect(dc, r1, GetStockObject(BLACK_BRUSH));
-  r1:= Rect(0, rc.Top, rc.Left, rc.Bottom); // left
-  FillRect(dc, r1, GetStockObject(BLACK_BRUSH));
-  r1:= Rect(rc.Right, rc.Top, r.Right, rc.Bottom); // right
-  FillRect(dc, r1, GetStockObject(BLACK_BRUSH));
-  r1:= Rect(0, rc.Bottom, r.Right, r.Bottom); // bottom
-  FillRect(dc, r1, GetStockObject(BLACK_BRUSH));
-
-  ReleaseDC(wnd, dc);
-end;
-
 procedure MyClipCursor;
 var
   r: TRect;
 begin
   GetClientRect(_MainWindow^, r);
   MapWindowPoints(_MainWindow^, 0, r, 2);
-  ClipCursor(@r);
+  BringWindowToTop(_MainWindow^);
+  if GetForegroundWindow = _MainWindow^ then
+    ClipCursor(@r);
 end;
 
 function WindowProcHook(w: HWND; msg: uint; wp: WPARAM; lp: LPARAM):HRESULT; stdcall;
@@ -2076,13 +2091,7 @@ begin
     exit;
   end;
   if _Windowed^ and (msg >= WM_MOUSEFIRST) and (msg <= WM_MOUSELAST) then
-    with xy do
-    begin
-      NeedScreenWH;
-      GetClientRect(_MainWindow^, r);
-      x:= MulDiv(x, SW, r.Right);
-      y:= MulDiv(y, SH, r.Bottom);
-    end;
+    xy.y:= TransformMousePos(xy.x, xy.y, lp);
 
   Result:= WindowProcStd(w, msg, wp, lp);
 
@@ -2102,21 +2111,37 @@ begin
       WM_SYSCOMMAND:
         if wp and $FFF0 = SC_RESTORE then
           MyClipCursor;
+    end;
+
+  if _Windowed^ and KeepAspectRatio and IsZoomed(w) then
+    case msg of
       WM_NCCALCSIZE:
         if wp <> 0 then
           with PNCCalcSizeParams(lp)^ do
           begin
-            CalcClientRect(rgrc[0]);
+            Wnd_CalcClientRect(rgrc[0]);
             Result:= WVR_REDRAW;
           end
-        else
-          CalcClientRect(PRect(lp)^);
+        else if IsZoomed(w) then
+          Wnd_CalcClientRect(PRect(lp)^);
       WM_NCPAINT:
-        PaintBorders(w, wp);
+        Wnd_PaintBorders(w, wp);
+      WM_NCHITTEST:
+        if Result = HTNOWHERE then
+          Result:= HTBORDER;
     end;
+
+  if _Windowed^ and (msg = WM_SIZING) and not IsZoomed(w) then
+    Wnd_Sizing(w, wp, PRect(lp)^);
 
   if Options.SupportTrueColor and (msg = WM_SIZE) then
     DXProxyOnResize;
+
+  if AllowMovieQuickLoad and (msg = WM_KEYDOWN) and (wp = Options.QuickLoadKey) then
+  begin
+    AllowMovieQuickLoad:= false;
+    _AbortMovie^:= true;
+  end;
 end;
 
 //----- Fly in Z axis with mouse
@@ -2348,19 +2373,17 @@ var
   AutoColor16Std, AutoColor16Std2: ptr;
 
 procedure AutoColor16Proc;
+const
+  bpp: array[boolean] of byte = (16, 32);
 var
   mode: TDevMode;
 begin
-  if Options.SupportTrueColor then
-  begin
-    if not _IsD3D^ then  exit;
-    if (GetDeviceCaps(GetDC(0), BITSPIXEL) = 32) and (GetDeviceCaps(GetDC(0), PLANES) = 1) then  exit;
-  end; 
-  if (GetDeviceCaps(GetDC(0), BITSPIXEL) <> 16) or (GetDeviceCaps(GetDC(0), PLANES) <> 1) then
+  if not (GetDeviceCaps(GetDC(0), BITSPIXEL) in [16, bpp[Options.SupportTrueColor]]) or
+     (GetDeviceCaps(GetDC(0), PLANES) <> 1) then
     with mode do
     begin
       dmSize:= SizeOf(mode);
-      dmBitsPerPel:= 16;
+      dmBitsPerPel:= bpp[Options.SupportTrueColor];
       dmFields:= DM_BITSPERPEL;
       ChangeDisplaySettings(mode, CDS_FULLSCREEN);
     end;
@@ -2669,6 +2692,30 @@ begin
     end;
 end;
 
+{procedure LoadCustomLodsHD(Old: int; const Name: string; Chap: PChar);
+var
+  s: string;
+  i: int;
+begin
+  with TRSFindFile.Create('Data\*.' + Name + '*') do
+    try
+      while FindNextAttributes(0, FILE_ATTRIBUTE_DIRECTORY) do // Only files
+      begin
+        s:= Data.cFileName;
+        i:= LastDelimiter('.', s);
+        s[i]:= ':';
+        i:= LastDelimiter('.', s);
+        if
+
+
+        if ExtractFileExt(Data.cFileName)
+        DoLoadCustomLod(ptr(Old), PChar('Data\' + Data.cFileName), Chap);
+      end;
+    finally
+      Free;
+    end;
+end;}
+
 var
   LoadLodsOld: TProcedure;
 
@@ -2678,7 +2725,10 @@ var
   Lang: array[0..103] of Char;
 begin
   LoadCustomLods($70D3E8, 'icons.lod', 'icons');
-  LoadCustomLods($72DC60, 'bitmaps.lod', 'bitmaps');
+  {if _IsD3D^ then
+    LoadCustomLodsHD($72DC60, 'bitmaps.lod', 'bitmaps')
+  else}
+    LoadCustomLods($72DC60, 'bitmaps.lod', 'bitmaps');
   LoadCustomLods($71EFA8, 'sprites.lod', 'sprites08');
   LoadCustomLods($6CE838, 'games.lod', 'chapter');
   LoadCustomLods($6F30D0, 'T.lod', 'language');
@@ -2687,6 +2737,8 @@ begin
   LoadCustomLods($6F30D0, PChar(Lang + 'T.lod'), 'language');
   LoadCustomLods($6F330C, PChar(Lang + 'D.lod'), 'language');
   LoadLodsOld;
+  if _IsD3D^ then
+    ApplyHooksD3D;
 end;
 
 //----- Custom LODs - Vid
@@ -3439,36 +3491,32 @@ asm
 @std:
 end;
 
-//----- Monsters can't cast Paralyze spell, but waste turn
+//----- Monsters can't cast some spells, but waste turn
 
-procedure FixParalyze;
+procedure FixUnimplementedSpells;
 asm
-  jnz @1
-  mov [esp], $42562C
-@1:
-  sub eax, 1
-  jnz @2
-  mov [esp], $425505
-  ret
-@2:
-  sub eax, 4
+  mov eax, [esp + $C]
+  cmp eax, 20  // Implosion
+  jz @bad
+  cmp eax, 44  // Mass Distortion
+  jz @bad
+  cmp eax, 81  // Paralyze
+  jz @bad
+
+  jmp @std
+@bad:
+  xor eax, eax
+  mov [esp], $425509
+@std:
 end;
 
 //----- Configure window size (also see WindowProcHook)
 
 function ScreenToClientHook(w: HWND; var p: TPoint): BOOL; stdcall;
-var
-  r: TRect;
 begin
   Result:= ScreenToClient(w, p);
   if Result then
-    with p do
-    begin
-      NeedScreenWH;
-      GetClientRect(_MainWindow^, r);
-      x:= MulDiv(x, SW, r.Right);
-      y:= MulDiv(y, SH, r.Bottom);
-    end;
+    p.y:= TransformMousePos(p.x, p.y, p.x);
 end;
 
 //----- Borderless fullscreen (also see WindowProcHook)
@@ -3476,7 +3524,6 @@ end;
 procedure SwitchToWindowedHook;
 begin
   Options.BorderlessWindowed:= true;
-//  SetWindowPos(_MainWindow^, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE + SWP_NOSIZE);
   ShowWindow(_MainWindow^, SW_SHOWNORMAL);
   SetWindowLong(_MainWindow^, GWL_STYLE, GetWindowLong(_MainWindow^, GWL_STYLE) or _WindowedGWLStyle^);
 end;
@@ -3484,9 +3531,7 @@ end;
 procedure SwitchToFullscreenHook;
 begin
   Options.BorderlessWindowed:= false;
-//  SetWindowPos(_MainWindow^, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE + SWP_NOSIZE);
   ShowWindow(_MainWindow^, SW_SHOWMAXIMIZED);
-  BringWindowToTop(_MainWindow^);
   MyClipCursor;
 end;
 
@@ -3818,10 +3863,256 @@ asm
   or eax, 1
 end;
 
+//----- Allow window maximization
+
+function GetRestoredRect(hWnd: HWND; var lpRect: TRect): BOOL; stdcall;
+begin
+  ShowWindow(hWnd, SW_SHOWNORMAL);
+  Result:= GetWindowRect(hWnd, lpRect);
+end;
+
+//----- Inactive players could attack
+
+procedure InactivePlayerActFix;
+begin
+  if (_CurrentMember^ <> 0) and
+     (pword(int(GetCurrentMember) + _CharOff_Recover)^ > 0) then
+  begin
+    _CurrentMember^:= _FindActiveMember;
+    _NeedRedraw^:= 1;
+  end;
+end;
+
+//----- Fix multiple steps at once in turn-based mode
+
+var
+  LastTurnBasedWalk: uint;
+
+procedure FixTurnBasedWalking;
+asm
+  jle @std
+  call timeGetTime
+  mov edx, eax
+  sub eax, LastTurnBasedWalk
+  and eax, $7FFFFFFF
+  cmp eax, TurnBasedWalkDelay
+  jle @std
+  mov LastTurnBasedWalk, edx
+@std:
+end;
+
+//----- Allow loading quick save from death movie + NoDeathMovie
+
+var
+  oldDeathMovie: TProcedure;
+
+function DeathMovieProc: Boolean;
+begin
+  AllowMovieQuickLoad:= true;
+  if not NoDeathMovie then
+    oldDeathMovie;
+  Result:= not AllowMovieQuickLoad;
+  AllowMovieQuickLoad:= false;
+  if Result then
+    QuickLoad;
+end;
+
+procedure DeathMovieHook;
+asm
+  call DeathMovieProc
+  test al, al
+  jz @std
+  mov [esp], $461877
+@std:
+end;
+
+//----- Remember minimap zoom indoors
+
+type
+  TSelfProc = procedure(__,_: int; this: ptr);
+
+procedure MinimapZoomHook(f: TSelfProc; _, p: PChar);
+begin
+  if WasIndoor then
+    pint64(@Options.IndoorMinimapZoomMul)^:= pint64(p + 36)^;
+  f(0, 0, p);
+  WasIndoor:= (_IndoorOrOutdoor^ = 1);
+  if WasIndoor then
+    pint64(p + 36)^:= pint64(@Options.IndoorMinimapZoomMul)^;
+end;
+
+//----- A crash I once experienced in Adventurers Inn
+
+procedure AdvInnCrashFix;
+asm
+  cmp esi, 0
+  jnz @ok
+  mov [esp], $421265
+@ok:
+end;
+
+//----- Calculate mipmaps count depending on the texture in question
+
+procedure GetMipmapsCountHook;
+asm
+  mov eax, esi
+  mov edx, ebx
+  call GetMipmapsCountProc
+  mov DXProxyMipmapCount, eax
+end;
+
+//----- IsWater and AnimateTFT bits didn't work together in D3D
+
+procedure TFTWaterHook;
+asm
+  test ah, $40
+  jz @std
+  and al, $EF
+@std:
+end;
+
+//----- Alt+Tab interpreted as Tab
+
+function TabHook(n: int): int;
+begin
+  Result:= n;
+  if GetAsyncKeyState(VK_ALT) < 0 then
+    Result:= 40;
+end;
+
+//----- Load cursors from Data
+
+var
+  CursorTarget: HCURSOR;
+
+function MyLoadCursor(hInstance: HINST; name: PChar): HCURSOR; stdcall;
+begin
+  Result:= 0;
+  if int(name) > $7FFFF then
+    if name = 'Arrow' then
+      Result:= ArrowCur
+    else if name = 'Target' then
+      Result:= CursorTarget;
+  if Result = 0 then
+    Result:= LoadCursor(hInstance, name);
+end;
+
+//----- Monsters/items/effects not visible on the sides of the screen
+
+function AbsCheckOutdoor(v: int): int; cdecl;
+var
+  m: int;
+begin
+  Result:= abs(v);
+  with _RenderRect^ do
+    m:= 300 - _ViewMulOutdoor^*344 div (Right - Left);
+  if m > 0 then
+    dec(Result, (Result div 300)*m);
+end;
+
+//----- Precise sprites placement (D3D)
+
+var
+  DrawSpritePos: array of array[0..1] of int2;
+  DrawSpriteCount: int;
+  DrawSpriteOff: int;
+  FloatToIntShl16: single = 6755399441055744/$10000;
+
+procedure ExtendDrawSpritePos(n: int);
+begin
+  DrawSpriteCount:= n + max(501, DrawSpriteCount);
+  SetLength(DrawSpritePos, DrawSpriteCount);
+end;
+
+procedure CheckDrawSpriteCount;
+asm
+  push eax
+  mov eax, [__SpritesToDrawCount]
+  cmp eax, DrawSpriteCount
+  jl @ok
+  push edx
+  push ecx
+  call ExtendDrawSpritePos
+  pop ecx
+  pop edx
+@ok:
+  pop eax
+end;
+
+procedure StoreSpriteRemainder;
+asm
+  call CheckDrawSpriteCount
+  // store ax as int16
+  push edx
+  mov edx, [__SpritesToDrawCount]
+  shl edx, 2
+  and DrawSpriteOff, 2
+  add edx, DrawSpriteOff
+  xor DrawSpriteOff, 2
+  add edx, DrawSpritePos
+  mov [edx], ax
+  pop edx
+end;
+
+procedure StoreSpriteRemainderAndShr16;
+asm
+  call StoreSpriteRemainder
+  add eax, $8000
+  sar eax, 16
+end;
+
+procedure StoreSpriteRemainderIndoor;
+asm
+  cmp DrawSpriteOff, 2
+  jz StoreSpriteRemainderAndShr16
+  neg eax
+  call StoreSpriteRemainder
+  neg eax
+  add eax, $8000
+  sar eax, 16
+end;
+
+procedure LoadSpriteRemainder;
+asm
+  call CheckDrawSpriteCount
+  shl eax, 16
+  mov ecx, DrawSpriteOff
+  add ecx, DrawSpritePos
+  add DrawSpriteOff, 2
+  movsx ecx, word ptr [ecx]
+  sub eax, ecx
+// check for loop end:
+  mov ecx, [__SpritesToDrawCount]
+  shl ecx, 2
+  cmp ecx, DrawSpriteOff
+  jg @ok
+  and DrawSpriteOff, 2
+@ok:
+end;
+
+procedure FShr16;
+const
+  a: int = $10000;
+asm
+  fidiv a
+end;
+
+//----- Precise mouse (D3D)
+
+procedure LoadMouseRemainderX;
+asm
+  fadd MouseDX
+end;
+
+procedure LoadMouseRemainderY;
+asm
+  fadd MouseDY
+end;
+
 //----- HooksList
 
 var
-  HooksList: array[1..303] of TRSHookInfo = (
+  HooksList: array[1..338] of TRSHookInfo = (
     (p: $458E18; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $463862; old: $450493; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave/quicksave filenames localization
     (p: $4CD509; t: RShtNop; size: 12), // Fix Save/Load Slots: it resets SaveSlot, SaveScroll
@@ -3840,7 +4131,7 @@ var
     (p: $44C83D; old: VK_F11; newp: @QuickSaveKey; newref: true; t: RSht1), // QuickSaveKey
     (p: $44C84E; old: VK_F11; newp: @QuickSaveKey; newref: true; t: RSht1), // QuickSaveKey
     (p: $42E54A; newp: @CapsLockHook; t: RShtCall; size: 6; Querry: 4), // CapsLockToggleRun
-    (p: $4A7C76; old: $4A7C00; new: $4A7C45; t: RSht4; Querry: 3), // No death movie
+    (p: $4614FF; backup: @@oldDeathMovie; newp: @DeathMovieHook; t: RShtCall), // Allow loading quick save from death movie + NoDeathMovie
     (p: $4A7C62; old: $4A7BCC; new: $4A7C45; t: RSht4; Querry: 2), // No intro: 3dologo
     (p: $4A7C66; old: $4A7BD9; new: $4A7C45; t: RSht4; Querry: 2), // No intro: new world logo
     (p: $4A7C6A; old: $4A7BE6; new: $4A7C45; t: RSht4; Querry: 2), // No intro: jvc
@@ -3949,7 +4240,10 @@ var
     (p: $4BFD4C; newp: @FacetCheckHook2; t: RShtCall), // Fix facet ray interception checking out-of-bounds
     (p: $4BFE4A; newp: @FacetCheckHook2; t: RShtCall), // Fix facet ray interception checking out-of-bounds
     (p: $4BFF3E; newp: @FacetCheckHook2; t: RShtCall), // Fix facet ray interception checking out-of-bounds
-    (p: $4981AC; newp: @NoVertexFacetHook; t: RShtCall), // There is a facet without a single vertexes in Necromancers' Guild!
+    (p: $46C09E; newp: @FacetCheckHook3; t: RShtCall; size: 7), // Fix facet interception checking out-of-bounds
+    (p: $46C0B6; newp: @FacetCheckHook3; t: RShtCall; size: 7), // Fix facet interception checking out-of-bounds
+    (p: $4981AC; newp: @NoVertexFacetHook; t: RShtCall), // There is a facet without a single vertex in Necromancers' Guild!
+    (p: $433D91; newp: @NoVertexFacetHook2; t: RShtBefore; size: 6), // There is a facet without a single vertex in Necromancers' Guild!
     (p: $4A2C46; old: $44FD37; newp: @LoadBitmapD3DHook; t: RShtCall; Querry: 13), // No HWL for bitmaps
     (p: $49C175; old: $44FBD0; new: $44FC90; t: RShtCall; Querry: 13), // No HWL for bitmaps
     (p: $49C1CD; size: 5; Querry: 13), // No HWL for bitmaps
@@ -4059,7 +4353,7 @@ var
     (p: $461953; newp: @FixFullScreenBlink; t: RShtCall; size: 6; Querry: -100), // Light gray blinking in full screen
     (p: $40ECAD; newp: @FixBlitCopy; t: RShtCall; size: 6), // Draw buffer overflow in Arcomage
     (p: $40B15B; t: RShtNop; size: 2;), // Hang in Arcomage
-    (p: $44D675; newp: @FixMonsterSummon; t: RShtJmp; size: 7), // Monsters summoned by other monsters had wrong monster as their ally
+    (p: $44D675; newp: @FixMonsterSummon; t: RShtJmp; size: 7; Querry: hqFixMonsterSummon), // Monsters summoned by other monsters had wrong monster as their ally
     (p: $426145; old: $404340; newp: @FixDragonTargeting; t: RShtCall), // Dragons and some spells couldn't target rats
     (p: $460D46; t: RShtNop; size: 6; Querry: 24), // DisableAsyncMouse
     (p: $461A50; t: RShtNop; size: 7; Querry: 24), // DisableAsyncMouse
@@ -4073,8 +4367,8 @@ var
     (p: $4496BB; oldstr: #49#49#49#49#49#49; newstr: #48#48#48#48#48#48; t: RShtBStr), // Evt commands couldn't operate on some skills
     (p: $446BBA; old: 8; new: 9; t: RSht4; Querry: 25), // Heroism pedestal casting Haste instead
     (p: $466990; old: 135; new: 149; t: RSht4), // Flute making Heal sound
-    (p: $431F0E; oldstr: #131#13#28#123#81#0#255; newstr: #137#29#28#123#81#0#144; t: RShtBStr), // -1 being set as quick spell
-    (p: $43217D; oldstr: #131#13#28#123#81#0#255; newstr: #137#29#28#123#81#0#144; t: RShtBStr), // -1 being set as quick spell
+    (p: $431F0E; oldstr: #131#13#28#123#81#0#255; newstr: #137#29#28#123#81#0#144; t: RShtBStr; Querry: hqFixQuickSpell), // -1 being set as quick spell
+    (p: $43217D; oldstr: #131#13#28#123#81#0#255; newstr: #137#29#28#123#81#0#144; t: RShtBStr; Querry: hqFixQuickSpell), // -1 being set as quick spell
     (p: $490058; size: 16), // Shops unable to operate on some artifacts
     (p: $4BB64A; size: 16), // Shops unable to operate on some artifacts
     (p: $49008E; newp: @CanSellItemHook; t: RShtCall; size: 6), // Shops unable to operate on some artifacts
@@ -4084,7 +4378,7 @@ var
     (p: $47256E; newp: @FixLava2; t: RShtCall; size: 7), // Lava hurting players in air
     (p: $479B04; newp: @FixObelisk; t: RShtBefore; size: 6; Querry: hqFixObelisks), // Unicorn King appearing before obelisks are taken and respawning
     (p: $424E55; newp: @FixObelisk2; t: RShtAfter; Querry: hqFixObelisks), // Unicorn King appearing before obelisks are taken and respawning
-    (p: $4255B3; newp: @FixParalyze; t: RShtCall), // Monsters can't cast Paralyze spell, but waste turn
+    (p: $4254BA; newp: @FixUnimplementedSpells; t: RShtBefore; size: 6; Querry: hqFixUnimplementedSpells), // Monsters can't cast some spells, but waste turn
     (p: $4637B7; newp: @WindowWidth; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $4637CD; newp: @WindowHeight; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $4E821C; newp: @ScreenToClientHook; t: RSht4; Querry: hqWindowSize), // Configure window size
@@ -4119,13 +4413,71 @@ var
     (p: $461B7F; size: 6; Querry: hqTrueColor), // 32 bit color support
     (p: $4635BA; size: 2; Querry: hqTrueColor), // 32 bit color support
     (p: $4E801C; newp: @MyDirectDrawCreate; t: RSht4; Querry: hqTrueColor), // 32 bit color support + HD
-    (p: $4A2C58; size: $4A2C75 - $4A2C58; Querry: hqMipmaps), // Generate mipmaps
+    (p: $4A2C57; newp: @GetMipmapsCountHook; t: RShtCall; size: $4A2C75 - $4A2C57; Querry: hqMipmaps), // Calculate mipmaps count depending on the texture in question
     (p: $4A2D8A; newp: @FixMipmapsMemLeak; t: RShtAfter), // Mipmaps generation code not calling surface->Release
     (p: $41DE32; newp: @FixSpritesInMonInfo; t: RShtBefore; size: 6), // Fix sprites with non-zero transparent colors in monster info dialog
     (p: $41DF2F; newp: @FixSpritesInMonInfo; t: RShtBefore; size: 8), // Fix sprites with non-zero transparent colors in monster info dialog
     (p: $484B8A; newp: @FixDivCrash1; t: RShtCall; size: 6), // Fix int overflow crash in editor
     (p: $478FFD; newp: @FixDivCrash2; t: RShtCall; size: 6), // Fix int overflow crash in editor
     (p: $479341; newp: @FixDivCrash2; t: RShtCall; size: 6), // Fix int overflow crash in editor
+    (p: $4636C3; old: $CA0000; new: $CA0000 or WS_SIZEBOX or WS_MAXIMIZEBOX or WS_SYSMENU; t: RSht4), // Allow window resize
+    (p: $464C65; newp: @GetRestoredRect; t: RShtCall; size: 6), // Allow window maximization
+    (p: $462986; newp: @GetRestoredRect; t: RShtCall; size: 6), // Allow window maximization
+    (p: $43CC40; old: $D0; new: $C4; t: RSht4), // Support changing FOV indoor in D3D mode
+    (p: $43CFEC; old: $D0; new: $C4; t: RSht4), // Support changing FOV indoor in D3D mode
+    (p: $43D47A; old: $D0; new: $C4; t: RSht4), // Support changing FOV indoor in D3D mode
+    (p: $48A804; old: $D0; new: $C4; t: RSht4), // Support changing FOV indoor in D3D mode
+    (p: $47AB35; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Monsters not visible on the sides of the screen
+    (p: $47A55E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Items not visible on the sides of the screen
+    (p: $48B37E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Effects not visible on the sides of the screen
+    (p: $420F1F; size: 2), // Inactive characters couldn't interact with chests
+    (p: $420E14; size: 6; Querry: hqInactivePlayersFix), // Select inactive characters
+    (p: $4316B2; newp: @InactivePlayerActFix; t: RShtBefore; size: 6; Querry: hqInactivePlayersFix), // Inactive players could attack
+    (p: $42EBFF; newp: @FixTurnBasedWalking; t: RShtAfter; size: 6; Querry: hqFixTurnBasedWalking), // Fix multiple steps at once in turn-based mode
+    (p: $42EBCE; newp: @FixTurnBasedWalking; t: RShtAfter; size: 6; Querry: hqFixTurnBasedWalking), // Fix multiple steps at once in turn-based mode
+    (p: $42E669; newp: @FixTurnBasedWalking; t: RShtAfter; size: 6; Querry: hqFixTurnBasedWalking), // Fix multiple steps at once in turn-based mode
+    (p: $42E6BF; newp: @FixTurnBasedWalking; t: RShtAfter; size: 6; Querry: hqFixTurnBasedWalking), // Fix multiple steps at once in turn-based mode
+    (p: $48203C; newp: ptr($481F4F); t: RShtJmp; size: 6; Querry: hqNoWaterShoreBumps), // Fix bumpy water shore in software mode
+    (p: $440169; newp: @MinimapZoomHook; t: RShtFunctionStart; size: 6), // Remember minimap zoom indoors
+    (p: $4C9A9F; old: 476; new: 468; t: RSht4), // Left 8 pixels of paper doll area didn't react to clicks
+    (p: $4C9B06; old: 476; new: 468; t: RSht4), // Left 8 pixels of paper doll area didn't react to clicks
+    (p: $4C9B14; old: 164; new: 172; t: RSht4), // Left 8 pixels of paper doll area didn't react to clicks
+    (p: $420FC8; newp: @AdvInnCrashFix; t: RShtBefore; size: 7), // A crash I once experienced in Adventurers Inn
+    (p: $44B8EF; old: $7F; new: $7D; t: RSht1), // TFT.bin was animated incorrectly (first frame was longer, last frame was shorter)
+    (p: $4AF05E; newp: @TFTWaterHook; t: RShtBefore), // IsWater and AnimateTFT bits didn't work together in D3D
+    (p: $42ECAB; newp: @TabHook; t: RShtAfter), // Alt+Tab interpreted as Tab
+    (p: $42EB31; newp: @TabHook; t: RShtAfter), // Alt+Tab interpreted as Tab
+    (p: $4E8218; newp: @MyLoadCursor; t: RSht4), // Load cursors from Data
+    (p: $4C6E37; old: 498; new: 498-6; t: RSht4), // Wrong minimap placement
+    (p: $4C6E32; old: 635; new: 635-6; t: RSht4), // Wrong minimap placement
+    (p: $4CDFAC; old: 498; new: 498-6; t: RSht4), // Wrong minimap placement
+    (p: $4CDFA7; old: 635; new: 635-6; t: RSht4), // Wrong minimap placement
+    ()
+  );
+
+  HooksD3D: array[1..23] of TRSHookInfo = (
+    (p: $43443B; old: $4E8590; newp: @FloatToIntShl16; t: RSht4), // Precise sprites placement (indoor)
+    (p: $43446A; old: $4E8590; newp: @FloatToIntShl16; t: RSht4), // Precise sprites placement (indoor)
+    (p: $43443F; newp: @StoreSpriteRemainderIndoor; t: RShtAfter; size: 6), // Precise sprites placement (indoor)
+    (p: $43446E; newp: @StoreSpriteRemainderIndoor; t: RShtAfter; size: 6), // Precise sprites placement (indoor)
+    (p: $47A5D5; newp: @StoreSpriteRemainder; t: RShtAfter; size: 6), // Precise sprites placement (items outdoor)
+    (p: $47A5FE; newp: @StoreSpriteRemainder; t: RShtAfter; size: 6), // Precise sprites placement (items outdoor)
+    (p: $479FFB; old: $4E8798; newp: @FloatToIntShl16; t: RSht4), // Precise sprites placement (decor outdoor)
+    (p: $47A021; old: $4E8798; newp: @FloatToIntShl16; t: RSht4), // Precise sprites placement (decor outdoor)
+    (p: $479FFF; newp: @StoreSpriteRemainderAndShr16; t: RShtAfter; size: 6), // Precise sprites placement (decor outdoor)
+    (p: $47A025; newp: @StoreSpriteRemainderAndShr16; t: RShtAfter; size: 6), // Precise sprites placement (decor outdoor)
+    (p: $47ABA4; newp: @StoreSpriteRemainder; t: RShtAfter; size: 6), // Precise sprites placement (monsters outdoor)
+    (p: $47ABD3; newp: @StoreSpriteRemainder; t: RShtAfter; size: 6), // Precise sprites placement (monsters outdoor)
+    (p: $43DC89; newp: @LoadSpriteRemainder; t: RShtBefore; size: 6), // Precise sprites placement (indoor)
+    (p: $43DC8F; newp: @LoadSpriteRemainder; t: RShtBefore; size: 6), // Precise sprites placement (indoor)
+    (p: $4A2338; newp: @FShr16; t: RShtAfter; size: 10), // Precise sprites placement (indoor)
+    (p: $4A2359; newp: @FShr16; t: RShtBefore; size: 6), // Precise sprites placement (indoor)
+    (p: $47AE2F; newp: @LoadSpriteRemainder; t: RShtBefore; size: 6), // Precise sprites placement (outdoor)
+    (p: $47AE35; newp: @LoadSpriteRemainder; t: RShtBefore; size: 6), // Precise sprites placement (outdoor)
+    (p: $4A1FB2; newp: @FShr16; t: RShtAfter), // Precise sprites placement (outdoor)
+    (p: $4A1FD9; newp: @FShr16; t: RShtBefore; size: 6), // Precise sprites placement (outdoor)
+    (p: $44C273; newp: @LoadMouseRemainderX; t: RShtBefore; size: 7), // Precise mouse
+    (p: $44C273; newp: @LoadMouseRemainderY; t: RShtAfter), // Precise mouse
     ()
   );
 
@@ -4143,14 +4495,22 @@ begin
     end
 end;
 
+procedure CheckHooks(const Hooks);
+var
+  hk: array[0..0] of TRSHookInfo absolute Hooks;
+  i: int;
+begin
+  i:= RSCheckHooks(Hooks);
+  if i >= 0 then
+    raise Exception.CreateFmt(SWrong, [hk[i].p]);
+end;
+
 procedure HookAll;
 var
   LastDebugHook: DWord;
-  i: int;
 begin
-  i:= RSCheckHooks(HooksList);
-  if i >= 0 then
-    raise Exception.CreateFmt(SWrong, [HooksList[i + 1].p]);
+  CheckHooks(HooksList);
+  CheckHooks(HooksD3D);
 
   ExtendSpriteLimits;
 
@@ -4158,8 +4518,6 @@ begin
   RSApplyHooks(HooksList);
   if NoIntro then
     RSApplyHooks(HooksList, 2);
-  if NoDeathMovie then
-    RSApplyHooks(HooksList, 3);
   if not CapsLockToggleRun then
     RSApplyHooks(HooksList, 4);
   if NoVideoDelays then
@@ -4176,12 +4534,20 @@ begin
     RSApplyHooks(HooksList, 17);
   if DisableAsyncMouse then
     RSApplyHooks(HooksList, 24);
-  if (WindowWidth <> 640) or (WindowHeight <> 480) or BorderlessFullscreen then
+  //if (WindowWidth <> 640) or (WindowHeight <> 480) or BorderlessFullscreen then
     RSApplyHooks(HooksList, hqWindowSize);
   if BorderlessFullscreen then
     RSApplyHooks(HooksList, hqBorderless);
   if (MipmapsCount > 1) or (MipmapsCount < 0) then
     RSApplyHooks(HooksList, hqMipmaps);
+  if FixInactivePlayersActing then
+    RSApplyHooks(HooksList, hqInactivePlayersFix);
+  if TurnBasedWalkDelay > 0 then
+    RSApplyHooks(HooksList, hqFixTurnBasedWalking);
+  if NoWaterShoreBumpsSW then
+    RSApplyHooks(HooksList, hqNoWaterShoreBumps);
+  if FixQuickSpell then
+    RSApplyHooks(HooksList, hqFixQuickSpell);
 
   RSDebugUseDefaults;
   LastDebugHook:= DebugHook;
@@ -4226,6 +4592,15 @@ begin
     RSApplyHooks(HooksList, hqFixSmackDraw);
   if Options.SupportTrueColor then
     RSApplyHooks(HooksList, hqTrueColor);
+  if Options.FixUnimplementedSpells then
+    RSApplyHooks(HooksList, hqFixUnimplementedSpells);
+  if Options.FixMonsterSummon then
+    RSApplyHooks(HooksList, hqFixMonsterSummon);
+end;
+
+procedure ApplyHooksD3D;
+begin
+  RSApplyHooks(HooksD3D);
 end;
 
 exports
@@ -4235,6 +4610,10 @@ exports
   GetLodRecords;
 initialization
   @WindowProcStd:= @WindowProcStdImpl;
+  ArrowCur:= LoadCursorFromFile('Data\MouseCursorArrow.cur');
+  if ArrowCur = 0 then
+    ArrowCur:= LoadCursor(GetModuleHandle(nil), 'Arrow');
+  CursorTarget:= LoadCursorFromFile('Data\MouseCursorTarget.cur');
 finalization
   if EmptyCur <> 0 then
     DestroyCursor(EmptyCur);

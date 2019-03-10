@@ -3,8 +3,16 @@ By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
 Mok's patch is included.
+Save files are, of course, fully compatible with the unpatched game in both directions.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
+
+New in version 2.2:
+  << Fixes in maps >>
+[-] Castle of Air (d27) - 100k experience was given upon exiting the Plane of Air after getting the Heart of Air, so using Town Portal could lead to it getting skipping.
+[-] Castle of Fire (d29) - same as above.
+[-] Alvar (out03) - upon entering the Ogre Raiding Fort the party was facing in a wrong direction.
+[-] Dagger Wound Islands (out01) - upon entering the Uplifted Library the party was facing in a wrong direction.
 
 New in version 2.1:
   << MM6 - MM8 >>
@@ -33,7 +41,7 @@ New in version 2.1:
 [*] Some options made 'hidden' to reduce INI clutter.
   << MM7, MM8 >>
 [+] Mipmapping in D3D, controlled by "MipmapsCount" option. Value of 3 is optimal. Bigger values lead to less flickering at distance, but reduce resolution too much. Set to 1 to disable, as it was in original game. Set to -1 to generate a lot of mipmaps.
-[-] There's was a small semi-transparent black contour around sprites and sea shore in Hardware 3D mode.
+[-] There was a small semi-transparent black contour around sprites and sea shore in Hardware 3D mode.
 [-] Broken but unidentified items were green instead of red if you go to a shop to repair them.
 [-] Casting Telepathy spell or stealing from a monster used to prevent you from finding random items in its corpse.
 [-] Light gray blinking in full screen on some computers.
@@ -49,7 +57,7 @@ New in version 2.1:
   << MM8 >>
 [-] Sky bitmap getting reset each time the game is loaded. To turn off the fix, add FixSkyBitmap=0 line to mm8.ini.
 [-] Flute was making Heal sound.
-[-] Opening spell book and pessing "Quick Spell" key used to set quick spell to -1, causing a crash when you enter character screen.
+[-] Opening spell book and pressing "Quick Spell" key used to set quick spell to -1, causing a crash when you enter character screen.
 [-] My semi-bug: roster.txt and pcnames.txt weren't loaded from DataFiles.
 [-] Monsters couldn't cast Paralyze spell, but were wasting their turn.
 [-] My bug: Since some version of my patch movies were immediately cancelled when shown by a dialog option click, as in original MM8.

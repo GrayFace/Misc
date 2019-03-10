@@ -196,13 +196,54 @@ Version 2.1:
 [-] Monsters summoning wrong monsters (e.g. Archmages summoning Sylphs)
 [-] Pressing Alt+Tab during the win movie 'breaking' the game 
 
-[!] help, site: partial Black Phantom patch
+Version 2.2:
+(MM6 - MM8)
+[+] Resizeable window
+[+] KeepAspectRatio
+[+] Aspect ratio from WindowWidth, WindowHeight
+[+] MouseLookCursorHD
+[+] Quick load key works during the death movie
+[+] Patch now bypasses dgVoodoo DLLs if SupportTrueColor is not disabled
+[+] Minimaps zoom level is remembered indoors, not just outdoors as before
+[+] Customizable mouse cursor: Data\MouseCursorArrow.cur and Data\MouseCursorTarget.cur are used if present  
+[-] Fixed a crash due to facet interception checking out-of-bounds (found in Tatalia in MM7)
+[-] Inactive characters couldn't interact with chests
+[-] TFT.bin was animated incorrectly (first frame was longer, last frame was shorter)
+[-] My bug: Mouse position translation was wrong
+[*] Smarter FixInactivePlayersActing
+(MM7, MM8)
+[+] Accurate sprites coordinates in D3D
+[+] Accurate mouse in HD mode 
+[+] TurnBasedWalkDelay
+[+] Better water animation (???)
+[+] MipmapsBase
+[+] HDWTRCountHWL, HDWTRDelayHWL
+[+] Hidden FixMonsterSummon option
+[-] Combining IsWater and AnimateTFT caused texture change in D3D
+[-] Fixed a rare crash caused by a facet without a single vertex
+[-] My bug: Sparks effect was displayed incorrectly in the previous version
+[-] My bug: ScalingParam2 was read from ScalingParam1 entry
+(MM6)
+[+] "NoPlayerSwap" hidden option
+(MM7)
+[+] Bless etc. icons near player portrait can be transparent
+[-] Decorations were displayed shrinked vertically in D3D mode
+[-] Fly and Water Walk icons weren't displayed in simple message dialog
+[-] Health bars of first 2 players and danger indicators of all players were misplaced (FixInterfaceBugs hidden option)
+(MM8)
+[+] "FixQuickSpell" hidden option
+[-] NoWaterShoreBumpsSW
+[-] Mass Distortion and Implosion spells wasted monsters' turn, but didn't work
+[-] 8 leftmost pixels of paper doll area didn't react to clicks
+[-] Monsters/items/effects not visible on the sides of the view outdoors
+[-] Party wasn't centered on the minimap
 
-[!!] *.wav files instead of *.mp3
-[!!] Make smarter 'Inactive character can't act' fix
+
+[!!] Place items in chests vertically - 41FFB9 (MM7)
+[!!] Compact chest population
 [!!] What about adding a right-click option that lets you exit conversations and houses?
 [!!] Different configs for mouse look/no mouse look?
-[!!] Configurable key for mouse look
+[!!] Configurable (Caps Lock) key for mouse look
 [!!] textures from bitmaps (and option to change their gamma or not to change??)
 
 - if whole party dies Zombies lose "zombie" status, but portrait gets stuck

@@ -4,7 +4,7 @@ interface
 
 uses
   Forms, Windows, Messages, SysUtils, Classes, IniFiles, RSSysUtils, RSQ, Math,
-  RSCodeHook, DirectDraw, Direct3D, TypInfo, Common, RSResample;
+  RSCodeHook, DirectDraw, Direct3D, TypInfo, Common, RSResample, Graphics;
 
 {$I MMPatchVer.inc}
 
@@ -15,8 +15,10 @@ procedure DXProxyOnResize;
 procedure DXProxyDraw(SrcBuf: ptr; info: PDDSurfaceDesc2);
 
 var
-  DXProxyRenderW, DXProxyRenderH: int;
+  DXProxyRenderW, DXProxyRenderH, DXProxyMipmapCount: int;
   DXProxyActive: Boolean;
+  DXProxyCursorX, DXProxyCursorY: int;
+  DXProxyCursorBmp: TBitmap;
 
 implementation
 
@@ -456,10 +458,23 @@ begin
   CalcRenderSize;
 end;
 
+var
+  DDrawCreate: function(lpGUID: PGUID; out lplpDD: IDirectDraw;
+    pUnkOuter: IUnknown): HResult; stdcall;
+
 function MyDirectDrawCreate(lpGUID: PGUID; out lplpDD: IDirectDraw;
     const pUnkOuter: IUnknown): HResult; stdcall;
+var
+  path: array[0..MAX_PATH] of char;
 begin
-  Result:= DirectDrawCreate(lpGUID, lplpDD, pUnkOuter);
+  // Bypass dgVoodoo substitute DDraw.dll
+  if @DDrawCreate = nil then
+  begin
+    GetSystemDirectory(@path[0], SizeOf(path));
+    if RSLoadProc(@DDrawCreate, IncludeTrailingPathDelimiter(path) + 'ddraw.dll', 'DirectDrawCreate') = 0 then
+      @DDrawCreate:= @DirectDrawCreate;
+  end;
+  Result:= DDrawCreate(lpGUID, lplpDD, pUnkOuter);
   DXProxyActive:= (GetWindowLong(_MainWindow^, GWL_STYLE) and WS_BORDER <> 0) or
      BorderlessFullscreen or not _Windowed^;
   DXProxyActive:= DXProxyActive and (GetDeviceCaps(GetDC(0), BITSPIXEL) = 32);
@@ -473,6 +488,34 @@ begin
     CalcRenderSize;
   if Viewport_Def.dwSize <> 0 then
     Viewport.SetViewport2(Viewport_Def);
+end;
+
+procedure DrawCursor(surf: PChar; pitch: int);
+var
+  p1, p2: PChar;
+  x, y, w, h, d1, d2: int;
+  k, trans: int;
+begin
+  w:= DXProxyCursorBmp.Width;
+  h:= DXProxyCursorBmp.Height;
+  p1:= DXProxyCursorBmp.ScanLine[0];
+  d1:= PChar(DXProxyCursorBmp.ScanLine[1]) - p1 - 4*w;
+  p2:= surf + pitch*DXProxyCursorY + 4*DXProxyCursorX;
+  d2:= pitch - 4*w;
+  trans:= pint(p1)^;
+  for y := 1 to h do
+  begin
+    for x := 1 to w do
+    begin
+      k:= pint(p1)^;
+      if k <> trans then
+        pint(p2)^:= k;
+      inc(p1, 4);
+      inc(p2, 4);
+    end;
+    inc(p1, d1);
+    inc(p2, d2);
+  end;
 end;
 
 var
@@ -493,33 +536,48 @@ end;
 procedure DXProxyDraw(SrcBuf: ptr; info: PDDSurfaceDesc2);
 var
   r: TRect;
+  d: int;
 begin
+  //if GetKeyState(VK_SCROLL) and 1 <> 0 then  exit;
   //FPS;
   if (scale.DestW <> RenderW) or (scale.DestH <> RenderH) then
   begin
     RSSetResampleParams(ScalingParam1, ScalingParam2);
-    scale.Init(_ScreenW^, _ScreenH^, RenderW, RenderH);
+    scale.Init(_ScreenW^, _ScreenH^, max(RenderW, _ScreenW^), max(RenderH, _ScreenH^));
+    d:= IfThen(_IsD3D^, 1, -1);
     with Options.RenderRect do
-      r:= DXProxyScaleRect(Rect(max(0, Left - 1), max(0, Top - 1), Right + 1, Bottom + 1));
+      r:= DXProxyScaleRect(Rect(max(0, Left - d), max(0, Top - d), Right + d, Bottom + d));
     r.Right:= min(r.Right, RenderW);
     r.Bottom:= min(r.Bottom, RenderH);
-    scale3D:= scale.ScaleRect(r);
+    if not _IsD3D^ then
+    begin
+      RSSetResampleParams(1.11);
+      scale3D.Init(_ScreenW^, _ScreenH^, RenderW, RenderH);
+      scale3D:= scale3D.ScaleRect(r);
+    end else
+      scale3D:= scale.ScaleRect(r);
     scaleT:= scale.ScaleRect(Rect(0, 0, RenderW, r.Top));
     scaleB:= scale.ScaleRect(Rect(0, r.Bottom, RenderW, RenderH));
     scaleL:= scale.ScaleRect(Rect(0, r.Top, r.Left, r.Bottom));
     scaleR:= scale.ScaleRect(Rect(r.Right, r.Top, RenderW, r.Bottom));
   end;
-  {$IFNDEF mm6}
-  if _IsD3D^ then
+  if _IsD3D^ or SmoothScaleViewSW and (_CurrentScreen^ = 0) and
+     (_MainMenuCode^ < 0) and not _RightButtonPressed^ then
   begin
     RSResample16(scaleT, SrcBuf, _ScreenW^*2, info.lpSurface, info.lPitch);
     RSResample16(scaleL, SrcBuf, _ScreenW^*2, info.lpSurface, info.lPitch);
-    RSResampleTrans16_NoAlpha(scale3D, SrcBuf, _ScreenW^*2, info.lpSurface, info.lPitch, _GreenMask^ + _BlueMask^);
+    if _IsD3D^ then
+      RSResampleTrans16_NoAlpha(scale3D, SrcBuf, _ScreenW^*2, info.lpSurface, info.lPitch, _GreenMask^ + _BlueMask^)
+    else
+      RSResample16(scale3D, SrcBuf, _ScreenW^*2, info.lpSurface, info.lPitch);
     RSResample16(scaleR, SrcBuf, _ScreenW^*2, info.lpSurface, info.lPitch);
     RSResample16(scaleB, SrcBuf, _ScreenW^*2, info.lpSurface, info.lPitch);
   end else
-  {$ENDIF}
     RSResample16(scale, SrcBuf, _ScreenW^*2, info.lpSurface, info.lPitch);
+
+  if DXProxyCursorX > 0 then
+    DrawCursor(info.lpSurface, info.lPitch);
+  DXProxyCursorX:= 0;
 end;
 
 { THookedObject }
@@ -631,16 +689,17 @@ var
   NeedScaling: Boolean;
 begin
   with lpDDSurfaceDesc do
-    if (MipmapsCount > 1) and (dwMipMapCount > 1) and (dwFlags and DDSD_MIPMAPCOUNT <> 0) then
+    if (DXProxyMipmapCount > 0) and (dwMipMapCount > 1) and (dwFlags and DDSD_MIPMAPCOUNT <> 0) then
     begin
       desc:= lpDDSurfaceDesc;
-      desc.dwMipMapCount:= min(desc.dwMipMapCount, MipmapsCount);
+      desc.dwMipMapCount:= min(desc.dwMipMapCount, DXProxyMipmapCount);
       Result:= DDraw.CreateSurface(desc, lplpDDSurface, pUnkOuter);
       if Result <> DD_OK then
       begin
         desc.dwFlags:= desc.dwFlags and not DDSD_MIPMAPCOUNT;
         Result:= DDraw.CreateSurface(desc, lplpDDSurface, pUnkOuter);
       end;
+      DXProxyMipmapCount:= 0;
       exit;
     end;
 
@@ -806,6 +865,11 @@ begin
   begin
     VertexBuf[i].x:= VertexBuf[i].x*RenderW/_ScreenW^;
     VertexBuf[i].y:= VertexBuf[i].y*RenderH/_ScreenH^;
+    {if GetKeyState(VK_SCROLL) and 1 <> 0 then
+    begin
+      VertexBuf[i].x:= VertexBuf[i].x*1.5;
+      VertexBuf[i].y:= VertexBuf[i].y*1.5;
+    end;}
   end;
   Result:= Obj.DrawPrimitive(dptPrimitiveType,
     dwVertexTypeDesc, VertexBuf[0], dwVertexCount, dwFlags);
