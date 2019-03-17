@@ -454,6 +454,9 @@ const VidSizeSigNoExt = #$3F#$78#$DE#$47#$E9#$2E#$40#$65#$9A#$F1#$74#$BB#$AE#$9D
 const VidSizeSigSize = length(VidSizeSigOld);
 const GamesLod7Sig = VidSizeSigOld;
 
+const
+  PowerOf2: array[0..15] of int = (1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768);
+
 type
   TMyReadStream = class(TMemoryStream)
   protected
@@ -2763,7 +2766,10 @@ begin
     RSBitmapToBuffer(PChar(m.Memory) + SizeOf(TPCXFileHeader), b);
 
     if HasPal then
+    begin
+      b.IgnorePalette:= false;
       RSWritePalette(PChar(m.Memory) + j, b.Palette);
+    end;
   finally
     b1.Free;
   end;
@@ -2898,6 +2904,7 @@ begin
       begin
         b2:= TBitmap.Create;
         b2.Assign(b);
+        b1.IgnorePalette:= false;
         FillBitmapZooms(b2, p, b1.Palette);
       end;
     end else
@@ -2908,6 +2915,7 @@ begin
         Zip(m, buf, UnpSize, @DataSize, @UnpSize);
     i:= m.Seek(0, soEnd);
     m.SetSize(i + 256*3);
+    b1.IgnorePalette:= false;
     RSWritePalette(PChar(m.Memory) + i, b1.Palette);
   finally
     buf.Free;
@@ -3048,8 +3056,15 @@ begin
       data.Seek(-hdr.DataSize - 768, soCurrent);
       Unzip(data, m, hdr.DataSize, hdr.UnpSize, true);
 
-      Width:= hdr.BmpWidth;
-      Height:= hdr.BmpHeight;
+      if hdr.BmpSize <> hdr.BmpWidth*hdr.BmpHeight then // *.bitmapshd.lod
+      begin
+        Width:= PowerOf2[hdr.BmpWidthLn2];
+        Height:= PowerOf2[hdr.BmpHeightLn2];
+      end else
+      begin
+        Width:= hdr.BmpWidth;
+        Height:= hdr.BmpHeight;
+      end;
       RSBufferToBitmap(m.Memory, b);
       FLastPalette:= hdr.Palette;
     finally

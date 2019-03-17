@@ -70,6 +70,11 @@ Version 1.2.1:
 [-] Crash when loading another archive while in Compare To mode
 [-] After drag-drop of the same archive, files list wasn't updated after operations
 
+Version 1.2.2:
+[+] *.bitmapshd.lod support
+[-] Unpacking errors while dragging files onto other apps were leading to MMArchive hanging
+[-] "Ignore Unpacking Errors" option state wasn't preserved on program restart  
+
 перемещение цвета фона в правильное место при импорте в icons.lod
 drag&drop из MMArchive во вне
 Возможность выбора номера анимации дефа для показа
@@ -382,6 +387,7 @@ type
     FMyTempPath: string;
     FCopyStr: WideString;
     FDragFilesList: TStringList;
+    FDragException: string;
     Ini: TIniFile;
     FilterItemVisible: array of Boolean;
     procedure CreateParams(var Params: TCreateParams); override;
@@ -1740,6 +1746,7 @@ begin
       Language:= ReadString('General', 'Language', 'English');
       SwitchCheck(Sortbyextension1, ReadBool('General', 'Sort By Extension', false));
       Backup1.Checked:= ReadBool('General', 'Backup Original Files', true);
+      IgnoreUnpackingErrors1.Checked:= ReadBool('General', 'Ignore Unpacking Errors', false);
       OpenDialog1.InitialDir:= ReadString('General', 'Open Path', '');
       SaveDialogExport.InitialDir:= ReadString('General', 'Export Path', '');
       CommonExtractionFolder1.Checked:= (ReadString('General', 'Export Path', '|') <> SaveDialogExport.InitialDir);
@@ -2818,14 +2825,31 @@ end;
 
 procedure TRSLodEdit.DropFileSource1AfterDrop(Sender: TObject;
   DragResult: TDragResult; Optimized: Boolean);
+var
+  e: Exception;
 begin
   DragAcceptFiles(Handle, true);
+  if FDragException <> '' then
+  begin
+    e:= Exception.Create(FDragException);
+    try
+      Application.ShowException(e);
+    finally
+      e.Free;
+    end;
+  end;
 end;
 
 procedure TRSLodEdit.DropFileSource1Drop(Sender: TObject; DragType: TDragType;
   var ContinueDrop: Boolean);
 begin
-  ExtractDropSource;
+  try
+    ExtractDropSource;
+    FDragException:= '';
+  except
+    on e: Exception do
+      FDragException:= e.Message;
+  end;
 end;
 
 procedure TRSLodEdit.LoadTree(FileName:string);
@@ -2864,6 +2888,7 @@ begin
       WriteString('General', 'Language', Language);
       WriteBool('General', 'Sort By Extension', Sortbyextension1.Checked);
       WriteBool('General', 'Backup Original Files', Backup1.Checked);
+      WriteBool('General', 'Ignore Unpacking Errors', IgnoreUnpackingErrors1.Checked);
       WriteString('General', 'Open Path', DialogToFolder(OpenDialog1));
       WriteString('General', 'Export Path', DialogToFolder(SaveDialogExport));
       WriteString('General', 'Import Path', DialogToFolder(OpenDialogImport));
