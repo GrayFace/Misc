@@ -128,6 +128,8 @@ procedure ArrayDelete(var Arr; Index:int; Size:int);
 procedure ArrayInsert(var Arr; Index:int; Size:int);
 function SqDifference(cl1,cl2:int):int; //deprecated;
 function FileAge(const FileName: string): Integer;
+function RectW(const r: TRect): int; inline;
+function RectH(const r: TRect): int; inline;
 {$IFDEF MSWINDOWS}
 // Borland's original routines bug: they don't consider '/' a path delimiter.
 function FileExists(const FileName: string): Boolean;
@@ -498,6 +500,18 @@ begin
 {$WARNINGS OFF}
   Result:= SysUtils.FileAge(FileName);
 {$WARNINGS ON}
+end;
+
+function RectW(const r: TRect): int; inline;
+begin
+  with r do
+    Result:= Right - Left;
+end;
+
+function RectH(const r: TRect): int; inline;
+begin
+  with r do
+    Result:= Bottom - Top;
 end;
 
 // code mostly by DVM

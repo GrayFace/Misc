@@ -113,7 +113,8 @@ type
   private
     function GetAbsoluteRect: TRect;
     function GetBoundsRect: TRect;
-    function GetExtendedBoundsRect: TRect; deprecated; // turned out to be buggy (on multimonitor Win 10)
+    // DwmGetWindowAttribute is buggy: returns garbage when the window is in 2nd monitor on Win 10
+    //function GetExtendedBoundsRect: TRect;
     function GetClientRect: TRect;
     function GetClass: string;
     function GetExStyle: LongInt;
@@ -153,7 +154,6 @@ type
 
     property AbsoluteRect: TRect read GetAbsoluteRect write SetAbsoluteRect;
     property BoundsRect: TRect read GetBoundsRect write SetBoundsRect;
-    property ExtendedBoundsRect: TRect read GetExtendedBoundsRect;
     property ClientRect: TRect read GetClientRect;
 {$WARNINGS OFF}
     property ClassName: string read GetClass;
@@ -1054,6 +1054,7 @@ begin
   Result:=GetWindowLong(HWnd(self),GWL_EXSTYLE);
 end;
 
+{
 const
   DWMWA_EXTENDED_FRAME_BOUNDS = 9;
 var
@@ -1064,12 +1065,13 @@ function TRSWnd.GetExtendedBoundsRect: TRect;
 begin
   if not DwmGetWindowAttributeLoaded then
     RSLoadProc(@DwmGetWindowAttribute, 'Dwmapi.dll', 'DwmGetWindowAttribute');
-    
+
   if @DwmGetWindowAttribute <> nil then
     RSWndCheck(DwmGetWindowAttribute(HWnd(self), DWMWA_EXTENDED_FRAME_BOUNDS, Result, SizeOf(Result)) = S_OK)
   else
     RSWndCheck(GetWindowRect(HWnd(self), Result));
 end;
+}
 
 function TRSWnd.GetHeight: LongInt;
 begin
@@ -1730,7 +1732,7 @@ constructor TRSSharedData.Create(Name:string; Size:int);
 begin
   FSize:=Size;
   FMMF:= RSWin32Check(CreateFileMapping(INVALID_HANDLE_VALUE, nil,
-                        PAGE_READWRITE, 0, Size, ptr(Name)));
+                        PAGE_READWRITE, 0, max(1, Size), ptr(Name)));
   FAlreadyExists:= GetLastError = ERROR_ALREADY_EXISTS;
   FData:= RSWin32Check(MapViewOfFile(FMMF, FILE_MAP_ALL_ACCESS, 0, 0, 0));
 end;

@@ -56,7 +56,7 @@ type
     Querry: int;
   end;
 
-function AllocCode(n: int): int;
+function RSAllocCode(n: int): int;
 procedure RSApplyHook(const Hook: TRSHookInfo);
 procedure RSApplyHooks(const Hooks; Querry: int = 0);
 function RSCheckHook(const hk:TRSHookInfo): Boolean;
@@ -70,7 +70,7 @@ var
   AllocPtr: PChar;
   AllocSize: int;
 
-function AllocCode(n: int): int;
+function RSAllocCode(n: int): int;
 begin
   if AllocSize < n then
   begin
@@ -156,7 +156,7 @@ begin
       CopyMemory(ptr(p), PChar(Hook.newstr), sz0);
     RShtCallStore:
     begin
-      p1:= AllocCode(10);
+      p1:= RSAllocCode(10);
       pbyte(p1)^:= $B8;          // mov eax, @orig
       pint(p1+1)^:= RSGetHookValue(Hook);
       Jmp(p, p1, true);
@@ -164,7 +164,7 @@ begin
     end;
     RShtBefore:
     begin
-      p1:= AllocCode(sz + 10);
+      p1:= RSAllocCode(sz + 10);
       CopyCode(p1 + 5, p, sz);
       Jmp(p, p1);
       Jmp(p1, new, true);        // call @hook
@@ -173,7 +173,7 @@ begin
     end;
     RShtAfter:
     begin
-      p1:= AllocCode(sz + 10);
+      p1:= RSAllocCode(sz + 10);
       CopyCode(p1, p, sz);       // std
       Jmp(p, p1);
       pbyte(p1 + sz)^:= $68;     // push @after
@@ -182,7 +182,7 @@ begin
     end;
     RShtFunctionStart:
     begin
-      p1:= AllocCode(sz + 15);
+      p1:= RSAllocCode(sz + 15);
       CopyCode(p1 + 10, p, sz);
       Jmp(p, p1);
       pbyte(p1)^:= $B8;          // mov eax, @std
@@ -193,7 +193,7 @@ begin
     end;
     RShtCodePtrStore:
     begin
-      p1:= AllocCode(10);
+      p1:= RSAllocCode(10);
       pbyte(p1)^:= $B8;          // mov eax, @std
       pint(p1+1)^:= pint(p)^;
       Jmp(p1 + 5, new);          // jmp @hook

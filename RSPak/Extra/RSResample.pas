@@ -15,7 +15,7 @@ type
     function ScaleRect(const r: TRect): TRSResampleInfo;
   end;
 
-// 1.11 for linear scaling, 2 is good for interface to preserve pixels
+// 1.11 for linear scaling, 2 or 3 is good for interface to preserve pixels
 procedure RSSetResampleParams(Sigma: ext = 3; MiddleShift: ext = 0.2);
 procedure RSResample16(const info: TRSResampleInfo; Src: ptr; SrcPitch: IntPtr; Dest: ptr; DestPitch: IntPtr); overload;
 procedure RSResample16(const info: TRSResampleInfo; Src, Dest: TBitmap); overload;
@@ -580,9 +580,9 @@ begin
   Result.SrcW:= SrcW;
   Result.SrcH:= SrcH;
   Result.DestX:= r.Left + DestX;
-  Result.DestW:= r.Right - r.Left;
+  Result.DestW:= max(0, r.Right - r.Left);
   Result.DestY:= r.Top + DestY;
-  Result.DestH:= r.Bottom - r.Top;
+  Result.DestH:= max(0, r.Bottom - r.Top);
   Result.CmdX:= CutResampleArray(CmdX, r.Left, Result.DestW, Result.SrcX);
   inc(Result.SrcX, SrcX);
   Result.CmdY:= CutResampleArray(CmdY, r.Top, Result.DestH, Result.SrcY);

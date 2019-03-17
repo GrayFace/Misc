@@ -181,7 +181,7 @@ function RSParseToken(const ps:TRSParsedString; Index:int;
    const Separators:array of string; Limit: int = MaxInt):TRSParsedString;
 begin
   Index:= Index*2;
-  if Index < length(ps) then
+  if uint(Index) < length(ps) then
     Result:= DoParse(ps[Index], ps[Index+1], Separators, Limit)
   else
     Result:= nil;
@@ -201,7 +201,7 @@ end;
 function RSGetToken(const ps:TRSParsedString; Index:int):string;
 begin
   Index:= Index*2;
-  if Index < length(ps) then
+  if uint(Index) < length(ps) then
     SetString(Result, PChar(ps[Index]), DWord(ps[Index+1]) - DWord(ps[Index]))
   else
     Result:= '';
@@ -210,7 +210,7 @@ end;
 function RSGetTokenSep(const ps:TRSParsedString; Index:int):string;
 begin
   Index:= Index*2 + 1;
-  if Index < length(ps) then
+  if uint(Index) < length(ps) then
     SetString(Result, PChar(ps[Index]), DWord(ps[Index+1]) - DWord(ps[Index]))
   else
     Result:= '';
@@ -224,6 +224,7 @@ end;
 function RSGetTokensEx(const ps:TRSParsedString; IndexFrom:int; IndexTo:int = MaxInt):string;
 begin
   IndexTo:= min(IndexTo, length(ps)) - 1;
+  IndexFrom:= max(IndexFrom, 0);
   if IndexTo > IndexFrom then
     SetString(Result, ps[IndexFrom], ps[IndexTo] - ps[IndexFrom])
   else
