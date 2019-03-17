@@ -1,4 +1,4 @@
-GrayFace MM6 Patch v2.1
+GrayFace MM6 Patch v2.2
 By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
@@ -7,6 +7,26 @@ Save files are, of course, fully compatible with the unpatched game in both dire
 The patch has no uninstaller to make things simpler.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
+
+New in version 2.2:
+  << MM6 - MM8 >>
+[+] Quick load key now works during the death movie.
+[+] Game window is resizeable.
+[+] StretchWidth and StretchHeight parameters specify the factors by which the game area gets stretched to reduce black bars on the sides. StretchWidthFull and StretchHeightFull parameters are used only if it makes the game occupy the whole screen.
+[+] Now in Software rendering mode the view is always scaled linearly, which makes it less flickery.
+[+] Data\MouseLookCursorHD.bmp is used for mouse look in 32-bit color mode if window is bigger than 640x480.
+[+] Customizable mouse cursors: Data\MouseCursorArrow.cur and Data\MouseCursorTarget.cur are used if present.
+[+] Patch now bypasses dgVoodoo DLLs if SupportTrueColor is not disabled.
+[+] Minimaps zoom level is remembered always, not just outdoors as before.
+[-] Fixed a crash found in Tatalia in MM7.
+[-] Inactive characters couldn't interact with chests.
+[-] Animated textures (via TFT) were animated incorrectly: first frame was longer, last frame was shorter.
+[-] My bug: ScalingParam2 was read from ScalingParam1 entry.
+[-] My bug: Mouse placed in the bottom-right corner was causing a crash sometimes.
+[*] Smarter FixInactivePlayersActing: now you can select inactive characters, but they can't act.
+  << MM6 >>
+[+] "NoPlayerSwap" hidden option. Set it to 0 to return player swapping and bugs it opens up.
+
 
 New in version 2.1:
   << MM6 - MM8 >>

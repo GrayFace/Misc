@@ -212,6 +212,25 @@ Version 2.1:
 [-] My bug: Starburst and Meteor Shower range limitations still weren't accurate
 [-] My bug: Pressing CharScreenKey while holding right mouse button sometimes leading to crash
 
+Version 2.2:
+(MM6 - MM8)
+[+] Resizeable window
+[+] StretchWidth, StretchHeight, StretchWidthFull, StretchHeightFull
+[+] Now in Software rendering mode the view is always scaled linearly, which makes it less flickery
+[+] MouseLookCursorHD
+[+] Quick load key works during the death movie
+[+] Patch now bypasses dgVoodoo DLLs if SupportTrueColor is not disabled
+[+] Minimaps zoom level is remembered indoors, not just outdoors as before
+[+] Customizable mouse cursor: Data\MouseCursorArrow.cur and Data\MouseCursorTarget.cur are used if present
+[-] Fixed a crash due to facet interception checking out-of-bounds (found in Tatalia in MM7)
+[-] Inactive characters couldn't interact with chests
+[-] TFT.bin was animated incorrectly (first frame was longer, last frame was shorter)
+[-] My bug: ScalingParam2 was read from ScalingParam1 entry
+[-] My bug: Mouse position translation was wrong
+[*] Smarter FixInactivePlayersActing
+(MM6)
+[+] "NoPlayerSwap" hidden option
+
 
 Если загрузить сейв, где все рожи одинаковые, а потом сейв с разными, будут черные пятна на месте рож
 
