@@ -580,9 +580,9 @@ begin
   Result.SrcW:= SrcW;
   Result.SrcH:= SrcH;
   Result.DestX:= r.Left + DestX;
-  Result.DestW:= r.Right - r.Left;
+  Result.DestW:= max(0, r.Right - r.Left);
   Result.DestY:= r.Top + DestY;
-  Result.DestH:= r.Bottom - r.Top;
+  Result.DestH:= max(0, r.Bottom - r.Top);
   Result.CmdX:= CutResampleArray(CmdX, r.Left, Result.DestW, Result.SrcX);
   inc(Result.SrcX, SrcX);
   Result.CmdY:= CutResampleArray(CmdY, r.Top, Result.DestH, Result.SrcY);

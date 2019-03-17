@@ -5,6 +5,8 @@
 #define AppVer() \
   ParseVersion(AppDll(), Local[0], Local[1], Local[2], Local[3]), \
   Str(Local[0])+"."+Str(Local[1])+((Local[2] || Local[3]) ? "."+Str(Local[2]) : "")+(Local[3] ? "."+Str(Local[3]) : "")
+#define WaterMD5() GetMD5OfFile(AddBackslash(SourcePath) + "OptData\00 patch.bitmaps.lod")
+#define IconsMD5() GetMD5OfFile(AddBackslash(SourcePath) + "OptData\00 patch.icons.lod")
 
 [Setup]
 VersionInfoVersion={#AppVersion}
@@ -44,6 +46,10 @@ RussianGameVersion=Russian version of the game
 ru.RussianGameVersion=Русская версия игры
 LodsTask=Install LOD archives with fixes for particular maps and game progression%nUncheck this task if you are installing the patch over a big mod like MM6+7+8 merge.
 ru.LodsTask=LOD-архивы с исправлениями для конкретных карт и по ходу сюжета%nОтключите эту задачу, если Вы устанавливаете патч поверх большого мода, такого как объединение MM6+7+8.
+WaterTask=Use improved water animation.%nUncheck this task if you are installing the patch over MM6+7+8 merge.
+ru.WaterTask=Использовать улучшенную анимацию воды.%nОтключите эту задачу, если устанавливаете патч поверх объединения MM6+7+8.
+IconsTask=Install LOD archive with one interface fix%nUncheck this task if you are installing the patch over a mod that recolors interface.
+ru.IconsTask=LOD-архив с одним исправлением для интерфейса%nОтключите эту задачу, если Вы устанавливаете патч поверх мода, перекрашивающего интерфейс.
 
 [Tasks]
 Name: RusFiles1; Description: {cm:RussianGameVersion}; Check: RussianTaskCheck(true);
@@ -52,6 +58,10 @@ Name: NoFakeMouseLook1; Description: {cm:NoFakeMouseLook}; Check: LookTaskCheck(
 Name: NoFakeMouseLook2; Description: {cm:NoFakeMouseLook}; Flags: unchecked; Check: LookTaskCheck(false);
 Name: lods1; Description: {cm:LodsTask}; Check: LodsTaskCheck(true);
 Name: lods2; Description: {cm:LodsTask}; Flags: unchecked; Check: LodsTaskCheck(false);
+Name: water1; Description: {cm:WaterTask}; Check: WaterTaskCheck(true);
+Name: water2; Description: {cm:WaterTask}; Flags: unchecked; Check: WaterTaskCheck(false);
+Name: icons1; Description: {cm:IconsTask}; Check: IconsTaskCheck(true);
+Name: icons2; Description: {cm:IconsTask}; Flags: unchecked; Check: IconsTaskCheck(false);
 
 ; Delete SafeDisk files
 [InstallDelete]
@@ -67,6 +77,9 @@ Type: files; Name: "{app}\{#MM}.ICD";
 [Files]
 Source: "Files\*.*"; Excludes: "*.bak"; DestDir: "{app}"; Flags: promptifolder ignoreversion recursesubdirs; AfterInstall: AfterInst;
 Source: "Data\*"; Excludes: "*.bak"; DestDir: "{app}\Data\"; Tasks: lods1 lods2;
+Source: "OldWater\00 patch.bitmaps.lod"; DestDir: "{app}\Data\"; Check: BaseWaterCheck;
+Source: "OptData\00 patch.bitmaps.lod"; DestDir: "{app}\Data\"; Tasks: water1 water2;
+Source: "OptData\00 patch.icons.lod"; DestDir: "{app}\Data\"; Tasks: icons1 icons2;
 Source: "OptFiles\*"; Excludes: "*.bak"; DestDir: "{app}"; Flags: onlyifdoesntexist recursesubdirs;
 
 Source: "rus\*.*"; DestDir: "{app}"; Flags: promptifolder; Tasks: RusFiles1 RusFiles2;
@@ -94,29 +107,62 @@ begin
   Result:= GetVersionNumbers(ExpandConstant('{app}\{#m}patch.dll'), ms, ls) and (ms >= ver);
 end;
 
-
-var
-  PatchLods, PatchLodsChecked: Boolean;
-
-function LodsTaskCheck(checked: Boolean): Boolean;
+function CheckNoMerge: Boolean;
 begin
-  if not PatchLodsChecked then
-    PatchLods:= not CheckVer($20001) or FileExists(ExpandConstant('{app}\Data\00 patch.games.lod'));
-  PatchLodsChecked:= true;
-  Result:= (PatchLods = checked);
+  Result:= not (FileExists(ExpandConstant('{app}\Data\mm6.games.lod')) and FileExists(ExpandConstant('{app}\Data\mm7.games.lod')));
+end;
+
+type
+  TTask = record
+    On, Checked: Boolean;
+  end;
+
+function CheckTask(var t: TTask; checked: Boolean): Boolean;
+begin
+  t.Checked:= true;
+  Result:= (t.On = checked);
+end;
+
+function CheckOptLod(var t: TTask; var vis: Boolean; path, md5: string; checked: Boolean; ver: Integer): Boolean;
+begin
+  vis:= not FileExists(path) or (GetMD5OfFile(path) <> md5);
+  Result:= vis and not t.Checked;
+  if Result then
+    t.On:= FileExists(path) or not CheckVer(ver);
+  t.Checked:= t.Checked or vis;
+  vis:= vis and (t.On = checked);
 end;
 
 
 var
-  RussianGame, RussianGameChecked: Boolean;
+  Lods: TTask;
+
+function LodsTaskCheck(checked: Boolean): Boolean;
+begin
+  if not Lods.Checked then
+    Lods.On:= (not CheckVer($20001) or FileExists(ExpandConstant('{app}\Data\00 patch.games.lod'))) and CheckNoMerge;
+  Result:= CheckTask(Lods, checked);
+end;
+
+
+var
+  Icons: TTask;
+
+function IconsTaskCheck(checked: Boolean): Boolean;
+begin
+  CheckOptLod(Icons, Result, ExpandConstant('{app}\Data\00 patch.icons.lod'), '{#IconsMD5}', checked, $20002);
+end;
+
+
+var
+  RussianGame: TTask;
 
 function RussianTaskCheck(checked: Boolean): Boolean;
 begin
-  if not RussianGameChecked then
-    RussianGame:= (GetIniString('Install', 'GameLanguage', '', ExpandConstant('{app}\{#m}lang.ini')) = 'rus') or
+  if not RussianGame.Checked then
+    RussianGame.On:= (GetIniString('Install', 'GameLanguage', '', ExpandConstant('{app}\{#m}lang.ini')) = 'rus') or
      (ExpandConstant('{language}') = 'ru') and not FileExists(ExpandConstant('{app}\{#MM}Patch ReadMe.TXT'));
-  RussianGameChecked:= true;
-  Result:= (RussianGame = checked);
+  Result:= CheckTask(RussianGame, checked);
 end;
 
 
@@ -135,8 +181,62 @@ begin
 end;
 
 
-procedure AfterInst;
+var
+  Water: TTask;
+
+function WaterTaskCheck(checked: Boolean): Boolean;
+var
+  path: string;
 begin
+  if not Water.Checked then
+  begin
+    path:= ExpandConstant('{app}\Data\00 patch.bitmaps.lod');
+    if FileExists(path) then
+      Water.On:= (GetMD5OfFile(path) = '{#WaterMD5}') or not CheckVer($20002) and CheckNoMerge
+    else
+      Water.On:= not CheckVer($20000) and CheckNoMerge;
+    Water.Checked:= true;
+  end;
+  Result:= (Water.On = checked);
+end;
+
+function BaseWaterCheck: Boolean;
+var
+  path: string;
+begin
+  Result:= not IsTaskSelected('water1 water2') and CheckNoMerge;
+  path:= ExpandConstant('{app}\Data\00 patch.bitmaps.lod');
+  if FileExists(path) then
+    Result:= Result and (GetMD5OfFile(path) = '{#WaterMD5}');
+end;
+
+
+procedure AfterInst;
+var
+ ini: string;
+begin
+  ini:= ExpandConstant('{app}\{#m}.ini');
   if IsTaskSelected('NoFakeMouseLook1 NoFakeMouseLook2') then
-    SetIniInt('Settings', 'MouseLookBorder', -1, ExpandConstant('{app}\mm8.ini'));
+    SetIniInt('Settings', 'MouseLookBorder', -1, ini);
+  if IsTaskSelected('water1 water2') and (GetIniInt('Settings', 'HDWTRCount', 8, 0, 0, ini) <> 14) then
+  begin
+    SetIniInt('Settings', 'HDWTRCount', 14, ini);
+    SetIniInt('Settings', 'HDWTRDelay', 15, ini);
+  end
+  else if CheckNoMerge and (GetIniInt('Settings', 'HDWTRCount', 8, 0, 0, ini) mod 7 = 0) then
+  begin
+    DeleteIniEntry('Settings', 'HDWTRCount', ini);
+    DeleteIniEntry('Settings', 'HDWTRDelay', ini);
+  end;
+  if IsIniSectionEmpty('MipmapsBase', ini) then
+  begin
+    SetIniInt('MipmapsBase', 'hwtrdr*', 128, ini);
+    SetIniInt('MipmapsBase', 'hdwtr???', 64, ini);
+    SetIniInt('MipmapsBase', 'hdlav???', 64, ini);
+    SetIniInt('MipmapsBase', 'hwoil???', 128, ini);
+    SetIniInt('MipmapsBase', 'gdtyl', 256, ini);
+    SetIniInt('MipmapsBase', 'DIRTtyl', 256, ini);
+    SetIniInt('MipmapsBase', 'Grastyl', 256, ini);
+    SetIniInt('MipmapsBase', 'Grastyl2', 256, ini);
+  end;
 end;

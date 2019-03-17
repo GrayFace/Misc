@@ -1,18 +1,54 @@
-GrayFace MM8 Patch v2.1
+GrayFace MM8 Patch v2.2
 By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
 Mok's patch is included.
 Save files are, of course, fully compatible with the unpatched game in both directions.
+The patch has no uninstaller to make things simpler.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
 
 New in version 2.2:
+  << MM6 - MM8 >>
+[+] Quick load key now works during the death movie.
+[+] Game window is resizeable.
+[+] StretchWidth and StretchHeight parameters specify the factors by which the game area gets stretched to reduce black bars on the sides. StretchWidthFull and StretchHeightFull parameters are used only if it makes the game occupy the whole screen.
+[+] Now in Software rendering mode the view is always scaled linearly, which makes it less flickery.
+[+] Data\MouseLookCursorHD.bmp is used for mouse look in 32-bit color mode if window is bigger than 640x480.
+[+] Customizable mouse cursors: Data\MouseCursorArrow.cur and Data\MouseCursorTarget.cur are used if present.
+[+] Patch now bypasses dgVoodoo DLLs if SupportTrueColor is not disabled.
+[+] Minimaps zoom level is remembered always, not just outdoors as before.
+[-] Fixed a crash found in Tatalia in MM7.
+[-] Inactive characters couldn't interact with chests.
+[-] Animated textures (via TFT) were animated incorrectly: first frame was longer, last frame was shorter.
+[-] My bug: ScalingParam2 was read from ScalingParam1 entry.
+[-] My bug: Mouse placed in the bottom-right corner was causing a crash sometimes.
+[*] Smarter FixInactivePlayersActing: now you can select inactive characters, but they can't act.
+  << MM7, MM8 >>
+[+] Accurate sprites coordinates in D3D mode.
+[+] Pixel-perfect mouse targeting in HD mode.
+[+] Set TurnBasedWalkDelay to a value of your choice (e.g. 100) to be able to do individual steps in the walking phase of turn-based combat.
+[+] Better water animation.
+[+] MipmapsBase section in the INI controls how many mipmip levels matching textures can use. Smaller values lead to more mipmaps.
+[+] Separate HDWTRCountHWL, HDWTRDelayHWL options for the NoD3DBitmapHwl=0 case.
+[+] Hidden FixMonsterSummon option (1 - enabled by default).
+[-] Some small cosmetic bugs fixed by changing pictures from icons.lod.
+[-] Combination of IsWater and AnimateTFT facet attributes was causing texture change in D3D.
+[-] Fixed a rare crash caused by a facet without a single vertex.
+[-] My bug: Sparks effect was displayed incorrectly in the previous version.
+  << MM8 >>
+[+] "FixQuickSpell" hidden option you can set to 0 if you want to use the bug.
+[-] In Software rendering mode water shore is no longer bumpy. Set NoWaterShoreBumpsSW=0 to disable this.
+[-] Mass Distortion and Implosion spells wasted monsters' turn, but didn't work. Now they aren't used.
+[-] 8 leftmost pixels of paper doll area didn't react to clicks.
+[-] Monsters/items/effects weren't visible on the sides of the view outdoors.
+[-] Party wasn't centered on the minimap.
   << Fixes in maps >>
 [-] Castle of Air (d27) - 100k experience was given upon exiting the Plane of Air after getting the Heart of Air, so using Town Portal could lead to it getting skipping.
 [-] Castle of Fire (d29) - same as above.
 [-] Alvar (out03) - upon entering the Ogre Raiding Fort the party was facing in a wrong direction.
 [-] Dagger Wound Islands (out01) - upon entering the Uplifted Library the party was facing in a wrong direction.
+
 
 New in version 2.1:
   << MM6 - MM8 >>
@@ -160,7 +196,7 @@ Changes of Mok's patch:
 - added small delay before displaying bink movies (on fast machines it was too easy to skip a movie just by pressing mouse button)
 - removed buggy hard drive free space check.
 - fixed rare crash after playing Arcomage duel (on fast machines sound buffers were released before MSS finished playing them)
-- fixed Hour of Power spell (Haste part wasn’t working). Thanks to Mike Kienenberger for the fix.
+- fixed Hour of Power spell (Haste part wasnâ€™t working). Thanks to Mike Kienenberger for the fix.
 - fixed Psychic Shock spell (damage 12 + 1-12 instead of 12 + 1).
 - you can toggle running mode by pressing caps lock key.
 

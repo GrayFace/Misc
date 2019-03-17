@@ -189,6 +189,43 @@ Version 2.1:
 [-] My bug: Since some version of my patch movies were again immediately cancelled when shown from a dialog.
 [-] My bug: ProgressiveDaggerTrippleDamage fix didn't work in MM8
 
+Version 2.2:
+(MM6 - MM8)
+[+] Resizeable window
+[+] StretchWidth, StretchHeight, StretchWidthFull, StretchHeightFull
+[+] Now in Software rendering mode the view is always scaled linearly, which makes it less flickery
+[+] MouseLookCursorHD
+[+] Quick load key works during the death movie
+[+] Patch now bypasses dgVoodoo DLLs if SupportTrueColor is not disabled
+[+] Minimaps zoom level is remembered indoors, not just outdoors as before
+[+] Customizable mouse cursor: Data\MouseCursorArrow.cur and Data\MouseCursorTarget.cur are used if present
+[-] Fixed a crash due to facet interception checking out-of-bounds (found in Tatalia in MM7)
+[-] Inactive characters couldn't interact with chests
+[-] TFT.bin was animated incorrectly (first frame was longer, last frame was shorter)
+[-] My bug: ScalingParam2 was read from ScalingParam1 entry
+[-] My bug: Mouse position translation was wrong
+[*] Smarter FixInactivePlayersActing
+(MM7, MM8)
+[+] Accurate sprites coordinates in D3D
+[+] Accurate mouse in HD mode
+[+] TurnBasedWalkDelay
+[+] MipmapsBase
+[+] HDWTRCountHWL, HDWTRDelayHWL
+[+] Hidden FixMonsterSummon option
+[-] Combining IsWater and AnimateTFT caused texture change in D3D
+[-] Fixed a rare crash caused by a facet without a single vertex
+[-] My bug: Sparks effect was displayed incorrectly in the previous version
+(MM8)
+[+] "FixQuickSpell" hidden option
+[-] NoWaterShoreBumpsSW
+[-] Mass Distortion and Implosion spells wasted monsters' turn, but didn't work
+[-] 8 leftmost pixels of paper doll area didn't react to clicks
+[-] Monsters/items/effects not visible on the sides of the view outdoors
+[-] Party wasn't centered on the minimap
+
+
+
+
 Version ?:
 !!! Bad asserts: 4662BA, 44C39D
 ????[+] ExitOnException
