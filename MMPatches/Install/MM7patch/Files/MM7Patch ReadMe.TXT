@@ -1,4 +1,4 @@
-GrayFace MM7 Patch v2.1
+GrayFace MM7 Patch v2.2
 By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
@@ -9,13 +9,45 @@ The patch has no uninstaller to make things simpler.
 ([+] - feature, [-] - fixed bug, [*] - other)
 
 New in version 2.2:
+  << MM6 - MM8 >>
+[+] Quick load key now works during the death movie.
+[+] Game window is resizeable.
+[+] StretchWidth and StretchHeight parameters specify the factors by which the game area gets stretched to reduce black bars on the sides. StretchWidthFull and StretchHeightFull parameters are used only if it makes the game occupy the whole screen.
+[+] Now in Software rendering mode the view is always scaled linearly, which makes it less flickery.
+[+] Data\MouseLookCursorHD.bmp is used for mouse look in 32-bit color mode if window is bigger than 640x480.
+[+] Customizable mouse cursors: Data\MouseCursorArrow.cur and Data\MouseCursorTarget.cur are used if present.
+[+] Patch now bypasses dgVoodoo DLLs if SupportTrueColor is not disabled.
+[+] Minimaps zoom level is remembered always, not just outdoors as before.
+[-] Fixed a crash found in Tatalia in MM7.
+[-] Inactive characters couldn't interact with chests.
+[-] Animated textures (via TFT) were animated incorrectly: first frame was longer, last frame was shorter.
+[-] My bug: ScalingParam2 was read from ScalingParam1 entry.
+[-] My bug: Mouse placed in the bottom-right corner was causing a crash sometimes.
+[*] Smarter FixInactivePlayersActing: now you can select inactive characters, but they can't act.
+  << MM7, MM8 >>
+[+] Accurate sprites coordinates in D3D mode.
+[+] Pixel-perfect mouse targeting in HD mode.
+[+] Set TurnBasedWalkDelay to a value of your choice (e.g. 100) to be able to do individual steps in the walking phase of turn-based combat.
+[+] Better water animation.
+[+] MipmapsBase section in the INI controls how many mipmip levels matching textures can use. Smaller values lead to more mipmaps.
+[+] Separate HDWTRCountHWL, HDWTRDelayHWL options for the NoD3DBitmapHwl=0 case.
+[+] Hidden FixMonsterSummon option (1 - enabled by default).
+[-] Some small cosmetic bugs fixed by changing pictures from icons.lod.
+[-] Combination of IsWater and AnimateTFT facet attributes was causing texture change in D3D.
+[-] Fixed a rare crash caused by a facet without a single vertex.
+[-] My bug: Sparks effect was displayed incorrectly in the previous version.
   << MM7 >>
+[+] Bless etc. icons near player portrait can be transparent now.
+[-] Barrels and other static sprites were shrinked vertically indoors in D3D mode.
+[-] Fly and Water Walk icons weren't displayed in simple message dialog.
+[-] Health bars of first 2 players and danger indicators of all players were misplaced by 1 pixel (controlled by FixInterfaceBugs hidden option).
 [-] My bug: Russian (Buka) version contained a broken NPC greetings file.
 [-] My bug: Russian description in installer had a wrong encoding.
   << Fixes in maps >>
 [-] Hall of the Pit (t04): Teleporters were rotating the party to the right.
-[-] Nighon (out10): Right side of tavern door didn't react to clicks.
+[-] Nighon (out10): Right side of the tavern door didn't react to clicks.
 [-] My bug: Fixes for Avlee (out14), Barrow II (mdk03) and some for Nighon (out10) weren't included.
+
 
 New in version 2.1:
   << MM6 - MM8 >>

@@ -538,7 +538,6 @@ var
   r: TRect;
   d: int;
 begin
-  //if GetKeyState(VK_SCROLL) and 1 <> 0 then  exit;
   //FPS;
   if (scale.DestW <> RenderW) or (scale.DestH <> RenderH) then
   begin
@@ -865,11 +864,6 @@ begin
   begin
     VertexBuf[i].x:= VertexBuf[i].x*RenderW/_ScreenW^;
     VertexBuf[i].y:= VertexBuf[i].y*RenderH/_ScreenH^;
-    {if GetKeyState(VK_SCROLL) and 1 <> 0 then
-    begin
-      VertexBuf[i].x:= VertexBuf[i].x*1.5;
-      VertexBuf[i].y:= VertexBuf[i].y*1.5;
-    end;}
   end;
   Result:= Obj.DrawPrimitive(dptPrimitiveType,
     dwVertexTypeDesc, VertexBuf[0], dwVertexCount, dwFlags);

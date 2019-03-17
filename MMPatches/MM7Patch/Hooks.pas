@@ -1865,8 +1865,8 @@ begin
       speed:= @MLookSpeed2
     else
       speed:= @MLookSpeed;
-    dir^:= (dir^ - Partial((p.X - MLastPos.X), MLookPartX, speed.X)) and 2047;
-    angle^:= IntoRange(angle^ - Partial((p.Y - MLastPos.Y), MLookPartY, speed.Y),
+    dir^:= (dir^ - Partial(p.X - MLastPos.X, MLookPartX, speed.X)) and 2047;
+    angle^:= IntoRange(angle^ - Partial(p.Y - MLastPos.Y, MLookPartY, speed.Y),
       -Options.MaxMLookAngle, Options.MaxMLookAngle);
     if (p.X <> MLastPos.X) or (p.Y <> MLastPos.Y) then
     begin
@@ -2064,7 +2064,7 @@ begin
           MyClipCursor;
     end;
 
-  if _Windowed^ and KeepAspectRatio and IsZoomed(w) then
+  if _Windowed^ and IsZoomed(w) then
     case msg of
       WM_NCCALCSIZE:
         if wp <> 0 then
