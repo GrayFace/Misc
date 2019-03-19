@@ -5,7 +5,7 @@ interface
 uses
   Windows, Messages, SysUtils, Classes, RSSysUtils, RSQ, Common, RSCodeHook,
   Math, MP3, RSDebug, IniFiles, Direct3D, MMSystem, Graphics, RSStrUtils,
-  DirectDraw, DXProxy, RSResample;
+  DirectDraw, DXProxy, RSResample, MMCommon;
 
 procedure HookAll;
 procedure ApplyDeferredHooks;
@@ -23,23 +23,8 @@ procedure ProcessMouseLook; forward;
 //----- Functions
 
 procedure AddAction(action, info1, info2:int); stdcall;
-type
-  PActionQueueItem = ^TActionQueueItem;
-  TActionQueueItem = packed record
-    Action: int;
-    Info1: int;
-    Info2: int;
-  end;
-  PActionQueue = ^TActionQueue;
-  TActionQueue = packed record
-    Count: int;
-    Items: array[0..39] of TActionQueueItem;
-  end;
-
-const
-  Queue = PActionQueue(_ActionQueue);
 begin
-  with Queue^ do
+  with _ActionQueue^ do
     if Count < 40 then
     begin
       Items[Count]:= PActionQueueItem(@action)^;
@@ -4077,7 +4062,7 @@ end;
 //----- HooksList
 
 var
-  HooksList: array[1..319] of TRSHookInfo = (
+  HooksList: array[1..320] of TRSHookInfo = (
     (p: $45B0D1; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $4655FE; old: $452C75; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave file name localization
     (p: $45E5A4; old: $45E2D0; backup: @FillSaveSlotsStd; newp: @FillSaveSlotsHook; t: RShtCall), // Fix Save/Load Slots
@@ -4396,6 +4381,7 @@ var
     (p: $4E2A9C; old: $89; new: $8A; t: RSht2; Querry: hqFixInterfaceBugs), // Fix health bars position
     (p: $4924FA; old: 385; new: 384; t: RSht4; Querry: hqFixInterfaceBugs), // Fix danger indicators position
     (p: $4924AF; old: 385; new: 384; t: RSht4; Querry: hqFixInterfaceBugs), // Fix danger indicators position
+    (p: $434AA2; old: 470; new: 471; t: RSht4; Querry: hqFixInterfaceBugs), // Fix position of 'close rings view' in inventory
     ()
   );
 

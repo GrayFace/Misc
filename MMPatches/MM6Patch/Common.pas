@@ -23,7 +23,6 @@ const
   _NeedRedraw = pint($52D29C);
   _TextBuffer1 = pchar($55CDE0);
   _TextBuffer2 = pchar($55D5B0);
-  _ActionQueue = ptr($4D5F48);
   _PartyMembers = $944C64;
   _TurnBased = pbool($908E30);
   _TurnBasedPhase = pint($4C7DF4);
@@ -45,6 +44,7 @@ const
   _Party_Height = $908C70;
   _ScreenW = pint($971074);
   _ScreenH = pint($971070);
+  _ScreenBuffer = pptr($9B108C);
   _TimeDelta = pint($4D519C);
   _Flying = pint($908CE8);
   _MapMonsters = $56F478;
@@ -126,15 +126,6 @@ const
   DummyFalse: Bool = false;
   _IsD3D: pbool = @DummyFalse;
 
-{$DEFINE mm6}
-{$I MMPatch.inc}
-
-function GetMapExtra: PMapExtra;
-begin
-  if _IndoorOrOutdoor^ = 1 then
-    Result:= ptr($5F7D74)
-  else
-    Result:= ptr($689C78);
-end;
+implementation
 
 end.

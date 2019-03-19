@@ -5,7 +5,7 @@ interface
 uses
   Windows, Messages, SysUtils, Classes, RSSysUtils, RSQ, Common, RSCodeHook,
   Math, MP3, RSDebug, IniFiles, MMSystem, Graphics, DirectDraw, DXProxy,
-  RSResample;
+  RSResample, MMCommon;
 
 procedure HookAll;
 procedure ApplyDeferredHooks;
@@ -22,23 +22,8 @@ procedure ProcessMouseLook; forward;
 //----- Functions
 
 procedure AddAction(action, info1, info2:int); stdcall;
-type
-  PActionQueueItem = ^TActionQueueItem;
-  TActionQueueItem = packed record
-    Action: int;
-    Info1: int;
-    Info2: int;
-  end;
-  PActionQueue = ^TActionQueue;
-  TActionQueue = packed record
-    Count: int;
-    Items: array[0..39] of TActionQueueItem;
-  end;
-
-const
-  Queue = PActionQueue(_ActionQueue);
 begin
-  with Queue^ do
+  with _ActionQueue^ do
     if Count < 40 then
     begin
       Items[Count]:= PActionQueueItem(@action)^;

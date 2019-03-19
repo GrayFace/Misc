@@ -6,6 +6,7 @@ uses
   RSSysUtils,
   Windows,
   RSQ,
+  MMCommon,
   Hooks in 'Hooks.pas',
   Common in 'Common.pas',
   MP3 in 'MP3.pas';
@@ -284,8 +285,6 @@ ArmsMaster with GM staff: http://www.celestialheavens.com/forums/viewtopic.php?t
 
 }
 
-exports
-  GetOptions;
 begin
   try
     AssertErrorProc:= RSAssertErrorHandler;

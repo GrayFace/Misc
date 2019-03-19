@@ -4,7 +4,8 @@ interface
 
 uses
   Forms, Windows, Messages, SysUtils, Classes, IniFiles, RSSysUtils, RSQ, Math,
-  RSCodeHook, DirectDraw, Direct3D, TypInfo, Common, RSResample, Graphics;
+  RSCodeHook, DirectDraw, Direct3D, TypInfo, Common, MMCommon, RSResample,
+  Graphics;
 
 {$I MMPatchVer.inc}
 
@@ -328,7 +329,7 @@ type
 
   TMyBackBufferD3D = class(TMySurface, IDirectDrawSurface4)
   public
-    function Blt(lpDestRect: PRect;
+    function Blt(r: PRect;
         lpDDSrcSurface: IDirectDrawSurface4; lpSrcRect: PRect;
         dwFlags: DWORD; lpDDBltFx: PDDBltFX): HResult stdcall; reintroduce;
   end;
@@ -896,12 +897,33 @@ end;
 
 { TMyBackBufferD3D }
 
-function TMyBackBufferD3D.Blt(lpDestRect: PRect;
+procedure Blacken16(p: PChar; d: int; const r: TRect);
+var
+  y, w: int;
+begin
+  inc(p, d*r.Top + 2*r.Left);
+  w:= RectW(r)*2;
+  for y:= RectH(r) downto 1 do
+  begin
+    ZeroMemory(p, w);
+    inc(p, d);
+  end;
+end;
+
+function TMyBackBufferD3D.Blt(r: PRect;
   lpDDSrcSurface: IDirectDrawSurface4; lpSrcRect: PRect; dwFlags: DWORD;
   lpDDBltFx: PDDBltFX): HResult;
 begin
-  ScaleRect(lpDestRect);
-  Result:= Surf.Blt(lpDestRect, lpDDSrcSurface, lpSrcRect, dwFlags, lpDDBltFx);
+  if (dwFlags and DDBLT_COLORFILL <> 0) and (lpDDBltFx.dwFillColor = 0)
+     and (r.Right <= _ScreenW^) and (r.Bottom <= _ScreenH^) then
+  begin
+    Blacken16(_ScreenBuffer^, _ScreenW^*2, r^);
+    Result:= DD_OK;
+  end else
+  begin
+    ScaleRect(r);
+    Result:= Surf.Blt(r, lpDDSrcSurface, lpSrcRect, dwFlags, lpDDBltFx);
+  end;
 end;
 
 { TMyFrontBufferD3D }

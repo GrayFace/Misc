@@ -6,6 +6,7 @@ uses
   RSSysUtils,
   Windows,
   RSQ,
+  MMCommon,
   Hooks in 'Hooks.pas',
   Common in 'Common.pas',
   MP3 in 'MP3.pas';
@@ -228,6 +229,14 @@ Version 2.2:
 [-] Fly and Water Walk icons weren't displayed in simple message dialog
 [-] Health bars of first 2 players and danger indicators of all players were misplaced (FixInterfaceBugs hidden option)
 
+Version 2.3:
+(MM7, MM8)
+[+] Better blackening of background in moster info window (doesn't matter)
+(MM7)
+[-] 'close rings view' in inventory was misplaced
+(MM8)
+[-] Enter key pressed in the main menu had an effect in the game
+
 
 [!!] Place items in chests vertically - 41FFB9 (MM7)
 [!!] Compact chest population
@@ -394,8 +403,6 @@ Xfing:
 - I think thresholds on items in regards to their identification and repair should be raised. As things are now, 30 points in ID/Repair is enough to handle the best items in the game, which defeats the purpose of Grandmaster training entirely. I suggest to raise the threshold for artifacts and relics to 45 (or 45 and 60 respectively if these two categories can be done separately) to make GM in these two skills even worth obtaining.
 }
 
-exports
-  GetOptions;
 begin
   try
     AssertErrorProc:= RSAssertErrorHandler;

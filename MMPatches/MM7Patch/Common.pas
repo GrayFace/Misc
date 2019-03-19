@@ -22,7 +22,6 @@ const
   _TextBuffer1 = pchar($5C5C30);
   _TextBuffer2 = pchar($5C6400);
   _ItemInMouse = pint($AD458C);
-  _ActionQueue = ptr($50CA50);
   _PartyMembers = $A74F44;
   _Party_State = $AD45B0;
   _Party_Direction = pint($ACD4F8);
@@ -44,6 +43,7 @@ const
   _MainWindow = puint($6BE174);
   _ScreenW = pint($E31B68);
   _ScreenH = pint($E31B64);
+  _ScreenBuffer = pptr($E31B54);
   _TimeDelta = pint($50BA7C);
   _Flying = pint($ACD53C);
   _MapMonsters = $5FEFD8;
@@ -131,17 +131,6 @@ const
   SIni2 = 'mm7lang.ini';
   DummyFalse: Bool = false;
 
-{$DEFINE mm7}
-{$I MMPatch.inc}
+implementation
 
-function GetMapExtra: PMapExtra;
-begin
-  if _IndoorOrOutdoor^ = 1 then
-    Result:= ptr($6BE534)
-  else
-    Result:= ptr($6A1160);
-end;
-
-exports
-  AddMipmapBase;
 end.

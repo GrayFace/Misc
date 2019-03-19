@@ -19,7 +19,6 @@ const
   _NeedRedraw = pint($587ADC);
   _TextGameSaved = ppchar($601E88);
   _ItemInMouse = pint($B7CA64);
-  _ActionQueue = ptr($51E330);
   _PartyMembers = $B7CA48;
   _Party_MemberCount = pint($B7CA60);
   _Party_State = $B7CA88;
@@ -131,17 +130,6 @@ const
   SIni2 = 'mm8lang.ini';
   DummyFalse: Bool = false;
 
-{$DEFINE mm8}
-{$I MMPatch.inc}
+implementation
 
-function GetMapExtra: PMapExtra;
-begin
-  if _IndoorOrOutdoor^ = 1 then
-    Result:= ptr($6F3CF4)
-  else
-    Result:= ptr($6CF0CC);
-end;
-
-exports
-  AddMipmapBase;
 end.

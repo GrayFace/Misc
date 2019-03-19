@@ -1,4 +1,27 @@
+unit MMCommon;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Classes, RSSysUtils, RSQ, Math, Common, IniFiles;
+
+{$I MMPatchVer.inc}
+
 const
+{$IFDEF mm6}
+  IsMM6 = 1;
+  IsMM7 = 0;
+  IsMM8 = 0;
+{$ELSEIF defined(mm7)}
+  IsMM6 = 0;
+  IsMM7 = 1;
+  IsMM8 = 0;
+{$ELSEIF defined(mm8)}
+  IsMM6 = 0;
+  IsMM7 = 0;
+  IsMM8 = 1;
+{$IFEND}
+
   hqFixObelisks = 26;
   hqWindowSize = 27;
   hqBorderless = 28;
@@ -117,12 +140,12 @@ var
   NoPlayerSwap: Boolean;
 
   MappedKeys, MappedKeysBack: array[0..255] of Byte;
-{$ENDIF}{$IFDEF mm7}
+{$ELSEIF defined(mm7)}
   UseMM7text: Boolean;
-{$ENDIF}{$IFDEF mm8}
+{$ELSEIF defined(mm8)}
   NoWaterShoreBumpsSW, FixQuickSpell: Boolean;
   MouseBorder, StartupCopyrightDelay: int;
-{$ENDIF}
+{$IFEND}
 
 type
   PHwlBitmap = ^THwlBitmap;
@@ -204,7 +227,20 @@ type
     function GetPeriodicTimer(i: int; first: Boolean = false): int64;
   end;
 
+  PActionQueueItem = ^TActionQueueItem;
+  TActionQueueItem = packed record
+    Action: int;
+    Info1: int;
+    Info2: int;
+  end;
+  PActionQueue = ^TActionQueue;
+  TActionQueue = packed record
+    Count: int;
+    Items: array[0..39] of TActionQueueItem;
+  end;
+    
 const
+  _ActionQueue: PActionQueue = ptr(IsMM6*$4D5F48 + IsMM7*$50CA50 + IsMM8*$51E330);
   PowerOf2: array[0..15] of int = (1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768);
 
 {$IFNDEF mm6}
@@ -215,13 +251,14 @@ var
 procedure LoadIni;
 function GetOptions: ptr; stdcall;
 procedure LoadExeMods;
-// make semi-transparent borders not black when scaling
-procedure PropagateIntoTransparent(p: PWordArray; w, h: int);
 {$IFNDEF mm6}
 function GetMipmapsCountProc(var a: THwlBitmap; p: PChar): int;
 procedure AddMipmapBase(p: PChar; v: int);
 {$ENDIF}
 function GetMapExtra: PMapExtra;
+
+// make semi-transparent borders not black when scaling
+procedure PropagateIntoTransparent(p: PWordArray; w, h: int);
 procedure Wnd_CalcClientRect(var r: TRect);
 procedure Wnd_PaintBorders(wnd: HWND; wp: int);
 procedure Wnd_Sizing(wnd: HWND; side: int; var r: TRect);
@@ -533,52 +570,6 @@ begin
     end;
 end;
 
-function PropagateColor(p: PWordArray; x, y, w, h, dx, dy: int; need: Word): Boolean; inline;
-var
-  c: Word;
-begin
-  Result:= false;
-  if (dx < 0) and (x + dx < 0) then  exit;
-  if (dy < 0) and (y + dy < 0) then  exit;
-  if (dx > 0) and (x + dx >= w) then  exit;
-  if (dy > 0) and (y + dy >= h) then  exit;
-  c:= p[dx + dy*w];
-  Result:= (c > need);
-  if Result then
-    p[0]:= c and $7FFF;
-end;
-
-procedure PropagateIntoTransparent(p: PWordArray; w, h: int);
-var
-  found: Boolean;
-  x, y: int;
-begin
-  found:= false;
-  for y:= 0 to h - 1 do
-    for x:= 0 to w - 1 do
-    begin
-      found:= (p[0] = 0) and
-        (PropagateColor(p, x, y, w, h, -1, 0, $7FFF) or
-         PropagateColor(p, x, y, w, h, 1, 0, $7FFF) or
-         PropagateColor(p, x, y, w, h, 0, -1, $7FFF) or
-         PropagateColor(p, x, y, w, h, 0, 1, $7FFF)) or found;
-      inc(PWord(p));
-    end;
-  if not found then
-    exit;
-  dec(PWord(p), w*h);
-  for y:= 0 to h - 1 do
-    for x:= 0 to w - 1 do
-    begin
-      if (p[0] <> 0) or
-        PropagateColor(p, x, y, w, h, -1, 0, 0) or
-        PropagateColor(p, x, y, w, h, 1, 0, 0) or
-        PropagateColor(p, x, y, w, h, 0, -1, 0) or
-        PropagateColor(p, x, y, w, h, 0, 1, 0) then ;
-      inc(PWord(p));
-    end;
-end;
-
 {$IFNDEF mm6}
 function PatMatch(const pat, s: string): Boolean;  // only allows one '*' and any number of '?'
 var
@@ -639,6 +630,52 @@ begin
   MipmapsBase.Objects[i]:= ptr(v);
 end;
 {$ENDIF}
+
+function PropagateColor(p: PWordArray; x, y, w, h, dx, dy: int; need: Word): Boolean; inline;
+var
+  c: Word;
+begin
+  Result:= false;
+  if (dx < 0) and (x + dx < 0) then  exit;
+  if (dy < 0) and (y + dy < 0) then  exit;
+  if (dx > 0) and (x + dx >= w) then  exit;
+  if (dy > 0) and (y + dy >= h) then  exit;
+  c:= p[dx + dy*w];
+  Result:= (c > need);
+  if Result then
+    p[0]:= c and $7FFF;
+end;
+
+procedure PropagateIntoTransparent(p: PWordArray; w, h: int);
+var
+  found: Boolean;
+  x, y: int;
+begin
+  found:= false;
+  for y:= 0 to h - 1 do
+    for x:= 0 to w - 1 do
+    begin
+      found:= (p[0] = 0) and
+        (PropagateColor(p, x, y, w, h, -1, 0, $7FFF) or
+         PropagateColor(p, x, y, w, h, 1, 0, $7FFF) or
+         PropagateColor(p, x, y, w, h, 0, -1, $7FFF) or
+         PropagateColor(p, x, y, w, h, 0, 1, $7FFF)) or found;
+      inc(PWord(p));
+    end;
+  if not found then
+    exit;
+  dec(PWord(p), w*h);
+  for y:= 0 to h - 1 do
+    for x:= 0 to w - 1 do
+    begin
+      if (p[0] <> 0) or
+        PropagateColor(p, x, y, w, h, -1, 0, 0) or
+        PropagateColor(p, x, y, w, h, 1, 0, 0) or
+        PropagateColor(p, x, y, w, h, 0, -1, 0) or
+        PropagateColor(p, x, y, w, h, 0, 1, 0) then ;
+      inc(PWord(p));
+    end;
+end;
 
 var
   BaseClientRect: TRect;
@@ -774,4 +811,18 @@ begin
     inc(Result, $100000000);
 end;
 
+function GetMapExtra: PMapExtra;
+begin
+  if _IndoorOrOutdoor^ = 1 then
+    Result:= ptr(IsMM6*$5F7D74 + IsMM7*$6BE534 + IsMM8*$6F3CF4)
+  else
+    Result:= ptr(IsMM6*$689C78 + IsMM7*$6A1160 + IsMM8*$6CF0CC);
+end;
+
+exports
+{$IFNDEF mm6}
+  AddMipmapBase,
+{$ENDIF}
+  GetOptions;
+end.
 

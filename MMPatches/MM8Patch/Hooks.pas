@@ -5,7 +5,7 @@ interface
 uses
   Windows, Messages, SysUtils, Classes, RSSysUtils, RSQ, Common, RSCodeHook,
   Math, MP3, RSDebug, IniFiles, Direct3D, Graphics, MMSystem, RSStrUtils,
-  DirectDraw, DXProxy, RSResample, RSGraphics;
+  DirectDraw, DXProxy, RSResample, RSGraphics, MMCommon;
 
 procedure HookAll;
 procedure ApplyDeferredHooks;
@@ -22,23 +22,8 @@ procedure ProcessMouseLook; forward;
 //----- Functions
 
 procedure AddAction(action, info1, info2:int); stdcall;
-type
-  PActionQueueItem = ^TActionQueueItem;
-  TActionQueueItem = packed record
-    Action: int;
-    Info1: int;
-    Info2: int;
-  end;
-  PActionQueue = ^TActionQueue;
-  TActionQueue = packed record
-    Count: int;
-    Items: array[0..39] of TActionQueueItem;
-  end;
-
-const
-  Queue = PActionQueue(_ActionQueue);
 begin
-  with Queue^ do
+  with _ActionQueue^ do
     if Count < 40 then
     begin
       Items[Count]:= PActionQueueItem(@action)^;
@@ -4112,7 +4097,7 @@ end;
 //----- HooksList
 
 var
-  HooksList: array[1..338] of TRSHookInfo = (
+  HooksList: array[1..339] of TRSHookInfo = (
     (p: $458E18; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $463862; old: $450493; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave/quicksave filenames localization
     (p: $4CD509; t: RShtNop; size: 12), // Fix Save/Load Slots: it resets SaveSlot, SaveScroll
@@ -4298,6 +4283,7 @@ var
     (p: $4BCCE2; newp: @OpenBikSmkHook; t: RShtCall), // Custom LODs - Vid(Bik)
     //(p: $45E2A0; old: $45F1C2; newp: @CopyMapsToNewLodHook; t: RShtCall),
     (p: $45773F; newp: @ClearKeyStatesHook; t: RShtJmp; size: 6), // Clear my keys as well
+    (p: $46504A; newp: @ClearKeyStatesHook; t: RShtBefore), // Clear keys when entering the game
     (p: $45F91B; newp: @SaveGameBugHook; t: RShtCall), // Save game bug in Windows Vista and higher (bug of OS or other software)
     (p: $46F03E; newp: @FixStrafe1; t: RShtCall; size: 7; Querry: 23), // Fix movement rounding problems
     (p: $46F06A; newp: @FixStrafe1; t: RShtCall; size: 7; Querry: 23), // Fix movement rounding problems

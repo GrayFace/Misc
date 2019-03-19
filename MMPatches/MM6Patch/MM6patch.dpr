@@ -6,6 +6,7 @@ uses
   RSSysUtils,
   Windows,
   RSQ,
+  MMCommon,
   Hooks in 'Hooks.pas',
   Common in 'Common.pas',
   MP3 in 'MP3.pas';
@@ -325,8 +326,6 @@ asm
 
 end;
 
-exports
-  GetOptions;
 begin
   try
     AssertErrorProc:= RSAssertErrorHandler;

@@ -3,7 +3,7 @@ unit MP3;
 interface
 
 uses
-  Windows, Messages, SysUtils, RSSysUtils, RSQ, RSCodeHook, Math, Common;
+  Windows, Messages, SysUtils, RSSysUtils, RSQ, RSCodeHook, Math, MMCommon;
 
 procedure HookMP3;
 function RedbookStatus: int;
