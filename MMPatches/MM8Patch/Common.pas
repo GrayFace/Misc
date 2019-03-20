@@ -66,8 +66,10 @@ const
   _Time = puint64($B20EBC);
   _AbortMovie = pbool($FFDDEC);
   _ViewMulOutdoor = pint($6F300C);
+  _ViewMulIndoor = psingle($519454);
   _RenderRect = PRect($FFDE9C);
   __SpritesToDrawCount = $529F40;
+  _CGame = PPChar($75CE00);
 
   _ReleaseMouse: TProcedure = ptr($433136);
   _DoSaveGame: procedure(n1,unk, autoquick: int) = ptr($45CF27);

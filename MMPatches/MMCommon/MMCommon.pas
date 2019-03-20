@@ -3,7 +3,8 @@ unit MMCommon;
 interface
 
 uses
-  Windows, Messages, SysUtils, Classes, RSSysUtils, RSQ, Math, Common, IniFiles;
+  Windows, Messages, SysUtils, Classes, RSSysUtils, RSQ, Math, Common, IniFiles,
+  RSCodeHook;
 
 {$I MMPatchVer.inc}
 
@@ -36,6 +37,7 @@ const
   hqNoPlayerSwap = 37;
   hqFixQuickSpell = 38;
   hqFixInterfaceBugs = 39;
+  hqFixIndoorFOV = 40;
 
 type
   TOptions = packed record
@@ -129,6 +131,7 @@ var
   NoIntro, NoVideoDelays, DisableAsyncMouse: Boolean;
   TurnBasedWalkDelay: int;
   MipmapsBase, MipmapsBasePat: TStringList;
+  MouseDX, MouseDY: Double;
   {$ENDIF}
 
   TimersValidated: int64;
@@ -143,7 +146,7 @@ var
 {$ELSEIF defined(mm7)}
   UseMM7text: Boolean;
 {$ELSEIF defined(mm8)}
-  NoWaterShoreBumpsSW, FixQuickSpell: Boolean;
+  NoWaterShoreBumpsSW, FixQuickSpell, FixIndoorFOV: Boolean;
   MouseBorder, StartupCopyrightDelay: int;
 {$IFEND}
 
@@ -262,6 +265,7 @@ procedure PropagateIntoTransparent(p: PWordArray; w, h: int);
 procedure Wnd_CalcClientRect(var r: TRect);
 procedure Wnd_PaintBorders(wnd: HWND; wp: int);
 procedure Wnd_Sizing(wnd: HWND; side: int; var r: TRect);
+procedure CheckHooks(const Hooks);
 
 implementation
 
@@ -471,6 +475,7 @@ begin
       {$IFNDEF mm6}FixMonsterSummon:= ini.ReadBool(sect, 'FixMonsterSummon', true);{$ENDIF}
       {$IFDEF mm8}FixQuickSpell:= ini.ReadBool(sect, 'FixQuickSpell', true);{$ENDIF}
       {$IFDEF mm7}FixInterfaceBugs:= ini.ReadBool(sect, 'FixInterfaceBugs', true);{$ENDIF}
+      {$IFDEF mm8}FixIndoorFOV:= ini.ReadBool(sect, 'FixIndoorFOV', true);{$ENDIF}
 
 {$IFDEF mm6}
       if FileExists(AppPath + 'mm6text.dll') then
@@ -793,6 +798,16 @@ begin
     dec(r.Top, h - h0)
   else
     inc(r.Bottom, h - h0);
+end;
+
+procedure CheckHooks(const Hooks);
+var
+  hk: array[0..0] of TRSHookInfo absolute Hooks;
+  i: int;
+begin
+  i:= RSCheckHooks(Hooks);
+  if i >= 0 then
+    raise Exception.CreateFmt(SWrong, [hk[i].p]);
 end;
 
 { TMapExtra }

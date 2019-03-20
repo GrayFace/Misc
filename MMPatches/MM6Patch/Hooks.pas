@@ -5,7 +5,7 @@ interface
 uses
   Windows, Messages, SysUtils, Classes, RSSysUtils, RSQ, Common, RSCodeHook,
   Math, MP3, RSDebug, IniFiles, MMSystem, Graphics, DirectDraw, DXProxy,
-  RSResample, MMCommon;
+  RSResample, MMCommon, MMHooks;
 
 procedure HookAll;
 procedure ApplyDeferredHooks;
@@ -1489,7 +1489,6 @@ procedure ProcessMouseLook;
 const
   dir = _Party_Direction;
   angle = _Party_Angle;
-  AngleLim = 180;
 var
   p: TPoint;
   speed: PPoint;
@@ -2419,7 +2418,7 @@ begin
   Result:= @LodRecords;
 end;
 
-procedure LoadCustomLods(Old: int; Name: string; Chap: PChar);
+procedure LoadCustomLods(Old: int; const Name: string; Chap: PChar);
 begin
   with TRSFindFile.Create('Data\*.' + Name) do
     try
@@ -3780,11 +3779,9 @@ end;
 procedure HookAll;
 var
   LastDebugHook: DWord;
-  i: int;
 begin
-  i:= RSCheckHooks(HooksList);
-  if i >= 0 then
-    raise Exception.CreateFmt(SWrong, [HooksList[i + 1].p]);
+  CheckHooks(HooksList);
+  ApplyMMHooks;
   ReadDisables;
   RSApplyHooks(HooksList);
   if FixWalk then

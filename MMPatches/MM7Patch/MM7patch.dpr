@@ -6,10 +6,13 @@ uses
   RSSysUtils,
   Windows,
   RSQ,
-  MMCommon,
   Hooks in 'Hooks.pas',
   Common in 'Common.pas',
-  MP3 in 'MP3.pas';
+  MP3 in 'MP3.pas',
+  DXProxy in '..\mmcommon\DXProxy.pas',
+  MMCommon in '..\mmcommon\MMCommon.pas',
+  D3DHooks in '..\mmcommon\D3DHooks.pas',
+  MMHooks in '..\mmcommon\MMHooks.pas';
 
 {$R *.res}
 
@@ -235,6 +238,8 @@ Version 2.3:
 (MM7)
 [-] 'close rings view' in inventory was misplaced
 (MM8)
+[-] Buildings weren't drawn on sides of the screen
+[-] Indoors the FOV wasn't increased, so the area seen was smaller than in MM6 and MM7 
 [-] Enter key pressed in the main menu had an effect in the game
 
 

@@ -66,6 +66,9 @@ const
   _Time = puint64($908D08);
   _IsMoviePlaying = pbool($9DE364);
   _AbortMovie = pbool($9DE338);
+  _ViewMulOutdoor = pint($6296F4);
+  _ViewMulIndoor = psingle($4D516C);
+  _RenderRect = PRect($9DE3A8);
 
   _PauseTime: procedure(a1: int = 0; a2: int = 0; this: int = $4D5180) = ptr($420DB0);
   _ReleaseMouse: TProcedure = ptr($42FAC0);

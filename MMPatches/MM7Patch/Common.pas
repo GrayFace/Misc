@@ -63,7 +63,11 @@ const
   _IndoorOrOutdoor = pint($6BE1E0);
   _Time = puint64($ACCE64);
   _AbortMovie = pbool($F8B9F4);
+  _ViewMulOutdoor = pint($6BDF04);
+  _ViewMulIndoor = psingle($507B7C);
+  _RenderRect = PRect($F8BAA4);
   __SpritesToDrawCount = $518660;
+  _CGame = PPChar($71FE94);
 
   _PauseTime: procedure(a1: int = 0; a2: int = 0; this: int = $50BA60) = ptr($4262F2);
   _ReleaseMouse: TProcedure = ptr($4356EE); 

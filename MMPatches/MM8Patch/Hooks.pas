@@ -5,11 +5,10 @@ interface
 uses
   Windows, Messages, SysUtils, Classes, RSSysUtils, RSQ, Common, RSCodeHook,
   Math, MP3, RSDebug, IniFiles, Direct3D, Graphics, MMSystem, RSStrUtils,
-  DirectDraw, DXProxy, RSResample, RSGraphics, MMCommon;
+  DirectDraw, DXProxy, RSResample, RSGraphics, MMCommon, D3DHooks, MMHooks;
 
 procedure HookAll;
 procedure ApplyDeferredHooks;
-procedure ApplyHooksD3D;
 
 implementation
 
@@ -106,9 +105,6 @@ begin
   if SW = 0 then  SW:= 640;
   if SH = 0 then  SH:= 480;
 end;
-
-var
-  MouseDX, MouseDY: Double;
 
 function TransformMouseCoord(x, sw, w: int; out dx: Double): int;
 begin
@@ -1365,12 +1361,6 @@ begin
             inc(p, x2 - a2);
           end else
             inc(p, BufW);
-      asm
-        mov eax, [ebp]
-        //mov eax, [eax]
-        mov eax, dword ptr [eax+4]
-        mov i, eax
-      end;
       // Sparks spell ignores transparency bit, this check is to avoid interfering with it
       if _MainMenuCode^ < 0 then
         PropagateIntoTransparent(Buffer, BufW, BufH);
@@ -3982,122 +3972,41 @@ begin
     Result:= LoadCursor(hInstance, name);
 end;
 
-//----- Monsters/items/effects not visible on the sides of the screen
+//----- Indoor FOV wasn't extended like outdoor
 
-function AbsCheckOutdoor(v: int): int; cdecl;
-var
-  m: int;
+function DynFOV(x, y: int): ext;
 begin
-  Result:= abs(v);
-  with _RenderRect^ do
-    m:= 300 - _ViewMulOutdoor^*344 div (Right - Left);
-  if m > 0 then
-    dec(Result, (Result div 300)*m);
+  if x < y then  zSwap(x, y);
+	Result:= y*Power(x/y, 0.2);
 end;
 
-//----- Precise sprites placement (D3D)
-
-var
-  DrawSpritePos: array of array[0..1] of int2;
-  DrawSpriteCount: int;
-  DrawSpriteOff: int;
-  FloatToIntShl16: single = 6755399441055744/$10000;
-
-procedure ExtendDrawSpritePos(n: int);
-begin
-  DrawSpriteCount:= n + max(501, DrawSpriteCount);
-  SetLength(DrawSpritePos, DrawSpriteCount);
-end;
-
-procedure CheckDrawSpriteCount;
-asm
-  push eax
-  mov eax, [__SpritesToDrawCount]
-  cmp eax, DrawSpriteCount
-  jl @ok
-  push edx
-  push ecx
-  call ExtendDrawSpritePos
-  pop ecx
-  pop edx
-@ok:
-  pop eax
-end;
-
-procedure StoreSpriteRemainder;
-asm
-  call CheckDrawSpriteCount
-  // store ax as int16
-  push edx
-  mov edx, [__SpritesToDrawCount]
-  shl edx, 2
-  and DrawSpriteOff, 2
-  add edx, DrawSpriteOff
-  xor DrawSpriteOff, 2
-  add edx, DrawSpritePos
-  mov [edx], ax
-  pop edx
-end;
-
-procedure StoreSpriteRemainderAndShr16;
-asm
-  call StoreSpriteRemainder
-  add eax, $8000
-  sar eax, 16
-end;
-
-procedure StoreSpriteRemainderIndoor;
-asm
-  cmp DrawSpriteOff, 2
-  jz StoreSpriteRemainderAndShr16
-  neg eax
-  call StoreSpriteRemainder
-  neg eax
-  add eax, $8000
-  sar eax, 16
-end;
-
-procedure LoadSpriteRemainder;
-asm
-  call CheckDrawSpriteCount
-  shl eax, 16
-  mov ecx, DrawSpriteOff
-  add ecx, DrawSpritePos
-  add DrawSpriteOff, 2
-  movsx ecx, word ptr [ecx]
-  sub eax, ecx
-// check for loop end:
-  mov ecx, [__SpritesToDrawCount]
-  shl ecx, 2
-  cmp ecx, DrawSpriteOff
-  jg @ok
-  and DrawSpriteOff, 2
-@ok:
-end;
-
-procedure FShr16;
+function FixIndoorFOVProc: int;
 const
-  a: int = $10000;
-asm
-  fidiv a
+  base = 369;
+begin
+  with _RenderRect^ do
+    Result:= Round(base*DynFOV(Right - Left, Bottom - Top - 1)/DynFOV(460, 344));
+  _ViewMulIndoor^:= Result;
 end;
 
-//----- Precise mouse (D3D)
-
-procedure LoadMouseRemainderX;
-asm
-  fadd MouseDX
+procedure FixIndoorFOVProcD3D(var r: Single);
+const
+  base = 369;
+begin
+  with _RenderRect^ do
+    r:= base*DynFOV(Right - Left, Bottom - Top - 1)/DynFOV(460, 344);
 end;
 
-procedure LoadMouseRemainderY;
+procedure FixIndoorFOVHookD3D;
 asm
-  fadd MouseDY
+  lea eax, [esi + $C4]
+  jmp FixIndoorFOVProcD3D
 end;
 
 //----- HooksList
 
 var
-  HooksList: array[1..339] of TRSHookInfo = (
+  HooksList: array[1..338] of TRSHookInfo = (
     (p: $458E18; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $463862; old: $450493; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave/quicksave filenames localization
     (p: $4CD509; t: RShtNop; size: 12), // Fix Save/Load Slots: it resets SaveSlot, SaveScroll
@@ -4413,9 +4322,6 @@ var
     (p: $43CFEC; old: $D0; new: $C4; t: RSht4), // Support changing FOV indoor in D3D mode
     (p: $43D47A; old: $D0; new: $C4; t: RSht4), // Support changing FOV indoor in D3D mode
     (p: $48A804; old: $D0; new: $C4; t: RSht4), // Support changing FOV indoor in D3D mode
-    (p: $47AB35; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Monsters not visible on the sides of the screen
-    (p: $47A55E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Items not visible on the sides of the screen
-    (p: $48B37E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Effects not visible on the sides of the screen
     (p: $420F1F; size: 2), // Inactive characters couldn't interact with chests
     (p: $420E14; size: 6; Querry: hqInactivePlayersFix), // Select inactive characters
     (p: $4316B2; newp: @InactivePlayerActFix; t: RShtBefore; size: 6; Querry: hqInactivePlayersFix), // Inactive players could attack
@@ -4438,32 +4344,8 @@ var
     (p: $4C6E32; old: 635; new: 635-6; t: RSht4), // Wrong minimap placement
     (p: $4CDFAC; old: 498; new: 498-6; t: RSht4), // Wrong minimap placement
     (p: $4CDFA7; old: 635; new: 635-6; t: RSht4), // Wrong minimap placement
-    ()
-  );
-
-  HooksD3D: array[1..23] of TRSHookInfo = (
-    (p: $43443B; old: $4E8590; newp: @FloatToIntShl16; t: RSht4), // Precise sprites placement (indoor)
-    (p: $43446A; old: $4E8590; newp: @FloatToIntShl16; t: RSht4), // Precise sprites placement (indoor)
-    (p: $43443F; newp: @StoreSpriteRemainderIndoor; t: RShtAfter; size: 6), // Precise sprites placement (indoor)
-    (p: $43446E; newp: @StoreSpriteRemainderIndoor; t: RShtAfter; size: 6), // Precise sprites placement (indoor)
-    (p: $47A5D5; newp: @StoreSpriteRemainder; t: RShtAfter; size: 6), // Precise sprites placement (items outdoor)
-    (p: $47A5FE; newp: @StoreSpriteRemainder; t: RShtAfter; size: 6), // Precise sprites placement (items outdoor)
-    (p: $479FFB; old: $4E8798; newp: @FloatToIntShl16; t: RSht4), // Precise sprites placement (decor outdoor)
-    (p: $47A021; old: $4E8798; newp: @FloatToIntShl16; t: RSht4), // Precise sprites placement (decor outdoor)
-    (p: $479FFF; newp: @StoreSpriteRemainderAndShr16; t: RShtAfter; size: 6), // Precise sprites placement (decor outdoor)
-    (p: $47A025; newp: @StoreSpriteRemainderAndShr16; t: RShtAfter; size: 6), // Precise sprites placement (decor outdoor)
-    (p: $47ABA4; newp: @StoreSpriteRemainder; t: RShtAfter; size: 6), // Precise sprites placement (monsters outdoor)
-    (p: $47ABD3; newp: @StoreSpriteRemainder; t: RShtAfter; size: 6), // Precise sprites placement (monsters outdoor)
-    (p: $43DC89; newp: @LoadSpriteRemainder; t: RShtBefore; size: 6), // Precise sprites placement (indoor)
-    (p: $43DC8F; newp: @LoadSpriteRemainder; t: RShtBefore; size: 6), // Precise sprites placement (indoor)
-    (p: $4A2338; newp: @FShr16; t: RShtAfter; size: 10), // Precise sprites placement (indoor)
-    (p: $4A2359; newp: @FShr16; t: RShtBefore; size: 6), // Precise sprites placement (indoor)
-    (p: $47AE2F; newp: @LoadSpriteRemainder; t: RShtBefore; size: 6), // Precise sprites placement (outdoor)
-    (p: $47AE35; newp: @LoadSpriteRemainder; t: RShtBefore; size: 6), // Precise sprites placement (outdoor)
-    (p: $4A1FB2; newp: @FShr16; t: RShtAfter), // Precise sprites placement (outdoor)
-    (p: $4A1FD9; newp: @FShr16; t: RShtBefore; size: 6), // Precise sprites placement (outdoor)
-    (p: $44C273; newp: @LoadMouseRemainderX; t: RShtBefore; size: 7), // Precise mouse
-    (p: $44C273; newp: @LoadMouseRemainderY; t: RShtAfter), // Precise mouse
+    (p: $43DA21; newp: @FixIndoorFOVProc; t: RShtAfter; Querry: hqFixIndoorFOV), // Indoor FOV wasn't extended like outdoor
+    (p: $43520D; newp: @FixIndoorFOVHookD3D; t: RShtAfter; size: 6; Querry: hqFixIndoorFOV), // Indoor FOV wasn't extended like outdoor
     ()
   );
 
@@ -4481,25 +4363,14 @@ begin
     end
 end;
 
-procedure CheckHooks(const Hooks);
-var
-  hk: array[0..0] of TRSHookInfo absolute Hooks;
-  i: int;
-begin
-  i:= RSCheckHooks(Hooks);
-  if i >= 0 then
-    raise Exception.CreateFmt(SWrong, [hk[i].p]);
-end;
-
 procedure HookAll;
 var
   LastDebugHook: DWord;
 begin
   CheckHooks(HooksList);
-  CheckHooks(HooksD3D);
-
+  CheckHooksD3D;
+  ApplyMMHooks;
   ExtendSpriteLimits;
-
   ReadDisables;
   RSApplyHooks(HooksList);
   if NoIntro then
@@ -4534,6 +4405,8 @@ begin
     RSApplyHooks(HooksList, hqNoWaterShoreBumps);
   if FixQuickSpell then
     RSApplyHooks(HooksList, hqFixQuickSpell);
+  if FixIndoorFOV then
+    RSApplyHooks(HooksList, hqFixIndoorFOV);
 
   RSDebugUseDefaults;
   LastDebugHook:= DebugHook;
@@ -4582,11 +4455,6 @@ begin
     RSApplyHooks(HooksList, hqFixUnimplementedSpells);
   if Options.FixMonsterSummon then
     RSApplyHooks(HooksList, hqFixMonsterSummon);
-end;
-
-procedure ApplyHooksD3D;
-begin
-  RSApplyHooks(HooksD3D);
 end;
 
 exports

@@ -6,10 +6,13 @@ uses
   RSSysUtils,
   Windows,
   RSQ,
-  MMCommon,
   Hooks in 'Hooks.pas',
   Common in 'Common.pas',
-  MP3 in 'MP3.pas';
+  MP3 in 'MP3.pas',
+  DXProxy in '..\mmcommon\DXProxy.pas',
+  MMCommon in '..\mmcommon\MMCommon.pas',
+  D3DHooks in '..\mmcommon\D3DHooks.pas',
+  MMHooks in '..\mmcommon\MMHooks.pas';
 
 {$R *.res}
 
