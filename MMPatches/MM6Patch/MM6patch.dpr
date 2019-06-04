@@ -234,6 +234,15 @@ Version 2.2:
 (MM6)
 [+] "NoPlayerSwap" hidden option
 
+Version 2.3:
+(MM6-MM8)
+[+] PaperDollInChests
+[+] Keyboard control
+[+] Enter in save/load dialogs
+[-] My bug: If somehow game window managed to become smaller than 640x480, it wasn't handled gracefully in software 32-bit color mode.
+(MM6, MM7)
+[-] My bug: Quick load key during the death movie was causing a crash afterwards
+
 
 Если загрузить сейв, где все рожи одинаковые, а потом сейв с разными, будут черные пятна на месте рож
 

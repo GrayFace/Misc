@@ -13,23 +13,13 @@ procedure ApplyDeferredHooks;
 implementation
 
 var
-  QuickSaveUndone, Autorun, SkipMouseLook, AllowMovieQuickLoad: Boolean;
+  QuickSaveUndone, Autorun, SkipMouseLook: Boolean;
   DoubleSpeed: BOOL;
   _sprintfex: ptr; // Buka localization
 
 procedure ProcessMouseLook; forward;
 
 //----- Functions
-
-procedure AddAction(action, info1, info2:int); stdcall;
-begin
-  with _ActionQueue^ do
-    if Count < 40 then
-    begin
-      Items[Count]:= PActionQueueItem(@action)^;
-      inc(Count);
-    end;
-end;
 
 function GetCurrentMember:ptr;
 begin
@@ -62,53 +52,14 @@ end;
 
 function IncreaseRecoveryRateProc(v, n1: int; member:ptr):int; forward;
 
-var
-  SW, SH: int;
-
-procedure NeedScreenWH;
-begin
-  SW:= _ScreenW^;
-  SH:= _ScreenH^;
-  if SW = 0 then  SW:= 640;
-  if SH = 0 then  SH:= 480;
-end;
-
-function TransformMousePos(x, y: int; out x1: int): int;
-var
-  r: TRect;
-begin
-  NeedScreenWH;
-  GetClientRect(_MainWindow^, r);
-  x1:= x*SW div r.Right;
-  Result:= y*SH div r.Bottom;
-end;
-
 procedure QuickLoad;
 begin
   _Paused^:= 1;
   pint($610444)^:= 1;
+  _StopSounds;
   _SaveSlotsFiles[0]:= 'quiksave.mm6';
   _DoLoadGame(0, 0, 0);
   pint($6199C0)^:= 3;
-end;
-
-//----- Keys
-
-var
-  KeysChecked: array[0..255] of Boolean;
-
-function MyGetAsyncKeyState(vKey: Integer): SHORT;// stdcall;
-begin
-  vKey:= vKey and $ff;
-  Result:= GetAsyncKeyState(vKey);
-  if (Result < 0) and not KeysChecked[vKey] then
-    Result:= Result or 1;
-  KeysChecked[vKey]:= Result < 0;
-end;
-
-function CheckKey(key: int):Boolean;
-begin
-  Result:= (MyGetAsyncKeyState(key) and 1) <> 0;
 end;
 
 //----- Map Keys
@@ -1395,17 +1346,14 @@ var
   MiddleX, MiddleY, MLookPartX, MLookPartY: int;
   MWndPos, MLastPos, MLookTempPos: TPoint;
   MLookStartTime: DWORD;
-  EmptyCur, ArrowCur: HCURSOR;
+  EmptyCur: HCURSOR;
   MouseLookOn, MLookIsTemp: Boolean;
-
-const
-  CursorPos = PPoint($6A6120);
 
 function GetMLookPoint(var p: TPoint): BOOL;
 begin
   if MouseLookOn then
   begin
-    CursorPos^:= Point(MiddleX, MiddleY);
+    GameCursorPos^:= Point(MiddleX, MiddleY);
     p:= MWndPos;
     ClientToScreen(_MainWindow^, p);
     Result:= true;
@@ -1518,9 +1466,9 @@ procedure MouseLookHook(p: TPoint); stdcall;
 begin
   CheckMouseLook;
   if MouseLookOn then
-    CursorPos^:= Point(MiddleX, MiddleY)
+    GameCursorPos^:= Point(MiddleX, MiddleY)
   else
-    CursorPos^:= p;
+    GameCursorPos^:= p;
 end;
 
 function MouseLookHook2(var p: TPoint): BOOL; stdcall;
@@ -1533,39 +1481,6 @@ var
   MouseLookHook3Std: procedure(a1, a2, this: ptr);
   MLookBmp: TBitmap;
 
-function LoadMLookBmp(const fname: string; fmt: TPixelFormat): TBitmap;
-var
-  b: TBitmap;
-  exist: Boolean;
-begin
-  Result:= TBitmap.Create;
-  with Result, Canvas do
-  begin
-    PixelFormat:= fmt;
-    HandleType:= bmDIB;
-    b:= nil;
-    exist:= FileExists(fname);
-    if exist then
-      try
-        b:= TBitmap.Create;
-        b.LoadFromFile(fname);
-        Width:= b.Width;
-        Height:= b.Height;
-        CopyRect(ClipRect, b.Canvas, ClipRect);
-        b.Free;
-        exit;
-      except
-        RSShowException;
-        b.Free;
-      end;
-
-    Width:= 64;
-    Height:= 64;
-    Brush.Color:= $F0A0B0;
-    FillRect(ClipRect);
-    DrawIconEx(Handle, 32, 32, ArrowCur, 0, 0, 0, 0, DI_NORMAL);
-  end;
-end;
 
 procedure MLookLoad;
 var
@@ -1608,20 +1523,12 @@ begin
   end;
 end;
 
-procedure MLookDrawHD;
-begin
-  if DXProxyCursorBmp = nil then
-    DXProxyCursorBmp:= LoadMLookBmp('Data\MouseLookCursorHD.bmp', pf32bit);
-  DXProxyCursorX:= (MiddleX*DXProxyRenderW + SW div 2) div SW - DXProxyCursorBmp.Width div 2;
-  DXProxyCursorY:= (MiddleY*DXProxyRenderH + SH div 2) div SH - DXProxyCursorBmp.Height div 2;
-end;
-
 procedure MouseLookHook3(a1, a2, this: ptr);
 begin
   CheckMouseLook;
   if MouseLookOn and not MLookIsTemp then
     if MouseLookCursorHD and DXProxyActive and ((DXProxyRenderW > SW) or (DXProxyRenderH > SH)) then
-      MLookDrawHD
+      MLookDrawHD(MWndPos)
     else
       MLookDraw;
 
@@ -1637,104 +1544,6 @@ function FixPrismaticBug(size, unk: uint):ptr; cdecl;
 begin
   Result:= FixPrismaticBugStd(size, unk);
   ZeroMemory(Result, size);
-end;
-
-//----- Window procedure hook
-
-procedure WindowProcStdImpl;
-asm
-  sub esp, $40
-  push ebx
-  mov ebx, [esp + $54]
-  push $454348
-end;
-
-var
-  WindowProcStd: function(w: HWND; msg: uint; wp: WPARAM; lp: LPARAM):HRESULT; stdcall;
-
-procedure MyClipCursor;
-var
-  r: TRect;
-begin
-  GetClientRect(_MainWindow^, r);
-  MapWindowPoints(_MainWindow^, 0, r, 2);
-  BringWindowToTop(_MainWindow^);
-  if GetForegroundWindow = _MainWindow^ then
-    ClipCursor(@r);
-end;
-
-function WindowProcHook(w: HWND; msg: uint; wp: WPARAM; lp: LPARAM):HRESULT; stdcall;
-const
-  CommandsArray = $6A72A0;
-  AddCommand: procedure(a1, a2, this, cmd: int) = ptr($467A50);
-var
-  xy: TSmallPoint absolute lp;
-  r: TRect;
-begin
-  if _Windowed^ and (msg = WM_ERASEBKGND) then
-  begin
-    GetClientRect(w, r);
-    Result:= FillRect(wp, r, GetStockObject(BLACK_BRUSH));
-    exit;
-  end;
-  if _Windowed^ and (msg >= WM_MOUSEFIRST) and (msg <= WM_MOUSELAST) then
-    xy.y:= TransformMousePos(xy.x, xy.y, lp);
-
-  Result:= WindowProcStd(w, msg, wp, lp);
-
-  case msg of
-    WM_MOUSEWHEEL:
-      if Options.MouseWheelFly then
-        if wp < 0 then
-          AddCommand(0, 0, CommandsArray, 14)
-        else
-          AddCommand(0, 0, CommandsArray, 13);
-    WM_KEYDOWN, WM_SYSKEYDOWN:
-      if wp and not $ff = 0 then
-        KeysChecked[wp]:= false;
-  end;
-
-  if not Options.BorderlessWindowed and IsZoomed(w) then
-    case msg of
-      WM_ACTIVATEAPP:
-        if wp = 0 then
-          ClipCursor(nil)
-        else
-          MyClipCursor;
-      WM_SYSCOMMAND:
-        if wp and $FFF0 = SC_RESTORE then
-          MyClipCursor;
-    end;
-
-  if _Windowed^ and IsZoomed(w) then
-    case msg of
-      WM_NCCALCSIZE:
-        if wp <> 0 then
-          with PNCCalcSizeParams(lp)^ do
-          begin
-            Wnd_CalcClientRect(rgrc[0]);
-            Result:= WVR_REDRAW;
-          end
-        else if IsZoomed(w) then
-          Wnd_CalcClientRect(PRect(lp)^);
-      WM_NCPAINT:
-        Wnd_PaintBorders(w, wp);
-      WM_NCHITTEST:
-        if Result = HTNOWHERE then
-          Result:= HTBORDER;
-    end;
-
-  if _Windowed^ and (msg = WM_SIZING) and not IsZoomed(w) then
-    Wnd_Sizing(w, wp, PRect(lp)^);
-
-  if Options.SupportTrueColor and (msg = WM_SIZE) then
-    DXProxyOnResize;
-
-  if AllowMovieQuickLoad and (msg = WM_KEYDOWN) and (wp = Options.QuickLoadKey) then
-  begin
-    AllowMovieQuickLoad:= false;
-    _AbortMovie^:= true;
-  end;
 end;
 
 //----- Fly in Z axis with mouse
@@ -3264,56 +3073,15 @@ procedure SwitchToFullscreenHook;
 begin
   Options.BorderlessWindowed:= false;
   ShowWindow(_MainWindow^, SW_SHOWMAXIMIZED);
+  PostMessage(_MainWindow^, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
   MyClipCursor;
 end;
 
 //----- Compatible movie render
 
 var
-  ScreenDraw: TBitmap; ScreenDrawScanline: ptr;
   Scale640, Scale320: TRSResampleInfo;
   SmkBmp: TBitmap; SmkScanline: ptr; SmkPixelFormat: TPixelFormat;
-
-procedure NeedScreenDraw(var scale: TRSResampleInfo; sw, sh, w, h: int);
-begin
-  w:= max(w, sw);
-  h:= max(h, sh);
-  if (scale.DestW <> w) or (scale.DestH <> h) then
-  begin
-    RSSetResampleParams(1.3);
-    scale.Init(SW, SH, w, h);
-    if ScreenDraw = nil then
-      ScreenDraw:= TBitmap.Create
-    else
-      ScreenDraw.Height:= 0;
-    with ScreenDraw do
-    begin
-      PixelFormat:= pf32bit;
-      HandleType:= bmDIB;
-      Width:= w;
-      Height:= -h;
-      ScreenDrawScanline:= Scanline[h-1];
-      if PChar(Scanline[0]) - ScreenDrawScanline < 0 then
-        ScreenDrawScanline:= Scanline[0];
-    end;
-  end;
-end;
-
-procedure DrawScaled(var scale: TRSResampleInfo; sw, sh: int; scan: ptr; pitch: int);
-var
-  r: TRect;
-  dc: HDC;
-begin
-  GetClientRect(_MainWindow^, r);
-  NeedScreenDraw(scale, sw, sh, r.Right, r.Bottom);
-  RSResample16(scale, scan, pitch, ScreenDrawScanline, scale.DestW*4);
-  dc:= GetDC(_MainWindow^);
-  if (scale.DestW = r.Right) and (scale.DestH = r.Bottom) then
-    BitBlt(dc, 0, 0, scale.DestW, scale.DestH, ScreenDraw.Canvas.Handle, 0, 0, cmSrcCopy)
-  else
-    StretchBlt(dc, 0, 0, r.Right, r.Bottom, ScreenDraw.Canvas.Handle, 0, 0, scale.DestW, scale.DestH, cmSrcCopy);
-  ReleaseDC(_MainWindow^, dc);
-end;
 
 procedure DrawMovieHook;
 begin
@@ -3417,9 +3185,13 @@ begin
     oldDeathMovie;
   Result:= not AllowMovieQuickLoad;
   AllowMovieQuickLoad:= false;
-  _StopAllSounds; // sometimes the death kept talking
+  _StopSounds; // sometimes the death kept talking
   if Result then
+  begin
+    if _IsMoviePlaying^ then
+      _ExitMovie;
     QuickLoad;
+  end;
 end;
 
 procedure DeathMovieHook;
@@ -3427,6 +3199,7 @@ asm
   call DeathMovieProc
   test al, al
   jz @std
+  xor ebx, ebx
   mov [esp], $4541EF
 @std:
 end;
@@ -3472,7 +3245,7 @@ end;
 //----- HooksList
 
 var
-  HooksList: array[1..286] of TRSHookInfo = (
+  HooksList: array[1..283] of TRSHookInfo = (
     (p: $42ADE7; newp: @RunWalkHook; t: RShtCall), // Run/Walk check
     (p: $453AD3; old: $42ADA0; newp: @KeysHook; t: RShtCall), // My keys handler
     (p: $45456E; old: $417F90; newp: @WindowProcCharHook; t: RShtCall), // Map Keys
@@ -3588,7 +3361,6 @@ var
     (p: $43532D; backup: @@MouseLookHook3Std; newp: @MouseLookHook3; t: RShtCall), // Mouse look
     (p: $42AF22; newp: @StrafeOrWalkHook; t: RShtCall; Querry: 15), // Strafe in MouseLook
     (p: $42AF89; newp: @StrafeOrWalkHook; t: RShtCall; Querry: 15), // Strafe in MouseLook
-    (p: $454340; newp: @WindowProcHook; t: RShtJmp; size: 8), // Window procedure hook
     (p: $465B14; newp: @MouseLookFlyHook1; t: RShtCall; size: 8), // Fix strafes and walking rounding problems
     (p: $464404; newp: @MouseLookFlyHook2; t: RShtCall), // Fix strafes and walking rounding problems
     (p: $430FE4; newp: @FixBonusDamageHook20; t: RShtCall), // Fix damage of weapon enchants (don't ignore resists)
@@ -3705,10 +3477,8 @@ var
     (p: $48519A; newp: @CanSellItemHook; t: RShtCall; size: 7), // Shops buying blasters
     (p: $4A53C9; old: $4A4C30; newp: @CanSellItemHook2; t: RShtCall), // Shops buying blasters
     (p: $48FFF0; newp: @ExitCrashHook; t: RShtCall; size: 9), // Crash on exit
-    (p: $457567; newp: @WindowWidth; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
-    (p: $45757D; newp: @WindowHeight; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
-    (p: $4B9224; newp: @ScreenToClientHook; t: RSht4; Querry: hqWindowSize), // Configure window size
-    (p: $45B56D; old: $45ADF0; newp: @InstantMouseItemHook; t: RShtCallStore; Querry: hqWindowSize), // Configure window size
+    (p: $4B9224; newp: @ScreenToClientHook; t: RSht4), // Configure window size
+    (p: $45B56D; old: $45ADF0; newp: @InstantMouseItemHook; t: RShtCallStore), // Configure window size
     (p: $457AEC; old: $48D840; new: $48DA70; t: RShtCall; Querry: hqBorderless), // Borderless fullscreen
     (p: $457AEC; newp: @SwitchToFullscreenHook; t: RShtAfter; Querry: hqBorderless), // Borderless fullscreen
     (p: $457AA8; newp: @SwitchToWindowedHook; t: RShtAfter; Querry: hqBorderless), // Borderless fullscreen
@@ -3781,7 +3551,6 @@ var
   LastDebugHook: DWord;
 begin
   CheckHooks(HooksList);
-  ApplyMMHooks;
   ReadDisables;
   RSApplyHooks(HooksList);
   if FixWalk then
@@ -3800,8 +3569,6 @@ begin
     RSApplyHooks(HooksList, 17);
   if PlaceItemsVertically then
     RSApplyHooks(HooksList, 22);
-  //if (WindowWidth <> 640) or (WindowHeight <> 480) or BorderlessFullscreen then
-    RSApplyHooks(HooksList, hqWindowSize);
   if BorderlessFullscreen then
     RSApplyHooks(HooksList, hqBorderless);
   if FixInactivePlayersActing then
@@ -3810,6 +3577,8 @@ begin
     RSApplyHooks(HooksList, hqNoPlayerSwap);
   FixConditionSpells;
   FixStatColor;
+  ApplyMMHooks;
+  NeedWindowSize;
 
   RSDebugUseDefaults;
   LastDebugHook:= DebugHook;
@@ -3846,6 +3615,7 @@ begin
     RSApplyHooks(HooksList, hqFixSmackDraw);
   if Options.SupportTrueColor then
     RSApplyHooks(HooksList, hqTrueColor);
+  ApplyMMDeferredHooks;
 end;
 
 exports
@@ -3855,7 +3625,6 @@ exports
   GetLodRecords;
 initialization
   @PlaySound:= @DoPlaySound;
-  @WindowProcStd:= @WindowProcStdImpl;
   ArrowCur:= LoadCursorFromFile('Data\MouseCursorArrow.cur');
   if ArrowCur = 0 then
     ArrowCur:= LoadCursor(GetModuleHandle(nil), 'Arrow');

@@ -14,12 +14,16 @@ function MyDirectDrawCreate(lpGUID: PGUID; out lplpDD: IDirectDraw;
 function DXProxyScaleRect(const r: TRect): TRect;
 procedure DXProxyOnResize;
 procedure DXProxyDraw(SrcBuf: ptr; info: PDDSurfaceDesc2);
+procedure DXProxyDrawCursor(SrcBuf: ptr; info: PDDSurfaceDesc2);
 
 var
   DXProxyRenderW, DXProxyRenderH, DXProxyMipmapCount: int;
   DXProxyActive: Boolean;
   DXProxyCursorX, DXProxyCursorY: int;
   DXProxyCursorBmp: TBitmap;
+  DXProxyMul, DXProxyShiftX, DXProxyShiftY: ext;
+  DXProxyMinW: int = 640;
+  DXProxyMinH: int = 480;
 
 implementation
 
@@ -402,12 +406,9 @@ begin
     CopyMemory(@fmt, PChar(str), length(str));
 end;
 
-function DXProxyScaleRect(const r: TRect): TRect;
-var
-  SW, SH: int;
+function BaseScaleRect(const r: TRect): TRect;
 begin
-  SW:= _ScreenW^;
-  SH:= _ScreenH^;
+  NeedScreenWH;
   with Result do
   begin
     Left:= r.Left*RenderW div SW;
@@ -417,27 +418,60 @@ begin
   end;
 end;
 
+
+function DXProxyScaleRect(const r: TRect): TRect;
+begin
+  if _Windowed^ and (DXProxyMul <> 0) then
+    with Result do
+    begin
+      Left:= Round(r.Left*DXProxyMul + DXProxyShiftX);
+      Right:= Round(r.Right*DXProxyMul + DXProxyShiftX);
+      Top:= Round(r.Top*DXProxyMul + DXProxyShiftY);
+      Bottom:= Round(r.Bottom*DXProxyMul + DXProxyShiftY);
+    end else
+      Result:= BaseScaleRect(r);
+end;
+
 var
   ScaleRect_Rect: TRect;
 
 procedure ScaleRect(var r: PRect);
 begin
   if r = nil then  exit;
-  ScaleRect_Rect:= DXProxyScaleRect(r^);
+  ScaleRect_Rect:= BaseScaleRect(r^);
   r:= @ScaleRect_Rect;
+end;
+
+procedure CalcSize1(var rw, rh: int; fw, fh, w1, w2, h1, h2: int);
+begin
+  rw:= fw div ((fw - 1) div w2 + 1);
+  rh:= RDiv(rw*fh, fw);
+  if (rw < w1) or (rh < h1) then
+  begin
+    rw:= w2;
+    rh:= max(h1, RDiv(rw*fh, fw));
+  end;
 end;
 
 procedure CalcRenderSize;
 var
   r: TRect;
 begin
+  NeedScreenWH;
   GetClientRect(_MainWindow^, r);
   RenderW:= r.Right;
-  if RenderW > RenderLimX then
-    RenderW:= max(640, RenderW div ((RenderW - 1) div RenderLimX + 1));
   RenderH:= r.Bottom;
+  if (DXProxyMul <> 0) and ((RenderW > RenderLimX) or (RenderH > RenderLimY)) then
+    if RenderW*RenderLimY >= RenderH*RenderLimX then
+      CalcSize1(RenderW, RenderH, r.Right, r.Bottom, DXProxyMinW, RenderLimX, DXProxyMinH, RenderLimY)
+    else
+      CalcSize1(RenderH, RenderW, r.Bottom, r.Right, DXProxyMinH, RenderLimY, DXProxyMinW, RenderLimX);
+  if RenderW > RenderLimX then
+    RenderW:= max(DXProxyMinW, RenderW div ((RenderW - 1) div RenderLimX + 1));
   if RenderH > RenderLimY then
-    RenderH:= max(480, RenderH div ((RenderH - 1) div RenderLimY + 1));
+    RenderH:= max(DXProxyMinH, RenderH div ((RenderH - 1) div RenderLimY + 1));
+  RenderW:= min(RenderW, RenderLimX);
+  RenderH:= min(RenderH, RenderLimY);
 end;
 
 procedure CalcRenderLim;
@@ -536,6 +570,7 @@ end;
 
 procedure DXProxyDraw(SrcBuf: ptr; info: PDDSurfaceDesc2);
 var
+  scale2: TRSResampleInfo;
   r: TRect;
   d: int;
 begin
@@ -552,8 +587,8 @@ begin
     if not _IsD3D^ then
     begin
       RSSetResampleParams(1.11);
-      scale3D.Init(_ScreenW^, _ScreenH^, RenderW, RenderH);
-      scale3D:= scale3D.ScaleRect(r);
+      scale2.Init(_ScreenW^, _ScreenH^, max(RenderW, _ScreenW^), max(RenderH, _ScreenH^));
+      scale3D:= scale2.ScaleRect(r);
     end else
       scale3D:= scale.ScaleRect(r);
     scaleT:= scale.ScaleRect(Rect(0, 0, RenderW, r.Top));
@@ -574,7 +609,11 @@ begin
     RSResample16(scaleB, SrcBuf, _ScreenW^*2, info.lpSurface, info.lPitch);
   end else
     RSResample16(scale, SrcBuf, _ScreenW^*2, info.lpSurface, info.lPitch);
+  DXProxyDrawCursor(SrcBuf, info);
+end;
 
+procedure DXProxyDrawCursor(SrcBuf: ptr; info: PDDSurfaceDesc2);
+begin
   if DXProxyCursorX > 0 then
     DrawCursor(info.lpSurface, info.lPitch);
   DXProxyCursorX:= 0;
@@ -850,7 +889,7 @@ begin
 end;
 
 var
-  VertexBuf: array of D3DVERTEX;
+  VertexBuf: array of TD3DTLVertex;
 
 function TMyDevice.DrawPrimitive(dptPrimitiveType: TD3DPrimitiveType;
   dwVertexTypeDesc: DWORD; const lpvVertices; dwVertexCount,
@@ -862,10 +901,15 @@ begin
     SetLength(VertexBuf, dwVertexCount*2);
   CopyMemory(@VertexBuf[0], @lpvVertices, dwVertexCount*SizeOf(VertexBuf[0]));
   for i:= 0 to dwVertexCount - 1 do
-  begin
-    VertexBuf[i].x:= VertexBuf[i].x*RenderW/_ScreenW^;
-    VertexBuf[i].y:= VertexBuf[i].y*RenderH/_ScreenH^;
-  end;
+    if DXProxyMul <> 0 then
+    begin
+      VertexBuf[i].sx:= VertexBuf[i].sx*DXProxyMul + DXProxyShiftX;
+      VertexBuf[i].sy:= VertexBuf[i].sy*DXProxyMul + DXProxyShiftY;
+    end else
+    begin
+      VertexBuf[i].sx:= VertexBuf[i].sx*RenderW/_ScreenW^;
+      VertexBuf[i].sy:= VertexBuf[i].sy*RenderH/_ScreenH^;
+    end;
   Result:= Obj.DrawPrimitive(dptPrimitiveType,
     dwVertexTypeDesc, VertexBuf[0], dwVertexCount, dwFlags);
 end;
@@ -913,11 +957,15 @@ end;
 function TMyBackBufferD3D.Blt(r: PRect;
   lpDDSrcSurface: IDirectDrawSurface4; lpSrcRect: PRect; dwFlags: DWORD;
   lpDDBltFx: PDDBltFX): HResult;
+var
+  r1: TRect;
 begin
-  if (dwFlags and DDBLT_COLORFILL <> 0) and (lpDDBltFx.dwFillColor = 0)
-     and (r.Right <= _ScreenW^) and (r.Bottom <= _ScreenH^) then
+  if (dwFlags and DDBLT_COLORFILL <> 0) and (lpDDBltFx.dwFillColor = 0) then
   begin
-    Blacken16(_ScreenBuffer^, _ScreenW^*2, r^);
+    r1:= Rect(0, 0, _ScreenW^, _ScreenH^);
+    IntersectRect(r1, r1, r^);
+    if _ScreenBuffer^ <> nil then
+      Blacken16(_ScreenBuffer^, _ScreenW^*2, r1);
     Result:= DD_OK;
   end else
   begin

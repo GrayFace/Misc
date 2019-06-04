@@ -23,6 +23,7 @@ const
   _NeedRedraw = pint($52D29C);
   _TextBuffer1 = pchar($55CDE0);
   _TextBuffer2 = pchar($55D5B0);
+  _ItemInMouse = pint($90E81C);
   _PartyMembers = $944C64;
   _TurnBased = pbool($908E30);
   _TurnBasedPhase = pint($4C7DF4);
@@ -51,7 +52,6 @@ const
   _NoIntro = pbool($6A5F64);
   _Mouse_X = pint($6A6120);
   _Mouse_Y = pint($6A6124);
-  _ObjectByPixel = PPIntegerArray($9B1090);
   _ScanlineOffset = PPIntegerArray($41F431);
   _PlayersArray = $908F34;
   __Windowed = $9B10B4;
@@ -67,8 +67,13 @@ const
   _IsMoviePlaying = pbool($9DE364);
   _AbortMovie = pbool($9DE338);
   _ViewMulOutdoor = pint($6296F4);
-  _ViewMulIndoor = psingle($4D516C);
+  _ViewMulIndoorSW = psingle($4D516C);
   _RenderRect = PRect($9DE3A8);
+  _IsLoadingBig = pbool($52D0A8 + $3C);
+  _IsLoadingSmall = pbool($52D0A8 + $150);
+  _ChestDlg = pptr($4D50BC);
+  _NoHint = PChar($4CB230);
+  _ShowRingsHint = PPChar($56B930);
 
   _PauseTime: procedure(a1: int = 0; a2: int = 0; this: int = $4D5180) = ptr($420DB0);
   _ReleaseMouse: TProcedure = ptr($42FAC0);
@@ -81,6 +86,7 @@ const
   //_StrWidth: function(n1:int; str:PChar; fnt:ptr):int = ptr($442DD0);
   _OpenInventory_part: function(a1: int = 0; a2: int = 0; screen: int = 7):int = ptr($41FA50);
   _OpenInventory_result = pint($4D50CC);
+  _LoadPaperDollGraphics: TProcedure = ptr($411E80);
   _access: function(fileName: PChar; unk: int = 0): int cdecl = ptr($4B885E);
   _malloc: function(size:int):ptr cdecl = ptr($4AE753);
   _PermAlloc: function(n1,n2: int; allocator: ptr; name: PChar; size, unk: int):ptr = ptr($421390);
@@ -92,7 +98,14 @@ const
   _HasNPCProf: function(n1,n2, prof: int): LongBool = ptr($467F30);
   _DrawInventory: procedure(n1,n2, member: int) = ptr($4165E0);
   _ExitMovie: procedure(_1: int = 0; _2: int = 0; _3: int = $9DE330) = ptr($4A5D10);
-  _StopAllSounds: procedure(_: int = 0; __: int = 0; _3: int = $9CF598; _4: int = -1; _5: int = -1) = ptr($48FB40);
+  _StopSounds: procedure(_: int = 0; __: int = 0; _3: int = $9CF598; _4: int = -1; _5: int = -1) = ptr($48FB40);
+  _AddButton: function(dlg: ptr; x, y, w, h, shape, cmdX, action, acionInfo, key: int; hint: PChar; SpritesVarArg: ptr): ptr cdecl varargs = ptr($41A170);
+  _DeleteButton: procedure(_,__: int; btn: ptr) = ptr($41A110);
+
+  _CommandsArray = $6A72A0;
+  _AddCommand: procedure(a1, a2, this, cmd: int) = ptr($467A50);
+
+  _IconsLod = $4CB6D0;
 
   _Chest_CanPlaceItem: function(n1, itemType, pos, chest: int): BOOL = ptr($41DE90);
   _Chest_PlaceItem: procedure(n1, itemIndex, pos, chest: int) = ptr($41E210);
@@ -122,6 +135,8 @@ const
   _MonOff_BodyRadius = $78;
   _MonOff_Size = $224;
 
+  GameCursorPos = PPoint($6A6120);
+  
 const
   SWrong: string = 'This is not a valid mm6.exe file. Check failed at address %X';
   SIni = 'mm6.ini';

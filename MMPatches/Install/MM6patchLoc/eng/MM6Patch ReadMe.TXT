@@ -1,4 +1,4 @@
-GrayFace MM6 Patch v2.2
+GrayFace MM6 Patch v2.3
 By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
@@ -7,6 +7,19 @@ Save files are, of course, fully compatible with the unpatched game in both dire
 The patch has no uninstaller to make things simpler.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
+
+New in version 2.3:
+  << MM6 - MM8 >>
+[+] PaperDollInChests option shows paper doll in chest dialog: value 1 (default) will make it visible when you open inventory of a player, value 2 will make it visible right when you open the chest, value 0 will disable it.
+[+] Keyboard control: some dialogs can now be controlled by pressing Up/Down and Enter. E.g. NPC conversations. Only those dialogs that already had everything in place to support it are effected.
+[+] Save/load dialogs now react to Enter key.
+[+] Newer MP3DEC.ASI version. In theory this might fix some problems with MP3 playback.
+[-] My bug: If somehow game window managed to become smaller than 640x480, that wasn't handled gracefully in software 32-bit color mode.
+  << MM6, MM7 >>
+[-] My bug: Quick load key pressed during the death movie was causing a crash afterwards.
+  << MM6 >>
+[-] Text files fixes for Russian (Buka) version by tolich.
+
 
 New in version 2.2:
   << MM6 - MM8 >>
@@ -26,7 +39,6 @@ New in version 2.2:
 [*] Smarter FixInactivePlayersActing: now you can select inactive characters, but they can't act.
   << MM6 >>
 [+] "NoPlayerSwap" hidden option. Set it to 0 to return player swapping and bugs it opens up.
-
 
 New in version 2.1:
   << MM6 - MM8 >>

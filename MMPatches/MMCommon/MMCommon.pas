@@ -3,26 +3,12 @@ unit MMCommon;
 interface
 
 uses
-  Windows, Messages, SysUtils, Classes, RSSysUtils, RSQ, Math, Common, IniFiles,
-  RSCodeHook;
+  Windows, Messages, SysUtils, Classes, RSSysUtils, Math, Common, IniFiles,
+  RSCodeHook, RSStrUtils, RSQ, Direct3D, Graphics, RSGraphics;
 
 {$I MMPatchVer.inc}
 
 const
-{$IFDEF mm6}
-  IsMM6 = 1;
-  IsMM7 = 0;
-  IsMM8 = 0;
-{$ELSEIF defined(mm7)}
-  IsMM6 = 0;
-  IsMM7 = 1;
-  IsMM8 = 0;
-{$ELSEIF defined(mm8)}
-  IsMM6 = 0;
-  IsMM7 = 0;
-  IsMM8 = 1;
-{$IFEND}
-
   hqFixObelisks = 26;
   hqWindowSize = 27;
   hqBorderless = 28;
@@ -38,6 +24,29 @@ const
   hqFixQuickSpell = 38;
   hqFixInterfaceBugs = 39;
   hqFixIndoorFOV = 40;
+  hqLayout = 41;
+  hqPaperDollInChests = 42;
+  hqCloseRingsCloser = 43;
+  hqPaperDollInChestsAndOldCloseRings = 44;
+  hqPaperDollInChests2 = 45;
+
+{$IFDEF mm6}
+  m6 = 1;
+  m7 = 0;
+  m8 = 0;
+{$ELSEIF defined(mm7)}
+  m6 = 0;
+  m7 = 1;
+  m8 = 0;
+{$ELSEIF defined(mm8)}
+  m6 = 0;
+  m7 = 0;
+  m8 = 1;
+{$IFEND}
+
+  HookEachTick = m6*$453AD3 + m7*$46334B + m8*$461320; // OnAction
+  HookLoadLods = m6*$45761E + m7*$4655FE + m8*$463862; // set hook after
+  HookWindowProc = m6*$454340 + m7*$463828 + m8*$4618FF; // use RShtFunctionStart or RShtBefore
 
 type
   TOptions = packed record
@@ -82,7 +91,7 @@ type
     SkipUnsellableItemCheck: LongBool;        // 152 (MM7 only)
     FixGMStaff: LongBool;                     // 156 (MM7 only)
     FixObelisks: LongBool;                    // 160 (MM8 only)
-    BorderlessWindowed: LongBool;             // 164
+    BorderlessWindowed: LongBool;             // 164 (set to false only when the game is in Borderless Fullscreen)
     CompatibleMovieRender: LongBool;          // 168
     SmoothMovieScaling: LongBool;             // 172
     SupportTrueColor: LongBool;               // 176
@@ -91,13 +100,18 @@ type
     IndoorMinimapZoomMul: int;                // 188
     IndoorMinimapZoomPower: int;              // 192
     FixMonsterSummon: LongBool;               // 196 (unused in MM6)
-    FixInterfaceBugs: LongBool;                  // 200 (MM7 only)
+    FixInterfaceBugs: LongBool;               // 200 (MM7 only)
+    UILayout: PChar;                          // 204 (unused in MM6)
+    PaperDollInChests: int;                   // 208
+    HigherCloseRingsButton: LongBool;         // 208 (MM7 only)
+    RenderBottomPixel: int;                   // 208
   end;
 
 var
   Options: TOptions = (
     Size: SizeOf(TOptions);
     MaxMLookAngle: 200;
+    BorderlessWindowed: true;
 {$IFDEF mm8}
     RenderRect: (Left: 0; Top: 29; Right: 640; Bottom: 480 - 113);
 {$ELSE}
@@ -105,6 +119,11 @@ var
 {$ENDIF}
     IndoorMinimapZoomMul: 1024;
     IndoorMinimapZoomPower: 10;
+{$IFDEF mm8}
+    RenderBottomPixel: 480-114;
+{$ELSE}
+    RenderBottomPixel: 351;
+{$ENDIF}
   );
 
 var
@@ -116,7 +135,11 @@ var
   MLookRightPressed: pbool = _RightButtonPressed;
 
   TurnSpeedNormal, TurnSpeedDouble: single;
-  
+
+  MouseDX, MouseDY: Double;
+
+  FormatSettingsEN: TFormatSettings;
+
   StretchWidth, StretchWidthFull, StretchHeight, StretchHeightFull,
   ScalingParam1, ScalingParam2: ext;
 
@@ -131,7 +154,7 @@ var
   NoIntro, NoVideoDelays, DisableAsyncMouse: Boolean;
   TurnBasedWalkDelay: int;
   MipmapsBase, MipmapsBasePat: TStringList;
-  MouseDX, MouseDY: Double;
+  ViewMulFactor: ext = 1;
   {$ENDIF}
 
   TimersValidated: int64;
@@ -221,6 +244,26 @@ type
     // Palette...
   end;
 
+  TLoadedBitmap = packed record
+    Rec: TLodBitmap;
+    Image: PByteArray;
+    ImageMip: array[1..3] of PByteArray;
+    Palette16: PWordArray;
+    Palette24: ptr;
+  end;
+  PLoadedBitmaps = ^TLoadedBitmaps;
+  TLoadedBitmaps = packed record
+    Items: array[0..999 - 500*m6] of TLoadedBitmap;
+    Count: int;
+  end;
+
+  TLoadedPcx = packed record
+    _1: array[1..20] of byte;
+    w, h: int2;  // 20, 22
+    _2: array[1..12] of byte;
+    Buf: PWordArray;
+  end;
+
   PMapExtra = ^TMapExtra;
   TMapExtra = packed record
     LastVisitTime: uint64;
@@ -241,10 +284,82 @@ type
     Count: int;
     Items: array[0..39] of TActionQueueItem;
   end;
-    
+
+  PPDlgButton = ^PDlgButton;
+  PDlgButton = ^TDlgButton;
+  TDlgButton = packed record
+    Left, Top, Width, Height, Right_, Bottom_: int;
+    Shape: int;
+    u1: int;
+    Action, ActionInfo: int;
+    u2: int;
+    Pressed: Bool;
+    UpperBtn, LowerBtn: PDlgButton;
+    Parent: ptr;
+    Sprites: array[1..5] of int;
+    SpritesCount: int;
+    ShortCut: Byte;
+    Hint: array[1..103] of Char;
+  end;
+
+  PDrawSpriteD3D = ^TDrawSpriteD3D;
+  TDrawSpriteD3D = record
+    Texture: ptr;
+    VertNum: int;
+    Vert: array[0..3] of TD3DTLVertex;
+    ZBuf: int;
+    unk: array[0..1] of int;
+    ObjRef: uint;
+    SpriteToDrawIndex: int;
+  end;
+
+  PStatusTexts = ^TStatusTexts;
+  TStatusTexts = record
+    Text: array[Boolean] of array[0..199] of Char;
+    TmpTime: int;
+  end;
+
+  PPoint3D = ^TPoint3D;
+  TPoint3D = record
+    x, y, z: int;
+  end;
+
+  PMoveToMap = ^TMoveToMap;
+  TMoveToMap = record
+    x, y, z: int;
+    Direction, Angle: int;
+    SpeedZ: int;
+    Defined: Bool;
+  end;
+
+  PSpellBuff = ^TSpellBuff;
+  TSpellBuff = record
+    Expires: int8;
+    Power, Skill, OverlayId: int2;
+    Caster, Bits: Byte;
+  end;
+  PPartyBuffs = ^TPartyBuffs;
+  TPartyBuffs = array[0..19 - m6*4] of TSpellBuff;
+
 const
-  _ActionQueue: PActionQueue = ptr(IsMM6*$4D5F48 + IsMM7*$50CA50 + IsMM8*$51E330);
+  _ActionQueue: PActionQueue = ptr(m6*$4D5F48 + m7*$50CA50 + m8*$51E330);
   PowerOf2: array[0..15] of int = (1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768);
+  _IconsLodLoaded = PLoadedBitmaps(_IconsLod + $23C);
+  //BitmapsLodLoaded = PLoadedBitmaps(_BitmapsLod + $23C);
+  _ObjectByPixel = PPIntegerArray(m6*$9B1090 + m7*$E31A9C + m8*$F019B4);
+{$IFNDEF MM8}
+  _InventoryRingsShown = pbool(m6*$4D50F0 + m7*$511760);
+  _InventoryShowRingsButton = PPDlgButton(m6*$4D4710 + m7*$507514);
+  _InventoryPaperDollButton = PPDlgButton(m6*$4D46E0 + m7*$507510);
+{$ENDIF}
+  _StatusText = PStatusTexts(m6*$55BC04 + m7*$5C32A8 + m8*$5DB758);
+  _NoMusicDialog = pbool(m6*$9DE394 + m7*$F8BA90 + m8*$FFDE88); // intro, win screen, High Council
+  _PartyPos = PPoint3D(m6*$908C98 + m7*$ACD4EC + m8*$B21554);
+  _CameraPos = PPoint3D(m6*$4D5150 + m7*$507B60 + m8*$519438);
+  _ScreenMiddle = PPoint(m6*$9DE3C0 + m7*$F8BABC + m8*$FFDEB4);
+  _DialogsHigh = pint(m6*$4D46BC + m7*$5074B0 + m8*$518CE8);
+  _MoveToMap = PMoveToMap(m6*$551D20 + m7*$5B6428 + m8*$5CCCB8);
+  _PartyBuffs = PPartyBuffs(m6*$908E34 + m7*$ACD6C4 + m8*$B21738);
 
 {$IFNDEF mm6}
 var
@@ -264,8 +379,19 @@ function GetMapExtra: PMapExtra;
 procedure PropagateIntoTransparent(p: PWordArray; w, h: int);
 procedure Wnd_CalcClientRect(var r: TRect);
 procedure Wnd_PaintBorders(wnd: HWND; wp: int);
+procedure Wnd_Sizing_GetWH(wnd: HWND; const r: TRect; var w, h: int);
 procedure Wnd_Sizing(wnd: HWND; side: int; var r: TRect);
+procedure Wnd_Sizing_SetWH(wnd: HWND; side: int; var r: TRect; dw, dh: int);
 procedure CheckHooks(const Hooks);
+procedure ClipCursorRel(r: TRect);
+function DynamicFovFactor(const x, y: int): ext;
+function GetViewMul: ext;
+procedure AddAction(action, info1, info2:int); stdcall;
+
+var
+  SW, SH: int;
+
+procedure NeedScreenWH;
 
 implementation
 
@@ -313,18 +439,13 @@ var
 
   function ReadFloat(const key: string; default: Double): Double;
   var
-    old: char;
+    s: string;
   begin
     Assert(iniOverride = nil);
-    old:= DecimalSeparator;
-    DecimalSeparator:= '.';
-    Result:= ini.ReadFloat(sect, key, NaN);
-    if IsNan(Result) then
-    begin
-      ini.WriteFloat(sect, key, default);
-      Result:= default;
-    end;
-    DecimalSeparator:= old;
+    s:= ini.ReadString(sect, key, '');
+    if RSVal(s, Result) then  exit;
+    ini.WriteString(sect, key, FloatToStr(default, FormatSettingsEN));
+    Result:= default;
   end;
 
 {$IFDEF mm6}
@@ -335,6 +456,7 @@ var
   i:int;
 {$ENDIF}
 begin
+  GetLocaleFormatSettings($409, FormatSettingsEN);
   iniOverride:= nil;
   ini:= TIniFile.Create(AppPath + SIni);
   with Options do
@@ -397,9 +519,9 @@ begin
       {$IFNDEF mm6}NoBitmapsHwl:= ReadBool('NoD3DBitmapHwl', true);{$ENDIF}
       MouseLook:= ReadBool('MouseLook', false);
       MLookSpeed.X:= ReadInteger('MouseSensitivityX', 35);
-      MLookSpeed.Y:= ReadInteger('MouseSensitivityY', 35);
+      MLookSpeed.Y:= ini.ReadInteger(sect, 'MouseSensitivityY', MLookSpeed.X);
       MLookSpeed2.X:= ReadInteger('MouseSensitivityAltModeX', 75);
-      MLookSpeed2.Y:= ReadInteger('MouseSensitivityAltModeY', 75);
+      MLookSpeed2.Y:= ini.ReadInteger(sect, 'MouseSensitivityAltModeY', MLookSpeed2.X);
       MouseLookChangeKey:= ReadInteger('MouseLookChangeKey', VK_MBUTTON);
       MouseLookTempKey:= ReadInteger('MouseLookTempKey', 0);
       CapsLockToggleMouseLook:= ReadBool('CapsLockToggleMouseLook', true);
@@ -441,24 +563,12 @@ begin
       {$IFDEF mm8}FixObelisks:= ini.ReadBool(sect, 'FixObelisks', true);{$ENDIF}
       WindowWidth:= ReadInteger('WindowWidth', -1);
       WindowHeight:= ReadInteger('WindowHeight', 480);
-      if WindowWidth <= 0 then
-        if WindowHeight <= 0 then
-        begin
-          WindowWidth:= 640;
-          WindowHeight:= 480;
-        end else
-          WindowWidth:= (WindowHeight*4 + 1) div 3
-      else if WindowHeight <= 0 then
-        WindowHeight:= (WindowWidth*3 + 2) div 4;
-      WindowWidth:= max(640, WindowWidth);
-      WindowHeight:= max(480, WindowHeight);
       StretchWidth:=  max(1, ReadFloat('StretchWidth', 1));
       StretchWidthFull:= max(StretchWidth, ReadFloat('StretchWidthFull', 1));
       StretchHeight:= max(1, ReadFloat('StretchHeight', 1));
       StretchHeightFull:= max(StretchHeight, ReadFloat('StretchHeightFull', 1.067)); // stretch to 5:4
       BorderlessFullscreen:= ReadBool('BorderlessFullscreen', true);
       BorderlessProportional:= ini.ReadBool(sect, 'BorderlessProportional', false);
-      BorderlessWindowed:= true;
       CompatibleMovieRender:= ini.ReadBool(sect, 'CompatibleMovieRender', true);
       SmoothMovieScaling:= ini.ReadBool(sect, 'SmoothMovieScaling', true);
       SupportTrueColor:= ini.ReadBool(sect, 'SupportTrueColor', true);
@@ -476,6 +586,12 @@ begin
       {$IFDEF mm8}FixQuickSpell:= ini.ReadBool(sect, 'FixQuickSpell', true);{$ENDIF}
       {$IFDEF mm7}FixInterfaceBugs:= ini.ReadBool(sect, 'FixInterfaceBugs', true);{$ENDIF}
       {$IFDEF mm8}FixIndoorFOV:= ini.ReadBool(sect, 'FixIndoorFOV', true);{$ENDIF}
+      {$IFNDEF mm6}pstring(@UILayout)^:= ReadString('UILayout', '');
+      if (UILayout <> nil) and not FileExists('Data\' + UILayout + '.txt') then
+        pstring(@UILayout)^:= '';
+      {$ENDIF}
+      PaperDollInChests:= ReadInteger('PaperDollInChests', 1);
+      {$IFDEF mm7}HigherCloseRingsButton:= ReadBool('HigherCloseRingsButton', true);{$ENDIF}
 
 {$IFDEF mm6}
       if FileExists(AppPath + 'mm6text.dll') then
@@ -697,10 +813,9 @@ end;
 
 procedure Wnd_CalcClientRect(var r: TRect);
 var
-  w, h, SW, SH: int;
+  w, h: int;
 begin
-  SW:= max(_ScreenW^, 640);
-  SH:= max(_ScreenH^, 480);
+  NeedScreenWH;
   BaseClientRect:= r;
   w:= r.Right - r.Left;
   h:= r.Bottom - r.Top;
@@ -752,19 +867,24 @@ begin
   ReleaseDC(wnd, dc);
 end;
 
+procedure Wnd_Sizing_GetWH(wnd: HWND; const r: TRect; var w, h: int);
+var
+  r0, r1: TRect;
+begin
+  GetClientRect(wnd, r0);
+  GetWindowRect(wnd, r1);
+  w:= r.Right - r.Left - r1.Right + r1.Left + r0.Right;
+  h:= r.Bottom - r.Top - r1.Bottom + r1.Top + r0.Bottom;
+end;
+
 procedure Wnd_Sizing(wnd: HWND; side: int; var r: TRect);
 var
   CW: int absolute WindowWidth;
   CH: int absolute WindowHeight;
-  w, h, w0, h0, SW, SH: int;
-  r0, r1: TRect;
+  w, h, w0, h0: int;
 begin
-  SW:= max(_ScreenW^, 640);
-  SH:= max(_ScreenH^, 480);
-  GetClientRect(wnd, r0);
-  GetWindowRect(wnd, r1);
-  w0:= r.Right - r.Left - r1.Right + r1.Left + r0.Right;
-  h0:= r.Bottom - r.Top - r1.Bottom + r1.Top + r0.Bottom;
+  Wnd_Sizing_GetWH(wnd, r, w0, h0);
+  NeedScreenWH;
   w:= max(w0, SW);
   h:= max(h0, SH);
   if (CW = Round(CH*SW/SH)) or (CH = Round(CW*SH/SW)) then
@@ -788,16 +908,20 @@ begin
     CW:= w;
     CH:= h;
   end;
+  Wnd_Sizing_SetWH(wnd, side, r, w - w0, h - h0);
+end;
 
+procedure Wnd_Sizing_SetWH(wnd: HWND; side: int; var r: TRect; dw, dh: int);
+begin
   if side in [WMSZ_LEFT, WMSZ_TOPLEFT, WMSZ_BOTTOMLEFT] then
-    dec(r.Left, w - w0)
+    dec(r.Left, dw)
   else
-    inc(r.Right, w - w0);
+    inc(r.Right, dw);
 
   if side in [WMSZ_TOP, WMSZ_TOPLEFT, WMSZ_TOPRIGHT] then
-    dec(r.Top, h - h0)
+    dec(r.Top, dh)
   else
-    inc(r.Bottom, h - h0);
+    inc(r.Bottom, dh);
 end;
 
 procedure CheckHooks(const Hooks);
@@ -808,6 +932,57 @@ begin
   i:= RSCheckHooks(Hooks);
   if i >= 0 then
     raise Exception.CreateFmt(SWrong, [hk[i].p]);
+end;
+
+procedure ClipCursorRel(r: TRect);
+begin
+  MapWindowPoints(_MainWindow^, 0, r, 2);
+  BringWindowToTop(_MainWindow^);
+  if (GetForegroundWindow = _MainWindow^) and ((GetFocus = _MainWindow^) or (GetFocus = 0)) then
+    ClipCursor(@r);
+end;
+
+function DynamicFovCalc(const x, y: int): ext;
+begin
+  if x < y then
+    Result:= x*Power(y/x, 0.34)
+  else
+  	Result:= y*Power(x/y, 0.34);
+end;
+
+function DynamicFovFactor(const x, y: int): ext;
+begin
+  Result:= DynamicFovCalc(x, y)/DynamicFovCalc(460, 344);
+end;
+
+function GetViewMul: ext;
+begin
+  if _IndoorOrOutdoor^ <> 1 then
+    Result:= _ViewMulOutdoor^
+{$IFNDEF MM6}
+  else if _IsD3D^ then
+    Result:= psingle(ppchar(_CGame^ + $E54)^ + $C4)^
+{$ENDIF}
+  else
+    Result:= _ViewMulIndoorSW^;
+end;
+
+procedure AddAction(action, info1, info2:int); stdcall;
+begin
+  with _ActionQueue^ do
+    if Count < 40 then
+    begin
+      Items[Count]:= PActionQueueItem(@action)^;
+      inc(Count);
+    end;
+end;
+
+procedure NeedScreenWH;
+begin
+  SW:= _ScreenW^;
+  SH:= _ScreenH^;
+  if SW = 0 then  SW:= 640;
+  if SH = 0 then  SH:= 480;
 end;
 
 { TMapExtra }
@@ -829,15 +1004,34 @@ end;
 function GetMapExtra: PMapExtra;
 begin
   if _IndoorOrOutdoor^ = 1 then
-    Result:= ptr(IsMM6*$5F7D74 + IsMM7*$6BE534 + IsMM8*$6F3CF4)
+    Result:= ptr(m6*$5F7D74 + m7*$6BE534 + m8*$6F3CF4)
   else
-    Result:= ptr(IsMM6*$689C78 + IsMM7*$6A1160 + IsMM8*$6CF0CC);
+    Result:= ptr(m6*$689C78 + m7*$6A1160 + m8*$6CF0CC);
+end;
+
+procedure SaveBufferToBitmap(s: PChar; buf: ptr; w, h, bits: int); stdcall;
+var
+  b: TBitmap;
+begin
+  b:= TBitmap.Create;
+  case bits of
+    32:   b.PixelFormat:= pf32bit;
+    24:   b.PixelFormat:= pf24bit;
+    16,0: b.PixelFormat:= pf16bit;
+    15:   b.PixelFormat:= pf15bit;
+    else  Assert(false);
+  end;
+  b.Width:= w;
+  b.Height:= h;
+  RSBufferToBitmap(buf, b);
+  b.SaveToFile(s);
 end;
 
 exports
 {$IFNDEF mm6}
   AddMipmapBase,
 {$ENDIF}
-  GetOptions;
+  GetOptions,
+  SaveBufferToBitmap;
 end.
 
