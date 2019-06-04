@@ -7,6 +7,7 @@ unit RSStrUtils;
 { sergroj@mail.ru                                                         }
 {                                                                         }
 { See copyright notice at the end of RSSysUtils.pas file (MIT license).   }
+{ See copyright notice for PosMod function (MPL).                         }
 {                                                                         }
 { *********************************************************************** }
 {$I RSPak.inc}
@@ -35,6 +36,7 @@ procedure RSChangeStr(var ps:TRSParsedString; const OldStr, NewStr:string);
 function RSParseStringSingleToken(const s:string; token: int; const Separators:array of string; From:int=1): string;
 function RSSetString(lim1, lim2: PChar): string;
 function RSPos(const substr, str: string; Offset: int = 1; PosAfter: Boolean = false): int;
+function RSStartsStr(const substr, str: string; After: pint = nil; Offset: int = 1): Boolean;
 
 function RSStringReplace(const Str, OldPattern, NewPattern: string;
   Flags: TReplaceFlags=[rfReplaceAll]): string; overload;
@@ -47,8 +49,11 @@ function RSIntToStr(Value:LongInt; Base:byte = 10; ThousSep:char = #0; BigChars:
 function RSUIntToStr(Value:DWord; Base:byte = 10; ThousSep:char = #0; BigChars:boolean=true; Digits:int = 0):string;
 function RSInt64ToStr(Value:Int64; Base:DWord = 10; ThousSep:char = #0; BigChars:boolean=true; Digits:int = 0):string;
 
-function RSVal(s:string; var i:integer):boolean;
-function RSValEx(s:string; var i:integer):int;
+function RSVal(const s:string; var i:integer):boolean; overload;
+function RSVal(const s: string; var v: ext): Boolean; overload;
+function RSVal(const s: string; var v: Double): Boolean; overload;
+function RSVal(const s: string; var v: Single): Boolean; overload;
+function RSValEx(const s:string; var i:integer):int;
 function RSStrToInt(const Str:string; Base:DWord = 10; IgnoreChar:char=#0; IgnoreLeadSpaces:boolean=false; IgnoreTrailSpaces:boolean=false):LongInt; overload;
 function RSStrToIntEx(const Str:string; var ErrorCode:int; Base:DWord = 10; IgnoreChar:char=#0; IgnoreLeadSpaces:boolean=false; IgnoreTrailSpaces:boolean=false):LongInt; overload;
 function RSStrToIntEx(Str:PChar; ErrorCode:pint; Base:DWord = 10; IgnoreChar:char=#0; IgnoreLeadSpaces:boolean=false; IgnoreTrailSpaces:boolean=false):LongInt; overload;
@@ -181,7 +186,7 @@ function RSParseToken(const ps:TRSParsedString; Index:int;
    const Separators:array of string; Limit: int = MaxInt):TRSParsedString;
 begin
   Index:= Index*2;
-  if uint(Index) < length(ps) then
+  if uint(Index) < uint(length(ps)) then
     Result:= DoParse(ps[Index], ps[Index+1], Separators, Limit)
   else
     Result:= nil;
@@ -201,7 +206,7 @@ end;
 function RSGetToken(const ps:TRSParsedString; Index:int):string;
 begin
   Index:= Index*2;
-  if uint(Index) < length(ps) then
+  if uint(Index) < uint(length(ps)) then
     SetString(Result, PChar(ps[Index]), DWord(ps[Index+1]) - DWord(ps[Index]))
   else
     Result:= '';
@@ -210,7 +215,7 @@ end;
 function RSGetTokenSep(const ps:TRSParsedString; Index:int):string;
 begin
   Index:= Index*2 + 1;
-  if uint(Index) < length(ps) then
+  if uint(Index) < uint(length(ps)) then
     SetString(Result, PChar(ps[Index]), DWord(ps[Index+1]) - DWord(ps[Index]))
   else
     Result:= '';
@@ -463,6 +468,16 @@ begin
     if PosAfter then
       inc(Result, length(substr));
   end;
+end;
+
+function RSStartsStr(const substr, str: string; After: pint = nil; Offset: int = 1): Boolean;
+var
+  n: int;
+begin
+  n:= length(substr);
+  Result:= (length(str) >= n + Offset - 1) and CompareMem(@substr[1], @str[Offset], n);
+  if Result and (After <> nil) then
+    After^:= Offset + n;
 end;
 
 {------------------------- StringReplace ----------------------------}
@@ -789,14 +804,38 @@ end;
 
 {-------------------------- Int <- Str -----------------------------}
 
-function RSVal(s:string; var i:integer):boolean;
+function RSVal(const s:string; var i:integer):boolean; overload;
 var j:integer;
 begin
   val(s, i, j);
   Result:= j=0;
 end;
 
-function RSValEx(s:string; var i:integer):int;
+function RSVal(const s: string; var v: ext): Boolean; overload;
+var
+  code: int;
+begin
+  Val(s, v, code);
+  Result:= (code = 0);
+end;
+
+function RSVal(const s: string; var v: Double): Boolean; overload;
+var
+  code: int;
+begin
+  Val(s, v, code);
+  Result:= (code = 0);
+end;
+
+function RSVal(const s: string; var v: Single): Boolean; overload;
+var
+  code: int;
+begin
+  Val(s, v, code);
+  Result:= (code = 0);
+end;
+
+function RSValEx(const s:string; var i:integer):int;
 begin
   val(s, i, Result);
 end;
@@ -845,7 +884,7 @@ begin
 4:  String contains wrong chars (result is the valid part of string)
 5:  String contains only wrong characters (result is 0)
 6:  The value is too big and the string contains wrong chars
-                         (result is a maxum or a minimum integer value)
+                         (result is a maximum or a minimum integer value)
 }
   s:=Str;
   if ErrorCode=nil then ErrorCode:=@z;

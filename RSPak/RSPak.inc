@@ -140,10 +140,10 @@
 {$B-} { Complete Boolean Evaluation }
 {$R-} { Range-Checking }
 {$Q-} { Overflow checking }
-{$U-} { No support for prehistoric Pentium FDIV bug }
+{$U-} { Support for prehistoric Pentium FDIV bug }
 {$T-} { Typed @ operator }
 {$X+} { Extended syntax }
 {$H+} { Use long strings }
-{$D+} { Enable breakpoints (should always be on everywhere!) }
+{$D+} { Enable breakpoints }
 {$FINITEFLOAT OFF} { Floating-point overflow }
 

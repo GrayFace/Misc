@@ -72,6 +72,7 @@ Version 1.2.1:
 
 Version 1.2.2:
 [+] *.bitmapshd.lod support
+[+] Better transparent color detection
 [-] Unpacking errors while dragging files onto other apps were leading to MMArchive hanging
 [-] "Ignore Unpacking Errors" option state wasn't preserved on program restart  
 
@@ -4350,14 +4351,18 @@ var
 
 var
   pal: array[-1..255] of int;
-  w, h: int;
+  w, h, i: int;
 begin
   w:= b.Width - 1;
   h:= b.Height - 1;
-  if NotBest(0, 0) and NotBest(0, h) and NotBest(w, h) then  NotBest(w, 0);
   Result:= HPal;
-  if best = 0 then  exit;
   GetPaletteEntries(HPal, 0, 256, pal[0]);
+  if NotBest(0, 0) and NotBest(0, h) and NotBest(w, h) and NotBest(w, 0) then
+    for i:= 1 to 255 do
+      if (pal[i] = $FFFF00) or
+         (best = 0) and ((pal[i] = $FF00FF) or (pal[i] = $FC00FC) or (pal[i] = $FCFC00)) then
+        best:= i;
+  if best = 0 then  exit;
   zSwap(pal[0], pal[best]);
   pal[-1]:= $1000300;
   Result:= CreatePalette(PLogPalette(@pal)^);

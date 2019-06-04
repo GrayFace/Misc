@@ -18,8 +18,6 @@ uses
   RSStrUtils;
 
 type
-  TRSGetVarEvent = function(const Name: string): ext of object;
-
   TRSOpType = (RSotNone = 0, RSotPush, RSotNot, RSotNeg, RSotAdd, RSotMul,
      RSotDiv, RSotMod, RSotIDIv, RSotPower, RSotEq, RSotMore, RSotLess, RSotOr,
      RSotAnd);
@@ -34,11 +32,16 @@ type
   end;
   TRSOperatorArray = array of TRSOperator;
 
+  TRSCustomOpKind = (RSokValue, RSokLeft, RSokBinary, RSokRight);
+
+  TRSCustomOpEvent = function(const s: string; var k: int; var op: TRSOperator; kind: TRSCustomOpKind): Boolean of object;
+  TRSGetVarEvent = function(const Name: string; data: ptr): ext of object;
+
 // Result = 0:           No error
 // Result <= length(s):  Syntax error
 // Result > length(s):   Unfinished expression
-function RSParseExpr(const s: string; var a: TRSOperatorArray; AcceptEmpty: Boolean = false): int;
-function RSCalcExpr(const a: array of TRSOperator; const get: TRSGetVarEvent = nil): ext;
+function RSParseExpr(const s: string; var a: TRSOperatorArray; Custom: TRSCustomOpEvent = nil; AcceptEmpty: Boolean = false): int;
+function RSCalcExpr(const a: array of TRSOperator; const get: TRSGetVarEvent = nil; getData: ptr = nil): ext;
 
 implementation
 
@@ -87,12 +90,6 @@ begin
   SetLength(a, high(a));
 end;
 
-procedure EatSpace(const s: string; var k: int);
-begin
-  while (k <= length(s)) and (s[k] <= ' ') do
-    inc(k);
-end;
-
 function IsThere(p, p2: PChar): Boolean;
 begin
   Result:= false;
@@ -109,7 +106,6 @@ function CheckOps(const s: string; var k: int; const a: array of TRSOperator; va
 var
   i: int;
 begin
-  EatSpace(s, k);
   Result:= true;
   for i:= low(a) to high(a) do
     if IsThere(@s[k], PChar(a[i].Name)) then
@@ -127,7 +123,6 @@ var
   i, j: int;
 begin
   Result:= false;
-  EatSpace(s, k);
   i:= k;
   while s[i] in ['+','.','0'..'9'] do
     inc(i);
@@ -156,7 +151,6 @@ function CheckVar(const s: string; var k: int; var op: TRSOperator): Boolean;
 var
   i: int;
 begin
-  EatSpace(s, k);
   i:= k;
   while s[k] in ['A'..'Z','a'..'z','0'..'9','.','_'] do
     inc(k);
@@ -166,7 +160,7 @@ begin
   op.Name:= Copy(s, i, k - i);
 end;
 
-function RSParseExpr(const s: string; var a: TRSOperatorArray; AcceptEmpty: Boolean = false): int;
+function RSParseExpr(const s: string; var a: TRSOperatorArray; Custom: TRSCustomOpEvent = nil; AcceptEmpty: Boolean = false): int;
 var
   op: TRSOperator;
   left: Boolean;
@@ -178,6 +172,13 @@ var
       inc(Idx);
     if not op.RightHanded and (Idx < length(a)) and (a[Idx].Priority = op.Priority)  then
       inc(Idx);
+  end;
+
+  function Cus(kind: TRSCustomOpKind): Boolean;
+  begin
+    while (k <= length(s)) and (s[k] <= ' ') do
+      inc(k);
+    Result:= Assigned(Custom) and Custom(s, k, op, kind);
   end;
 
 begin
@@ -193,9 +194,9 @@ begin
   while true do
     if left then
     begin
-      while CheckOps(s, k, LOp, op) do
+      while Cus(RSokLeft) or CheckOps(s, k, LOp, op) do
         AInsert(a, Idx, op);
-      if not CheckNum(s, k, op) and not CheckVar(s, k, op) then
+      if not Cus(RSokValue) and not CheckNum(s, k, op) and not CheckVar(s, k, op) then
         if AcceptEmpty and (a = nil) then
           break
         else begin
@@ -206,7 +207,7 @@ begin
       left:= false;
     end else
     begin
-      while CheckOps(s, k, ROp, op) do
+      while Cus(RSokRight) or CheckOps(s, k, ROp, op) do
       begin
         FindIdx;
         if op.Priority <> Bracket then
@@ -221,14 +222,13 @@ begin
         end else
           ADel(a, Idx);
       end;
-      if not CheckOps(s, k, BinOp, op) then
+      if not Cus(RSokBinary) and not CheckOps(s, k, BinOp, op) then
         break;
       FindIdx;
       AInsert(a, Idx, op);
       left:= true;
     end;
   // syntax error?
-  EatSpace(s, k);
   Result:= k;
   if k <= length(s) then
     exit;
@@ -275,7 +275,7 @@ begin
   stack[k]:= x;
 end;
 
-function RSCalcExpr(const a: array of TRSOperator; const get: TRSGetVarEvent = nil): ext;
+function RSCalcExpr(const a: array of TRSOperator; const get: TRSGetVarEvent = nil; getData: ptr = nil): ext;
 var
   stack: TMyArray;
   i, k: int;
@@ -291,7 +291,7 @@ begin
         if k >= length(stack) then
           SetLength(stack, k*2);
         if (Name <> '') and Assigned(get) then
-          stack[k]:= get(Name)
+          stack[k]:= get(Name, getData)
         else
           stack[k]:= Val;
       end;

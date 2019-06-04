@@ -120,6 +120,12 @@ function CutResampleArray(const a: TRSByteArray; x, w: int; out sx: int): TRSByt
 var
   i, k, v: int;
 begin
+  if a = nil then
+  begin
+    Result:= nil;
+    sx:= x;
+    exit;
+  end;  
   SetLength(Result, w + 1);
   k:= 0;
   v:= MaxMix;
@@ -151,6 +157,7 @@ end;
 
 var
   ToBits: array[0..$FFFF] of array[0..1] of uint;
+  ToColor: array[0..$FFFF] of array[Boolean] of uint;
   TransMix: array[0..MaxMix*MaxMix*MaxMix*4 - 1] of uint;
 
 procedure Prepare16to32;
@@ -163,6 +170,8 @@ begin
     v:= GetPixel16(i);
     ToBits[i][0]:= (v and MixMask) div MaxMix;
     ToBits[i][1]:= v and MixRemainder;
+    ToColor[i][false]:= v;
+    ToColor[i][true]:= v or $FF000000;
   end;
 end;
 
@@ -473,6 +482,27 @@ begin
     end;
 end;
 
+procedure Simple16To32(ps: PWord; pd: pint; ds, dd, w, h: int; c0: Word; Opaque, Alpha: Boolean); inline;
+var
+  x: int;
+begin
+  dec(ds, w*2);
+  dec(dd, w*4);
+  for h:= h downto 1 do
+  begin
+    for x:= w downto 1 do
+    begin
+      if Opaque or (ps^ <> c0) then
+        pd^:= ToColor[ps^][Alpha];
+      inc(ps);
+      inc(pd);
+    end;
+    inc(PChar(ps), ds);
+    inc(PChar(pd), dd);
+  end;
+end;
+
+
 procedure RSResample16_Any(const info: TRSResampleInfo; Src: ptr; SrcPitch: int;
    Dest: ptr; DestPitch: int; Trans: int; HasTrans: Boolean; NoAlpha: Boolean); inline;
 var
@@ -485,10 +515,15 @@ begin
     exit;
   if ToBits[$FFFF][0] = 0 then
     Prepare16to32;
-  if HasTrans and (TransMix[MaxMix*2] = 0) then
-    PrepareTransMix;
   inc(PChar(Src), info.SrcX*2 + info.SrcY*SrcPitch);
   inc(PChar(Dest), info.DestX*4 + info.DestY*DestPitch);
+  if info.CmdX = nil then
+  begin
+    Simple16To32(src, dest, SrcPitch, DestPitch, info.DestW, info.DestH, Trans, not HasTrans, not NoAlpha);
+    exit;
+  end;
+  if HasTrans and (TransMix[MaxMix*2] = 0) then
+    PrepareTransMix;
   SetLength(buf, info.DestW*4);
   pc:= ptr(buf);
   pl:= @buf[info.DestW*2];
@@ -596,8 +631,15 @@ begin
   SrcH:= sH;
   DestW:= dW;
   DestH:= dH;
-  CmdX:= PrepareResampleArray(sW, dW);
-  CmdY:= PrepareResampleArray(sH, dH);
+  if (sW <> dW) or (sH <> dH) then
+  begin
+    CmdX:= PrepareResampleArray(sW, dW);
+    CmdY:= PrepareResampleArray(sH, dH);
+  end else
+  begin
+    CmdX:= nil;
+    CmdY:= nil;
+  end;
 end;
 
 end.
