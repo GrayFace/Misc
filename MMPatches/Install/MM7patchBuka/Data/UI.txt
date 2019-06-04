@@ -1,0 +1,442 @@
+Command	X	Y	Width	Height	NewX	NewY	Click	Draw	Condition	Format	NewWidth	NewHeight	Canvas	NewCanvas	Comment
+; todo:
+smooth video sides
+default Options.Scale	1
+var Options.Scale	1								Options.Scale<=0	
+default Options.PartyScale	1.11
+default Options.StatusbarScale	0
+default Options.StatusbarPlace	0
+default Options.MouseShiftY	30
+default Options.FOVMul	1
+var w h	960	600
+var mw mh	950	480
+var w h	w/Options.Scale	h/Options.Scale
+var w	mw								w<mw	
+var h	mh								h<mh	
+var ScreenW ScreenH	w	h
+SCREEN					ScreenW	ScreenH
+var StatusPlace	Options.StatusbarPlace
+var StatusMul	1+(R-mw)/465
+var StatusMul	(R-341)/465								Options.StatusbarPlace>=0
+var StatusMul	Options.StatusbarScale								Options.StatusbarScale>0 and StatusMul>Options.StatusbarScale
+var StatusMul	B/480								Options.StatusbarScale<=0 and StatusMul>B/480
+var StatusMul	R/640								Options.StatusbarScale<=0 and StatusMul>R/640
+var StatusH0	15 + 0*(StatusPlace>=0)
+var StatusW StatusH	StatusMul*465	StatusMul*StatusH0
+var PartyStatusDist ScreenFW	5	R
+var PartyStatusDist	-StatusH								StatusPlace>0
+var PartyMul	(R-446-20)/(95*4+Options.PortraitsDistance*3)
+var PartyMul	1								PartyMul<1
+var PartyMul	Options.PartyScale								PartyMul>Options.PartyScale
+var PartyH	98*PartyMul
+
+; Various Screens										
+var NoRecover	1								Game.RenderedScreen=-1 or Game.Good - Game.Evil <> LastAlign
+var Game.Screen MainMenu	-1	1							Game.RenderedScreen=-1 or Game.Arcomage or Game.Loading and WasMainMenuLike
+var MainMenuLike	1								MainMenu or Game.VideoPlaying or Game.Screen = 13 or Game.Screen = 18
+var WasMainMenuLike	MainMenuLike
+persist WasMainMenuLike
+var LastAlign	Game.Good - Game.Evil
+persist LastAlign
+
+FOR x	0	29
+var x	104								x=29
+var s%d	Game.RenderedScreen=x									x
+LOOP
+
+var IsAdv	s0+s19+s20
+var Game.CustomRightSide	1								s10 or s15
+var NoRightSide	Game.CustomRightSide or Game.Screen=-1
+var ReadRightSide	NoRightSide=0 and Game.RenderedScreen=Game.Screen
+var Bottom	Game.Screen<>-1 or Game.Loading=2
+var ReadBottom	Bottom and Game.RenderedScreen=Game.Screen
+var SmallDialog	(IsAdv=0) and NoRightSide=0
+var FullDialog	NoRightSide
+
+var Game.TextColor	#FF6060								Game.Evil
+var Game.TextShadowColor	#E0CCCC								Game.Good
+var Game.TextColor	#000030								Game.Good and s1
+var Game.TextColor	#C00000								Game.Evil and s1
+var Game.TextShadowColor	#507070								Game.Evil and s1
+
+var ui	"UI-"								Game.Neutral
+var ui	"UIg"								Game.Good
+var ui	"UIe"								Game.Evil
+var ui	"UIm"								Game.MainMenuCode >= 0 or Game.Loading=1 and Game.Neutral
+var ui	"UIg"								Game.Arcomage
+var UA	"A"								Game.Neutral
+var UA	"B"								Game.Good
+var UA	"C"								Game.Evil
+var UA2	"-b"								Game.Good
+var UA2	"-c"								Game.Evil
+
+; Stages
+stage Read
+stage DrawView
+stage DrawViewUI
+stage Darken
+stage DrawDialog
+stage DrawRMenu
+stage DrawMouse
+
+STAGE Read
+
+SCREEN					ScreenW	ScreenH			ReadRightSide						READ RIGHT SIDE
+; Test which books are darkened
+	RL-136	385	8	8			+	+						BookR1
+pcx IB-R-%s	RL-136	385	8	8			-	erase	Key1=0	UA				BookR1
+	RL-110	371	8	8			+	+						BookR2	Green
+pcx IB-R-%s	RL-110	371	8	8			-	erase	Key2=0	UA				BookR2
+	RL-88	373	8	8			+	+						BookR3	Map
+pcx IB-R-%s	RL-88	373	8	8			-	erase	Key3=0	UA				BookR3
+	RL-36	386	8	8			+	+						BookL1
+pcx IB-R-%s	RL-36	386	8	8			-	erase	Key4=0	UA				BookL1
+	RL-59	396	8	8			+	+						BookL2
+pcx IB-R-%s	RL-59	396	8	8			-	erase	Key5=0	UA				BookL2
+
+pcx %sMnuBg							-	+		ui				Menu	Menu Bk
+
+	R-164	190	1	1				+						MenuChk	Arrows
+pcx IB-R-%s	R-164	190	1	1				erase		UA				MenuChk
+	R-6	184	1	1	1			+						MenuChk
+pcx IB-R-%s	R-6	184	1	1	1			erase		UA				MenuChk
+if	0	0											MenuChk
+icon %sMnuAr			12			53	-	+		ui				Menu
+if	1	0											MenuChk
+icon %sMnuAr	12		12		152	53	-	+		ui				Menu
+if
+	484	323-Game.Good	122	14	14	8	+	+						Menu	Gold Food
+	488	151-Game.Good	136	75	14	27	-	+						Menu	NPC Icons
+	474	151-Game.Good	163	76		27	+	-						Menu	NPC Clicks
+
+var x	1
+if									IsAdv
+	602	450	33	26	R-7-x	B-1								Menu	Menu Btn
+	560	450	34	26	R-46-x	B-1								Menu
+	518	450	34	26	6-x	B-1								Menu
+	476	450	34	26	45-x	B-1								Menu
+if									IsAdv=0
+pcx IB-R-%s	602-468	450	33	26	R-7-x	B-1				UA				Menu
+pcx IB-R-%s	560-468	450	34	26	R-46-x	B-1				UA				Menu
+pcx IB-R-%s	518-468	450	34	26	6-x	B-1				UA				Menu
+pcx IB-R-%s	476-468	450	34	26	45-x	B-1				UA				Menu
+if
+pcx %sBookL	1				163	B	-	+		ui				Menu
+					163	B	+	not			18	80	BookL1	Menu
+					R	B	+	not			30	71	BookL2	Menu
+pcx UI-BokDL	1				R	B	-	behind						Menu
+
+pcx %sBookR						B+131	-	+		ui				Minimap
+					R-16	B-26	+	not			37	61	BookR1	Minimap
+					R-16	B-25	+	not			35	1	BookR1	Minimap
+					R	B-24	+	not			16	62	BookR2	Minimap
+						B	+	not			67	24	BookR3	Minimap
+						B-24	+	not			51	1	BookR3	Minimap
+						B-25	+	not			15	1	BookR3	Minimap
+pcx UI-BokDR					R	B	-	behind						Minimap
+	471	0	167	131	RL		+	+						Minimap	Minimap
+	R-50	0	1	1	R	B	+	-			167	2		Minimap	Time area
+	R-50	0	1	1	R		+	-			15	BT		Minimap	Time area
+	R-50	0	1	1	RL-167		+	-			15	BT		Minimap	Time area
+	518	135	18	13	R-104	3		+	Game.Neutral					Minimap	[+]
+	517	135	18	13	R-107	3		+	Game.Good					Minimap	[+]
+	518	134	18	13	R-106	2		+	Game.Evil					Minimap	[+]
+	538	135	32	13	R-63	3	-	+	Game.Neutral					Minimap	Compass
+	540	135	28	13	R-68	3	-	+	Game.Good					Minimap	Compass
+	540	134	28	13	R-68	2	-	+	Game.Evil					Minimap	Compass
+	571	135	20	13	R-35	3		+	Game.Neutral					Minimap	[-]
+	572	135	19	13	R-37	3		+	Game.Good					Minimap	[-]
+	573	134	19	13	R-36	2		+	Game.Evil					Minimap	[-]
+icon UI-MapU	R		R-8	2	RL-167+8		-	+	Game.Neutral					Minimap
+icon ib-autmask-a	3		8	7	RL-167		-	erase	Game.Neutral					Minimap
+icon UI-MapU			8		RL-167		-	and	Game.Neutral					Minimap
+icon UI-MapU			8		RL-167		-	behind	Game.Neutral					Minimap
+icon UI-Map2					RL-167		-		Game.Neutral					Minimap
+icon UI-MapL					RL-167	B	-		Game.Neutral					Minimap
+icon %sMap					R		-	#ff00ff	Game.Good	ui				Minimap
+icon %sMap			1		RL-167		-	+	Game.Evil	ui				Minimap
+icon %sMap	4	B		4	R	B	-	#ff00ff	Game.Evil	ui				Minimap
+
+; Spells Top														
+	474	244	158	27				+						SpLeft
+	484	255	1	1			+	-			158	27		SpLeft
+icon UI-SpMskL							-	and						SpLeft
+if empty	5												Game.PartyBuffs
+icon %sSpBgL	1		22		1		-	+		ui				SpLeft
+if empty	6												Game.PartyBuffs	
+icon %sSpBgL	23		22		23		-	+		ui				SpLeft
+if empty	0												Game.PartyBuffs	
+icon %sSpBgL	47		22		47		-	+		ui				SpLeft
+if empty	17												Game.PartyBuffs	
+icon %sSpBgL	68		22		68		-	+		ui				SpLeft
+if empty	12												Game.PartyBuffs	
+icon %sSpBgL	86		22		86		-	+		ui				SpLeft
+if empty	4												Game.PartyBuffs	
+icon %sSpBgL	109		30		109		-	+		ui				SpLeft
+if empty	1												Game.PartyBuffs	
+icon %sSpBgL	140				140		-	+		ui				SpLeft
+if
+
+	477	277	159	27				+						SpRight
+	487	290	1	1			+	-			159	27		SpRight
+icon UI-SpMskR							-	and						SpRight
+if empty	9												Game.PartyBuffs	
+icon %sSpBgR			22				-	+		ui				SpRight
+if empty	8												Game.PartyBuffs	
+icon %sSpBgR	22		22		22		-	+		ui				SpRight
+if empty	14												Game.PartyBuffs	
+icon %sSpBgR	22*2+1		19		22*2+1		-	+		ui				SpRight
+if empty	15												Game.PartyBuffs	
+icon %sSpBgR	22*3-2		22		22*3-2		-	+		ui				SpRight
+if empty	13												Game.PartyBuffs	
+icon %sSpBgR	22*4		22		22*4		-	+		ui				SpRight
+if empty	10												Game.PartyBuffs	
+icon %sSpBgR	22*5+2		22		22*5+2		-	+		ui				SpRight
+if empty	2												Game.PartyBuffs	
+icon %sSpBgR	22*6+2				22*6+2		-	+		ui				SpRight
+if
+
+
+
+
+SCREEN					ScreenW	ScreenH			ReadBottom						READ BOTTOM
+; Party
+default Options.PortraitsDistance	17														20 is game default
+var w h	95	98
+var PlayerW PlayerBox	w	w+Options.PortraitsDistance
+FOR i	0	3						
+var x	115*i
+	17+x	378	w	h	x		+	+						Party
+pcx IB-B-%s	17+x	26	w	h	x		-	erase		UA				Party
+if	109-17+x	401-378											Party
+pcx %sPrtFr	96		6	17	106-17+x	394-378	-	+		ui			Party	Party
+pcx %sPrtFr	541	0	13	21	541-460+x	0	-	behind		ui				Party
+if	109-17+x	419-378											Party	
+pcx %sPrtFr	460	0	10	21	x	0	-	behind		ui				Party
+if	109-17+x	452-378											Party	
+pcx %sPrtFr	96		6	17	106-17+x	446-378	-	+		ui			Party	Party
+pcx %sPrtFr	460	75	11	23	x	75	-	behind		ui				Party
+if	109-17+x	440-378											Party	
+pcx %sPrtFr	541	75	13	23	541-460+x	75	-	behind		ui				Party
+if
+pcx %sPrtFr	96		6	39	106-17+x	408-378	-	+		ui			Party	Party
+pcx %sPrtFr	x		w	h	x		-	behind		ui				Party
+LOOP
+	6	359	465	15			-	+	SmallDialog=0					Statusbar
+if									0
+pcx IB-B-%s	7	7+14	460	1		15	-	+	SmallDialog=0 and s19=0 and StatusPlace>=0	UA				Statusbar
+pcx IB-B-%s	R	7+14	1	1	R-2	15	-	+	SmallDialog=0 and s19=0 and StatusPlace>=0	UA	5-2			Statusbar
+pcx IB-R-%s		359+14	2	1	R	15	-	+	SmallDialog=0 and s19=0 and StatusPlace>=0	UA				Statusbar
+if
+	0	0	1	1				+	SmallDialog=0				Game.Status	StatusbarStatus
+
+
+SCREEN					ScreenW	ScreenH			IsAdv and ReadRightSide						READ 3D VIEW
+; Spells															
+	8	8	64	64										Fly
+	460-64	8	64	64										Walk
+recover			64	64									Hand
+if empty	8	347													No NPC Text
+	394	288	64	64			-	+						Hand	Turn-Based Hand
+if
+
+STAGE DrawView
+
+SCREEN					ScreenW/StatusMul	ScreenH/StatusMul			IsAdv and ReadRightSide
+; NPC Text
+if	8	347
+icon %sFrDlg								+		ui				Text
+	8	72	460	280-1	3			+						Text
+;	8	347	460	5	0	280-1		and			466			Text	Bottom
+	8	72	3	280	0	B-4		and						Text	Sides
+	8	72	3	280	R	B-4		and						Text
+;					C	B-128							Text
+					C	B - 135/StatusMul - 20	-						Text
+if
+
+SCREEN					ScreenW	ScreenH			SmallDialog+FullDialog=0						PROGRESS BAR
+icon Bardata														Bardata
+var w h	R	B											Bardata
+	80	122	w	h	C	C - Options.MouseShiftY
+
+SCREEN									NoRecover						DISCARD
+			0	0										Menu
+			0	0										Minimap
+			0	0										SpLeft
+			0	0										SpRight
+			0	0										Fly
+			0	0										Walk
+			0	0										Party
+			0	0										Statusbar
+
+SCREEN															RECOVER
+recover													Menu
+recover													Minimap
+recover													SpLeft
+recover													SpRight
+recover													Fly
+recover													Walk
+recover													Party
+recover													Statusbar
+
+
+STAGE Read
+
+if									SmallDialog						small screens
+var w h	460	344
+var x y	9	9
+var dw dh	x*2	y*2
+var x y	10	9							Game.Neutral
+var dw dh	x+11	y+8							Game.Neutral
+var status	1								s1+s2+s5+s11+s12+s15+s26+s28+s104=0
+var btn	1								status+s15
+var btn	2								s8+s17+s18
+var NoPartyDlg	1								s8
+var NoPartyDlg2	1								s1+s2+s3+s11+s12+s26+s28
+var down	98 + 24 + (btn+status<>0)*8 - 5
+var down	31								NoPartyDlg
+var down	100 + (btn+status<>0)*10								NoPartyDlg2
+var dh	dh - 5 - Game.Evil								Game.Neutral=0 and status
+var DlgW DlgH	w+dw	h+dh+down
+var DlgDown DlgMiddleShift	down	-dw/2+x
+var down	31								NoPartyDlg2
+var fw fh	600	DlgH>480 and DlgH or 480
+var fw	580								NoPartyDlg2
+var NopSide	55
+var fw fh	DlgW+NopSide	DlgH+NopSide							NoPartyDlg
+var NoPartyDlg	1								NoPartyDlg2
+
+SCREEN					fw	fh									SMALL SCREENS
+icon %sFrSmS							+	+		ui				Dialog
+	8	8	w	h	x	y	+	+						Dialog
+			0	0	DlgW	0								Dialog
+					C-1-dw/2+x	DlgH+TB	+	+	NoPartyDlg=0				Party	Dialog
+	6+5	359	455	15					s1					Status1
+pcx IB-B-%s	6+5	7	465	15				erase	s1	UA				Status1
+					x+5	y + 321	+		s1				Status1	Dialog
+var btnW	55													
+;var NoPartyDlg	0														test
+var btnSep	0
+var x1 x2	x	w+dw-(btnW*btn + btnSep*btn)-1						
+	6-1	359	465+1	15+Game.Evil										Status1
+	C		(x2-x1)-1		x1+1	h+dh	+	+	status and NoPartyDlg=0				Status1	Dialog
+			2		x1-1	h+dh	+	+	status and NoPartyDlg=0				Status1	Dialog
+	R		2		x2-1	h+dh	+	+	status and NoPartyDlg=0				Status1	Dialog
+					x-2	h+dh	+	+	status and NoPartyDlg				Status1	Dialog
+
+var bx by	1	1
+var bx by	dw-x-2+3-Game.Neutral*4	17-down							NoPartyDlg
+var fy	2 + 2*Game.Good + Game.Evil
+icon %sFrSm2						h+dh-fy	+		NoPartyDlg and status	ui				Dialog
+pcx %sBtnEx					R-bx	h+dh-by			btn	ui				Dialog
+pcx %sBtnSp					R-btnW-btnSep-bx	h+dh-by			btn=2	ui				Dialog
+icon %sFrSm2	0		x2+3-bx	18 + (Game.Evil=0)*50	0	h+dh-fy	+		status and NoPartyDlg=0	ui				Dialog
+icon %sFrSm2	0	19	x2+3-bx	1	0	h+dh-fy+18	+		status and NoPartyDlg=0 and Game.Evil	ui				Dialog
+icon %sFrSm2	x2+3-bx			3-Game.Evil	x2+3-bx	h+dh-fy	+		status and NoPartyDlg=0 and Game.Neutral=0	ui				Dialog
+var FullW FullH	R	B
+var RealH	B												Dialog
+var RealH	344+y								s5+s104
+	562	460	1	1	R	h+dh-by	+	-	btn		55+bx	17 + NoPartyDlg		Dialog	Step 1 pixel over to ensure it's clickable
+	480	460	1	1	R-btnW-btnSep-bx	h+dh-by	+	-	btn=2		55	17 + NoPartyDlg		Dialog	Step 1 pixel over to ensure it's clickable
+			0	0	DlgW	DlgH								Dialog
+					C-dw/2+x	(BT-DlgH)/2+y			Game.FullScreen		DlgW-dw	RealH-y-(NoPartyDlg and status+btn=0)*(dh-y)	Game.LockMouse
+if
+
+
+
+if									FullDialog
+SCREEN					640	480									BIG SCREENS
+var x y	R>640 and 100	B>480 and 100
+icon %sFrScr	C	C	640+x	480+y			+	+	Game.Arcomage=0	ui				Dialog
+			0	0	640	480	+	+						Dialog
+					C	C								Dialog
+icon %sFrScr	3	C	50	480	3	C	-		x and ui="UI-" and Game.Arcomage=0	ui				Dialog
+var x y	R/2-320	B/2-240											Dialog
+pcx IB-B-%s		26		98	x	y+352+26	-	+	Bottom	UA				Dialog
+					x+17	y+378	+		Bottom				Party	Dialog
+icon evt02%s					x+477	y			s10 and Game.PaperDollInChests<>2 or s15 and Game.PaperDollInChests=0	UA2				Dialog
+icon IB-MB-%s				360	x+468	y			s10 and Game.PaperDollInChests<>2 or s15 and Game.PaperDollInChests=0	UA				Dialog
+icon evtnpc%s					x+554+LC	y+80+TC			s10 and Game.PaperDollInChests<>2	UA2				Dialog
+icon UI-Chest					x+554+LC	y+80+TC			s10 and Game.PaperDollInChests<>2					Dialog
+var DlgW DlgH	640	480
+var FullW FullH	R	B
+					C	C	-						Game.RightButtonMenu	Dialog
+					C	C			Game.FullScreen		DlgW	DlgH	Game.LockMouse
+if
+
+default Options.FlyEtcOnTop	1
+
+
+STAGE DrawView
+
+SCREEN					ScreenW	ScreenH			MainMenuLike=0						DRAW VIEW
+			0	0							R	B	Game.Render
+var Game.RenderCenterY Game.FOVMul	0.5-Options.MouseShiftY/B	(1 + Options.MouseShiftY/B)*Options.FOVMul											
+var dx dy	-1	-2											
+					6+dx	37+dy	-		Options.FlyEtcOnTop				Fly
+					R-10-dx	37+dy	-		Options.FlyEtcOnTop				Walk
+					6+dx	B-148-3-dy	-		Options.FlyEtcOnTop=0				Fly
+					R-10-dx	B-148-dy	-		Options.FlyEtcOnTop=0				Walk
+					R-135	B-150	-						Hand
+
+STAGE DrawViewUI
+						B							Menu
+					R	B							Minimap
+							+						SpLeft
+					R		+						SpRight
+var x	C-2 - (PlayerBox*3 + PlayerW)*PartyMul/2
+FOR i	0	3							SmallDialog=0 or NoPartyDlg
+	i*115		PlayerW		x+i*PlayerBox*PartyMul	B-(StatusPlace<0)*(StatusH + PartyStatusDist)					PlayerW*PartyMul	PartyH	Party
+LOOP
+if									StatusPlace<0 and (SmallDialog=0 or NoPartyDlg and StatusPlace<0)
+					C	B	-	+			StatusW	StatusH	Statusbar
+if	0	0							StatusPlace>=0 and SmallDialog=0 and s0+Game.OpaqueScreen				StatusbarStatus
+					C	(StatusPlace=0)*(B-PartyH-PartyStatusDist)	-	+			StatusW	StatusH	Statusbar
+if
+STAGE Darken
+
+SCREEN					Game.Width	Game.Height			FullDialog or SmallDialog						DARKEN
+icon %sDarken							+		MainMenuLike=0	ui	Game.Width	Game.Height		Darken
+icon %sParch							+		MainMenuLike	ui	Game.Width	Game.Height		Darken
+var mul	Game.Width/FullW
+
+var x2 y2	DlgW*mul	DlgH*mul
+var x1 y1	(Game.Width - x2)/2	(Game.Height - y2)/2
+var x2 y2	x1 + x2	y1 + y2 - DlgDown*mul
+var x1	0								x1<0
+var y1	0								y1<0
+				y1			+						Darken
+	0	y1	x1	y2-y1	0	y1	+						Darken
+	x2	y1	Game.Width-x2	y2-y1	x2	y1	+						Darken
+	0	y2		Game.Height-y2	0	y2	+						Darken
+
+STAGE DrawDialog
+
+SCREEN					FullW	FullH			FullDialog or SmallDialog						DIALOG
+		 			C	C	+						Dialog
+
+STAGE DrawRMenu
+SCREEN					640	480			SmallDialog						RBUTTON
+							-						Game.RightButtonMenu
+
+SCREEN					FullW	FullH			FullDialog or SmallDialog						RBUTTON
+					C+DlgMiddleShift	C-7					DlgW-40	DlgH-20	Game.RightButtonMenuArea
+					C+DlgMiddleShift-1	C-3			FullDialog		DlgW-18	DlgH-16-3*2	Game.RightButtonMenuArea
+					C+DlgMiddleShift	C-3			FullDialog		DlgW-70	DlgH-16-3*2	Game.RightButtonMenuArea2
+					C+DlgMiddleShift	C-5			s8		2	2	Game.RightButtonMenuArea2
+
+SCREEN					640	480			FullDialog=0 and SmallDialog=0						RBUTTON
+							-						Game.RightButtonMenu
+var mul	R/ScreenFW
+var x y	20	15
+var h	B												Minimap
+var h1	PartyH+StatusH+PartyStatusDist
+var h	h1								h < h1
+					x	27*mul+y					R-x*2	B-y*2-(h+27)*mul	Game.RightButtonMenuArea
+
+STAGE DrawMouse
+SCREEN					ScreenW	ScreenH			FullDialog=0						ADV MOUSE
+							-						Game.MouseItem	
+
+SCREEN					FullW	FullH			FullDialog						MOUSE
+							-		MainMenu=0				Game.MouseItem

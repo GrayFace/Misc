@@ -77,16 +77,18 @@ LodGroup=Uncheck these tasks if you are installing the patch over a big mod like
 LodsTask=Install LOD archives with fixes for particular maps and game progression
 TunnelsTask=Fix Thunderfist Mountain entrances mismatch, add videos to exits from it into different dungeons
 DragonTask=Make "Mega-Dragon" in The Dragon Caves in Eeofol a real mega-dragon instead of a weakened regular dragon
-WaterTask=Use improved water animation.
+WaterTask=Use improved water animation
 IconsTask=Install LOD archive with interface fixes%nUncheck this task if you are installing the patch over a mod that recolors interface.
+UITask=Use widescreen-friendly flexible interface
 #endif
 #if ru
 ru.LodGroup=Отключите эти задачи, если Вы устанавливаете патч поверх большого мода, такого как BDJ Rev4 mod:
 ru.LodsTask=LOD-архивы с исправлениями для конкретных карт и по ходу сюжета
 ru.TunnelsTask=Исправить путаницу со входами в Гору Громовой Кулак, добавить видеозаставки при переходе в другие подземелья из неё
 ru.DragonTask=Заменить ослабленного обычного дракона с именем "Мегадракон" в Пещерах драконов в Эофоле на настоящего магадракона
-ru.WaterTask=Использовать улучшенную анимацию воды.
+ru.WaterTask=Использовать улучшенную анимацию воды
 ru.IconsTask=Установить LOD-архив с исправлениями для интерфейса%nОтключите эту задачу, если Вы устанавливаете патч поверх мода, перекрашивающего интерфейс.
+ru.UITask=Включить гибкий интерфейс, адаптированный для широкоэкранников
 #endif
 
 [Tasks]
@@ -94,6 +96,8 @@ ru.IconsTask=Установить LOD-архив с исправлениями для интерфейса%nОтключите эту 
 Name: RusFiles1; Description: {cm:RussianGameVersion}; Check: RussianTaskCheck(true);
 Name: RusFiles2; Description: {cm:RussianGameVersion}; Flags: unchecked; Check: RussianTaskCheck(false);
 #endif
+Name: ui1; Description: {cm:UITask}; Check: UITaskCheck(true);
+Name: ui2; Description: {cm:UITask}; Flags: unchecked; Check: UITaskCheck(false);
 Name: icons1; Description: {cm:IconsTask}; Check: IconsTaskCheck(true);
 Name: icons2; Description: {cm:IconsTask}; Flags: unchecked; Check: IconsTaskCheck(false);
 Name: water1; Description: {cm:WaterTask}; Check: WaterTaskCheck(true);
@@ -162,6 +166,11 @@ begin
 #endif
 end;
 
+function MMIni: string;
+begin
+  Result:= ExpandConstant('{app}\{#m}.ini');
+end;
+
 #if loc
 var
   RussianGame, RussianGameChecked: Boolean;
@@ -188,6 +197,12 @@ type
     On, Checked: Boolean;
   end;
 
+function CheckTask(var t: TTask; checked: Boolean): Boolean;
+begin
+  t.Checked:= true;
+  Result:= (t.On = checked);
+end;
+
 function CheckOptLod(var t: TTask; var vis: Boolean; path, md5: string; checked: Boolean; ver: Integer): Boolean;
 begin
   vis:= not FileExists(path) or (GetMD5OfFile(path) <> md5);
@@ -196,12 +211,6 @@ begin
     t.On:= FileExists(path) or not CheckVer(ver);
   t.Checked:= t.Checked or vis;
   vis:= vis and (t.On = checked);
-end;
-
-function CheckTask(var t: TTask; checked: Boolean): Boolean;
-begin
-  t.Checked:= true;
-  Result:= (t.On = checked);
 end;
 
 
@@ -214,7 +223,7 @@ begin
     if CheckVer($20001) then
       PatchLods:= FileExists(ExpandConstant('{app}\Data\00 patch.games.lod'))
     else
-      PatchLods:= GetIniBool('Install', 'PatchLods', true, ExpandConstant('{app}\{#m}.ini'));
+      PatchLods:= GetIniBool('Install', 'PatchLods', true, MMIni);
   PatchLodsChecked:= true;
   Result:= (PatchLods = checked);
 end;
@@ -279,11 +288,22 @@ begin
 end;
 
 
+var
+  UI: TTask;
+
+function UITaskCheck(checked: Boolean): Boolean;
+begin
+  if not UI.Checked then
+    UI.On:= not CheckVer($20003);
+  Result:= (UpperCase(GetIniString('Settings', 'UILayout', '', MMIni)) <> 'UI') and CheckTask(UI, checked);
+end;
+
+
 procedure AfterInst;
 var
  ini: string;
 begin
-  ini:= ExpandConstant('{app}\{#m}.ini');
+  ini:= MMIni;
   if GetIniString('Install', 'PatchLods', #13#10, ini) <> #13#10 then 
     DeleteIniEntry('Install', 'PatchLods', ini);
   if IsTaskSelected('water1 water2') and (GetIniInt('Settings', 'HDWTRCount', 7, 0, 0, ini) <> 14) then
@@ -301,4 +321,6 @@ begin
     SetIniInt('MipmapsBase', 'hwtrdr*', 128, ini);
     SetIniInt('MipmapsBase', 'hdwtr???', 32, ini);
   end;
+  if IsTaskSelected('ui1 ui2') then
+    SetIniString('Settings', 'UILayout', 'UI', ini);
 end;

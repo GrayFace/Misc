@@ -1,4 +1,4 @@
-GrayFace MM7 Patch v2.2
+GrayFace MM7 Patch v2.3
 By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
@@ -7,6 +7,35 @@ Save files are, of course, fully compatible with the unpatched game in both dire
 The patch has no uninstaller to make things simpler.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
+
+New in version 2.3:
+  << MM6 - MM8 >>
+[+] PaperDollInChests option shows paper doll in chest dialog: value 1 (default) will make it visible when you open inventory of a player, value 2 will make it visible right when you open the chest, value 0 will disable it.
+[+] Keyboard control: some dialogs can now be controlled by pressing Up/Down and Enter. E.g. NPC conversations. Only those dialogs that already had everything in place to support it are effected.
+[+] Save/load dialogs now react to Enter key.
+[+] Newer MP3DEC.ASI version. In theory this might fix some problems with MP3 playback.
+[-] My bug: If somehow game window managed to become smaller than 640x480, that wasn't handled gracefully in software 32-bit color mode.
+  << MM6, MM7 >>
+[-] My bug: Quick load key pressed during the death movie was causing a crash afterwards.
+  << MM7, MM8 >>
+[+] Widescreen-friendly flexible UI in Hardware 3D mode.
+[+] Accurate effects coordinates in Hardware 3D mode.
+[+] Accurate coordinates of top part of the outdoor sky in Hardware 3D mode.
+[+] In Hardware 3D mode the game was prioritizing interacting with sprites on sides of the view too often.
+[-] In Hardware 3D mode bottom of sprites didn't react to clicks indoors when mouse is away from horizontal center of the view.
+[-] My bug: "Pixel-perfect mouse targeting in HD mode" wasn't working.
+  << MM7 >>
+[+] HigherCloseRingsButton option places the 'Close' button that closes rings view next to the magnifying glass, like in MM6. Default is 1 (enabled).
+[-] The 'Close' button that closes rings view in inventory screen was misplaced by 1 pixel.
+[-] In English version autonote text for Repair item Master was replaced by a duplicate of Merchant Grandmaster.
+[-] In English version Identify Item Grandmaster was written as residing in Avlee instead of Tularean Forest. I previously fixed it in Autonotes, but forgot to fix it in NPC text.
+[-] My bug: Pressing the quick load key while a character is taking damage was causing a temporary sound glitch.
+  << Fixes in maps >>
+[-] Bracada Desert (out06): Shops didn't have a teleporter leading to them, instead there were two Temple teleporters.
+[-] Castle Gryphonheart (d33): Taken paintings were reappearing upon reentry.
+[-] The Haunted Mansion (d37): Taken painting was reappearing on the wall upon reentry.
+[-] In the fix for Thunderfist Mountain exits the party was facing in wrong direction upon entering/exiting the dungeon.
+
 
 New in version 2.2:
   << MM6 - MM8 >>
@@ -29,7 +58,7 @@ New in version 2.2:
 [+] Pixel-perfect mouse targeting in HD mode.
 [+] Set TurnBasedWalkDelay to a value of your choice (e.g. 100) to be able to do individual steps in the walking phase of turn-based combat.
 [+] Better water animation.
-[+] MipmapsBase section in the INI controls how many mipmip levels matching textures can use. Smaller values lead to more mipmaps.
+[+] MipmapsBase section in the INI controls how many mipmap levels matching textures can use. Smaller values lead to more mipmaps.
 [+] Separate HDWTRCountHWL, HDWTRDelayHWL options for the NoD3DBitmapHwl=0 case.
 [+] Hidden FixMonsterSummon option (1 - enabled by default).
 [-] Some small cosmetic bugs fixed by changing pictures from icons.lod.
@@ -47,7 +76,6 @@ New in version 2.2:
 [-] Hall of the Pit (t04): Teleporters were rotating the party to the right.
 [-] Nighon (out10): Right side of the tavern door didn't react to clicks.
 [-] My bug: Fixes for Avlee (out14), Barrow II (mdk03) and some for Nighon (out10) weren't included.
-
 
 New in version 2.1:
   << MM6 - MM8 >>

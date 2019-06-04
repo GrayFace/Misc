@@ -12,7 +12,9 @@ uses
   DXProxy in '..\mmcommon\DXProxy.pas',
   MMCommon in '..\mmcommon\MMCommon.pas',
   D3DHooks in '..\mmcommon\D3DHooks.pas',
-  MMHooks in '..\mmcommon\MMHooks.pas';
+  MMHooks in '..\mmcommon\MMHooks.pas',
+  LayoutSupport in '..\mmcommon\LayoutSupport.pas',
+  MMLayout in '..\mmcommon\MMLayout.pas';
 
 {$R *.res}
 
@@ -198,7 +200,7 @@ Version 2.1:
 [-] My bug: FixChests=1 was broken - event execution was stopped after the chest is opened
 [-] From Black Phantom patch...
 [-] Monsters summoning wrong monsters (e.g. Archmages summoning Sylphs)
-[-] Pressing Alt+Tab during the win movie 'breaking' the game 
+[-] Pressing Alt+Tab during the win movie 'breaking' the game
 
 Version 2.2:
 (MM6 - MM8)
@@ -233,20 +235,36 @@ Version 2.2:
 [-] Health bars of first 2 players and danger indicators of all players were misplaced (FixInterfaceBugs hidden option)
 
 Version 2.3:
+(MM6-MM8)
+[+] PaperDollInChests
+[+] Keyboard control
+[+] Enter in save/load dialogs
+[-] My bug: If somehow game window managed to become smaller than 640x480, it wasn't handled gracefully in software 32-bit color mode.
+(MM6, MM7)
+[-] My bug: Quick load key during the death movie was causing a crash afterwards
 (MM7, MM8)
-[+] Better blackening of background in moster info window (doesn't matter)
+[+] Widescreen support with new UI
+[+] Better blackening of background in moster info window (almost doesn't matter for users)
+[+] In D3D the game was prioritizing interacting with sprites on sides of the view too often
+[+] Accurate effects coordinates in D3D
+[+] Accurate coordinates of top part of the outdoor sky in D3D
+[-] In D3D on right/left sides of the screen bottom of sprites didn't react to clicks indoors
+[-] One bitmap loading function was unable to load uncompressed bitmaps
+[-] My bug: Precise mouse targeting wasn't working
 (MM7)
+[+] HigherCloseRingsButton
 [-] 'close rings view' in inventory was misplaced
-(MM8)
-[-] Buildings weren't drawn on sides of the screen
-[-] Indoors the FOV wasn't increased, so the area seen was smaller than in MM6 and MM7 
-[-] Enter key pressed in the main menu had an effect in the game
+[-] Sound issue - quick load during taking damage
 
 
+[!!] HD textures
+[!!] Prioritize geometry near the center
 [!!] Place items in chests vertically - 41FFB9 (MM7)
 [!!] Compact chest population
-[!!] What about adding a right-click option that lets you exit conversations and houses?
+[!!] Not completely vertical trees
+[!!] Night sky, better day/night cycle, sun?
 [!!] Different configs for mouse look/no mouse look?
+[!!] What about adding a right-click option that lets you exit conversations and houses?
 [!!] Configurable (Caps Lock) key for mouse look
 [!!] textures from bitmaps (and option to change their gamma or not to change??)
 
