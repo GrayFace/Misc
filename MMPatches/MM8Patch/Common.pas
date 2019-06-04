@@ -66,33 +66,56 @@ const
   _Time = puint64($B20EBC);
   _AbortMovie = pbool($FFDDEC);
   _ViewMulOutdoor = pint($6F300C);
-  _ViewMulIndoor = psingle($519454);
+  _ViewMulIndoorSW = psingle($519454);
   _RenderRect = PRect($FFDE9C);
+  _RenderRect2 = PRect($FFDE8C);
   __SpritesToDrawCount = $529F40;
+  _SpritesToDrawCount = pint(__SpritesToDrawCount);
   _CGame = PPChar($75CE00);
+  _IsLoadingBig = pbool($5878D8 + $3C);
+  _IsLoadingSmall = pbool($5878D8 + $158);
+  _LPicTopbar = pint($519264);
+  _ArcomageActive = PBoolean($516E6A);
+  _InventoryRingsShown = pbool($523040);
 
   _ReleaseMouse: TProcedure = ptr($433136);
   _DoSaveGame: procedure(n1,unk, autoquick: int) = ptr($45CF27);
   _DoLoadGame: procedure(n1,n2, slot: int) = ptr($45C906);
   _FindActiveMember: function(n1: int = 0; n2: int = 0; this: int = $B20E90):int = ptr($491A55);
   _ShowStatusText: procedure(a0, seconds: int; text: PChar) = ptr($4496C5);
+  _LoadPaperDollGraphics: procedure(_: int = 0; __: int = 0; unk: int = -1) = ptr($4398E6);
   _access: function(fileName: PChar; unk: int = 0): int cdecl = ptr($4DC7E5);
   _malloc: function(size:int):ptr cdecl = ptr($4D9F62);
   _new: function(size:int):ptr cdecl = ptr($4D9E0B);
+  _free: procedure(p:ptr) cdecl = ptr($4DA09C);
   _PermAlloc: function(n1,n2: int; allocator: ptr; name: PChar; size, unk: int):ptr = ptr($424B4D);
   _PermAllocator = ptr($73F910);
   _LoadMapTrack: procedure = ptr($4AA3E7);
   _ExitScreen: procedure(n1: int = 0; n2: int = 0; a1: int = $1006148; a6: int = 0; a5: int = 0; a4: int = 0; a3: int = 1; a2: int = 27) = ptr($4D1D6A);
+  _IsScreenOpaque: function: BOOL = ptr($421886);
+  _IsMoviePlaying: function: Boolean = ptr($4BCFA0);
+  _StopSounds: procedure(_: int = 0; __: int = 0; this: int = $FEB360; a1: int = -1; a2: int = -1) = ptr($4A9BF7);
   _strcmpi: function(const s1, s2: PChar): int cdecl = ptr($4DA920);
 
-  _LodFind: function(n1, n2, Lod, NoSort: int; Name: PChar): ptr = ptr($45EFFF); 
+  _CommandsArray = $75E3C0;
+  _AddCommand: procedure(a1, a2, this, cmd: int) = ptr($47519C);
+
+  _LodFind: function(n1, n2, Lod, NoSort: int; Name: PChar): ptr = ptr($45EFFF);
   _fread: function(var Buf; Size, Count: int; f: ptr): int cdecl = ptr($4DA641);
   _Deflate: procedure(n1: int; UnpSize: pint; var UnpBuf; PkSize: int; var Pk) = ptr($4D1EC0);
-  _BitmapsLod = $72DC60;
-
   _LoadPalette: function(n1, n2, Palettes, PalId: int): int = ptr($489C9F);
+{    pk: int;  // palette kind: 2 = 16 bits, 1 = 24 bits, 0 = none
+    forceNew, inEnglishD: BOOL;
+  _LoadLodBitmap: function(_,__, lod: int; param: TLoadBitmapParams; name: PChar): int = ptr($410D70);}
+  _LoadBitmapInPlace: function(_,__, lod: int; palKind: int; name: PChar; var bmp): int = ptr($411931);
+  //_FreeBitmap: procedure(_,_1: int; var bmp) = ptr($410A10);
+  _BitmapsLod = $72DC60;
+  _IconsLod = $70D3E8;
+  _LoadPcx: function(_,_1: int; var pcx; _2: int; lang: BOOL; name: PChar): int = ptr($4106F3);
+  _FreePcx: procedure(_,_1: int; var pcx) = ptr($40F7F6);
+
   _LockSurface: function(surf: IUnknown; var desc; flags: int = 1): bool stdcall = ptr($49E9C0);
-  
+
   _Chest_CanPlaceItem: function(n1, itemType, pos, chest: int): BOOL = ptr($41F293);
   _Chest_PlaceItem: procedure(n1, itemIndex, pos, chest: int) = ptr($41F55E);
   _ChestWidth = $4F3B04;
@@ -114,17 +137,21 @@ const
   _CharOff_Recover = $1BF2;
   _CharOff_SpellPoints = $1BFC;
   _CharOff_Size = $1D28;
-  
+
   _ItemOff_Size = $24;
 
   _MonOff_vx = $9C;
   _MonOff_vy = $9E;
   _MonOff_Size = $3CC;
-  
+
+  _LodOff_BmpNum = $11B7C;
+
 const
   _SpritesLod = $71EFA8;
   _SpritesOld = _SpritesLod + $23C;
   SpritesMax = 10000;
+
+function GameCursorPos:PPoint;
 
 const
   SWrong: string = 'This is not a valid mm8.exe file. Check failed at address %X';
@@ -133,5 +160,10 @@ const
   DummyFalse: Bool = false;
 
 implementation
+
+function GameCursorPos:PPoint;
+begin
+  Result:= PPoint(PPChar($75D770)^ + $108);
+end;
 
 end.

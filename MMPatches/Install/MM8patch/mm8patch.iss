@@ -46,14 +46,18 @@ RussianGameVersion=Russian version of the game
 ru.RussianGameVersion=Русская версия игры
 LodsTask=Install LOD archives with fixes for particular maps and game progression%nUncheck this task if you are installing the patch over a big mod like MM6+7+8 merge.
 ru.LodsTask=LOD-архивы с исправлениями для конкретных карт и по ходу сюжета%nОтключите эту задачу, если Вы устанавливаете патч поверх большого мода, такого как объединение MM6+7+8.
-WaterTask=Use improved water animation.%nUncheck this task if you are installing the patch over MM6+7+8 merge.
-ru.WaterTask=Использовать улучшенную анимацию воды.%nОтключите эту задачу, если устанавливаете патч поверх объединения MM6+7+8.
+WaterTask=Use improved water animation%nUncheck this task if you are installing the patch over MM6+7+8 merge.
+ru.WaterTask=Использовать улучшенную анимацию воды%nОтключите эту задачу, если устанавливаете патч поверх объединения MM6+7+8.
 IconsTask=Install LOD archive with one interface fix%nUncheck this task if you are installing the patch over a mod that recolors interface.
 ru.IconsTask=LOD-архив с одним исправлением для интерфейса%nОтключите эту задачу, если Вы устанавливаете патч поверх мода, перекрашивающего интерфейс.
+UITask=Use widescreen-friendly flexible interface
+ru.UITask=Включить гибкий интерфейс, адаптированный для широкоэкранников
 
 [Tasks]
 Name: RusFiles1; Description: {cm:RussianGameVersion}; Check: RussianTaskCheck(true);
 Name: RusFiles2; Description: {cm:RussianGameVersion}; Flags: unchecked; Check: RussianTaskCheck(false);
+Name: ui1; Description: {cm:UITask}; Check: UITaskCheck(true);
+Name: ui2; Description: {cm:UITask}; Flags: unchecked; Check: UITaskCheck(false);
 Name: NoFakeMouseLook1; Description: {cm:NoFakeMouseLook}; Check: LookTaskCheck(true);
 Name: NoFakeMouseLook2; Description: {cm:NoFakeMouseLook}; Flags: unchecked; Check: LookTaskCheck(false);
 Name: lods1; Description: {cm:LodsTask}; Check: LodsTaskCheck(true);
@@ -98,6 +102,11 @@ function GetInstallDir(param: string): string;
 begin
   if not RegQueryStringValue(HKLM, 'SOFTWARE\New World Computing\Might and Magic Day of the Destroyer\1.0', 'AppPath', Result) then
     Result:= ExpandConstant('{pf}\3DO\Might and Magic VIII');
+end;
+
+function MMIni: string;
+begin
+  Result:= ExpandConstant('{app}\{#m}.ini');
 end;
 
 function CheckVer(ver: Cardinal): Boolean;
@@ -171,7 +180,7 @@ var
 
 function LookTaskCheck(checked: Boolean): Boolean;
 begin
-  LookVisible:= GetIniInt('Settings', 'MouseLookBorder', 200, 0, 0, ExpandConstant('{app}\mm8.ini')) >= 0;
+  LookVisible:= GetIniInt('Settings', 'MouseLookBorder', 200, 0, 0, MMIni) >= 0;
   if LookVisible and not LookChecked then
   begin
     LookEnabled:= not CheckVer($10006);  // 1.5.1 and lower didn't have this option in setup
@@ -211,11 +220,22 @@ begin
 end;
 
 
+var
+  UI: TTask;
+
+function UITaskCheck(checked: Boolean): Boolean;
+begin
+  if not UI.Checked then
+    UI.On:= not CheckVer($20003);
+  Result:= (UpperCase(GetIniString('Settings', 'UILayout', '', MMIni)) <> 'UI') and CheckTask(UI, checked);
+end;
+
+
 procedure AfterInst;
 var
  ini: string;
 begin
-  ini:= ExpandConstant('{app}\{#m}.ini');
+  ini:= MMIni;
   if IsTaskSelected('NoFakeMouseLook1 NoFakeMouseLook2') then
     SetIniInt('Settings', 'MouseLookBorder', -1, ini);
   if IsTaskSelected('water1 water2') and (GetIniInt('Settings', 'HDWTRCount', 8, 0, 0, ini) <> 14) then
@@ -239,4 +259,6 @@ begin
     SetIniInt('MipmapsBase', 'Grastyl', 256, ini);
     SetIniInt('MipmapsBase', 'Grastyl2', 256, ini);
   end;
+  if IsTaskSelected('ui1 ui2') then
+    SetIniString('Settings', 'UILayout', 'UI', ini);
 end;

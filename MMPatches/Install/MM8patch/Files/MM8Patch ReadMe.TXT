@@ -1,4 +1,4 @@
-GrayFace MM8 Patch v2.2
+GrayFace MM8 Patch v2.3
 By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
@@ -7,6 +7,28 @@ Save files are, of course, fully compatible with the unpatched game in both dire
 The patch has no uninstaller to make things simpler.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
+
+New in version 2.3:
+  << MM6 - MM8 >>
+[+] PaperDollInChests option shows paper doll in chest dialog: value 1 (default) will make it visible when you open inventory of a player, value 2 will make it visible right when you open the chest, value 0 will disable it.
+[+] Keyboard control: some dialogs can now be controlled by pressing Up/Down and Enter. E.g. NPC conversations. Only those dialogs that already had everything in place to support it are effected.
+[+] Save/load dialogs now react to Enter key.
+[+] Newer MP3DEC.ASI version. In theory this might fix some problems with MP3 playback.
+[-] My bug: If somehow game window managed to become smaller than 640x480, that wasn't handled gracefully in software 32-bit color mode.
+  << MM7, MM8 >>
+[+] Widescreen-friendly flexible UI in Hardware 3D mode.
+[+] Accurate effects coordinates in Hardware 3D mode.
+[+] Accurate coordinates of top part of the outdoor sky in Hardware 3D mode.
+[+] In Hardware 3D mode the game was prioritizing interacting with sprites on sides of the view too often.
+[-] In Hardware 3D mode bottom of sprites didn't react to clicks indoors when mouse is away from horizontal center of the view.
+[-] My bug: "Pixel-perfect mouse targeting in HD mode" wasn't working.
+  << MM8 >>
+[-] Buildings weren't drawn on sides of the view.
+[-] Indoors the field of view wasn't increased to account for wider view, so the area of view was even smaller than in MM6 and MM7.
+[-] Quickly pressing R, R, Esc to rest was glitching the game if monsters attacked you in your sleep.
+[-] Enter key pressed in the main menu had an effect in the game (when starting a new game).
+[-] Screenshots of Saves were shrinked horizontally (fixed in Hardware 3D mode only for now).
+
 
 New in version 2.2:
   << MM6 - MM8 >>
@@ -29,7 +51,7 @@ New in version 2.2:
 [+] Pixel-perfect mouse targeting in HD mode.
 [+] Set TurnBasedWalkDelay to a value of your choice (e.g. 100) to be able to do individual steps in the walking phase of turn-based combat.
 [+] Better water animation.
-[+] MipmapsBase section in the INI controls how many mipmip levels matching textures can use. Smaller values lead to more mipmaps.
+[+] MipmapsBase section in the INI controls how many mipmap levels matching textures can use. Smaller values lead to more mipmaps.
 [+] Separate HDWTRCountHWL, HDWTRDelayHWL options for the NoD3DBitmapHwl=0 case.
 [+] Hidden FixMonsterSummon option (1 - enabled by default).
 [-] Some small cosmetic bugs fixed by changing pictures from icons.lod.

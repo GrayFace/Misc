@@ -12,7 +12,9 @@ uses
   DXProxy in '..\mmcommon\DXProxy.pas',
   MMCommon in '..\mmcommon\MMCommon.pas',
   D3DHooks in '..\mmcommon\D3DHooks.pas',
-  MMHooks in '..\mmcommon\MMHooks.pas';
+  MMHooks in '..\mmcommon\MMHooks.pas',
+  LayoutSupport in '..\mmcommon\LayoutSupport.pas',
+  MMLayout in '..\mmcommon\MMLayout.pas';
 
 {$R *.res}
 
@@ -226,6 +228,28 @@ Version 2.2:
 [-] 8 leftmost pixels of paper doll area didn't react to clicks
 [-] Monsters/items/effects not visible on the sides of the view outdoors
 [-] Party wasn't centered on the minimap
+
+Version 2.3:
+(MM6-MM8)
+[+] PaperDollInChests
+[+] Keyboard control
+[+] Enter in save/load dialogs
+[-] My bug: If somehow game window managed to become smaller than 640x480, it wasn't handled gracefully in software 32-bit color mode.
+(MM7, MM8)
+[+] Widescreen support with new UI
+[+] Better blackening of background in moster info window (almost doesn't matter for users)
+[+] In D3D the game was prioritizing interacting with sprites on sides of the view too often
+[+] Accurate effects coordinates in D3D
+[+] Accurate coordinates of top part of the outdoor sky in D3D
+[-] In D3D on right/left sides of the screen bottom of sprites didn't react to clicks indoors
+[-] One bitmap loading function was unable to load uncompressed bitmaps
+[-] My bug: Precise mouse targeting wasn't working
+(MM8)
+[-] Buildings weren't drawn on sides of the screen
+[-] Indoors the FOV wasn't increased, so the area of view was smaller than in MM6 and MM7
+[-] Quickly pressing R,R,Esc to rest was glitching the game if monsters attacked you in your sleep  
+[-] Enter key pressed in the main menu had an effect in the game
+[-] Screenshots of Saves were stretched vertically (fixed in D3D only for now)
 
 
 
