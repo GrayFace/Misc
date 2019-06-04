@@ -60,16 +60,14 @@ stage DrawMouse
 
 STAGE Read
 
-SCREEN					ScreenW	ScreenH			HasAdv						READ ADV
+SCREEN									HasAdv and s0						READ ADV
 
-icon UI-Comp								+						Compass
-	307	10	25	9	4	1		+						Compass
-
-var w	10
-icon UI-FrGol	R		144-w				+	+						Gold
-	171	1	142-w	21	0	0	+	+						Gold
-icon compcovr			18-w		124	3	-	erase						Gold
-icon topbar	295	3	18-w	18	124	3	-	behind						Gold
+icon UI-FrMnu							+	+						Menu	
+	379	0	40	25	4	4	+	+						Menu	Notes
+	385	6	30	15	0	0	+	-			44	34		Menu	Area: Notes
+	479	0	95	25	R-5	4	-	+						Menu	Overview, Main Menu
+	479	6	95	15	R-5	0	+	-				34		Menu	Area: Overview, Main Menu
+	479+90	6	5	15	R	0	+	-				34		Menu	Area: Main Menu
 
 icon UI-FrGol			149-w				+	+						Food
 	80	1	99	21	2	0	+	+						Food	Food
@@ -78,12 +76,16 @@ icon UI-FrGol			149-w				+	+						Food
 icon topbar	419+w	1	48-w	21	R	0	-	erase						Food	Erase Background
 icon topbar	179	1	48-w	21	R	0	-	behind						Food	New Background
 
-icon UI-FrMnu							+	+						Menu
-	379	0	40	25	4	4	+	+						Menu	Notes
-	385	6	30	15	0	0	+	-			44	34		Menu	Area: Notes
-	479	0	95	25	R-5	4	-	+						Menu	Overview, Main Menu
-	479	6	95	15	R-5	0	+	-				34		Menu	Area: Overview, Main Menu
-	479+90	6	5	15	R	0	+	-				34		Menu	Area: Main Menu
+SCREEN									HasAdv						INCLUDE s20
+
+var w	10
+icon UI-FrGol	R		144-w				+	+						Gold
+	171	1	142-w	21	0	0	+	+						Gold
+icon compcovr			18-w		124	3	-	erase						Gold
+icon topbar	295	3	18-w	18	124	3	-	behind						Gold
+
+icon UI-Comp								+	Options.NoCompass=0					Compass
+	307	10	25	9	4	1		+	Options.NoCompass=0					Compass
 
 	0	0	20	20			+	-			67	67		Man	Click Area
 	0	1	61	63	3	B-1	-	+						Man	Icon
@@ -102,7 +104,7 @@ icon UI-FrSp							-	behind						Skull	Border
 	624	460	16	20	R	B	+	+						Minimap
 icon UI-MMap							-							Minimap
 
-; Spells
+SCREEN									HasAdv and s0						SPELLS
 var x y	18	6
 if	8+x	76+y
 	8	76	64	64				+						Fly

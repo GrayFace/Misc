@@ -123,7 +123,7 @@ Type: files; Name: "{app}\{#MM}.ICD";
 [Files]
 #define FlagsOlder (loc ? "Flags: promptifolder;" : "")
 #define FlagOlder (loc ? "promptifolder" : "")
-Source: "Files\*.*"; Excludes: "*.bak"; DestDir: "{app}"; Flags: {#FlagOlder} ignoreversion; AfterInstall: AfterInst;
+Source: "Files\*.*"; Excludes: "*.bak"; DestDir: "{app}"; Flags: {#FlagOlder} ignoreversion recursesubdirs; AfterInstall: AfterInst;
 Source: "Data\*"; Excludes: "*.bak"; DestDir: "{app}\Data\"; {#FlagsOlder} Tasks: lods1 lods2;
 Source: "OldWater\00 patch.bitmaps.lod"; DestDir: "{app}\Data\"; Check: OldWaterCheck;
 Source: "OptData\01 dragon.games.lod"; DestDir: "{app}\Data\"; Flags: promptifolder; Tasks: dragon1 dragon2;

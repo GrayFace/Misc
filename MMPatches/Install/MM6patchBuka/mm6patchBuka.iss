@@ -49,7 +49,7 @@ Type: files; Name: "{app}\SmackW32.NEW";
 Type: files; Name: "{app}\MP3DEC.ASI";
 
 [Files]
-Source: "Files\*"; Excludes: "*.bak"; DestDir: "{app}"; Flags: ignoreversion; AfterInstall: AfterInst;
+Source: "Files\*"; Excludes: "*.bak"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs; AfterInstall: AfterInst;
 Source: "Data\*"; Excludes: "*.bak"; DestDir: "{app}\Data\"; Flags: promptifolder; Tasks: lods1 lods2;
 Source: "OptFiles\*"; Excludes: "*.bak"; DestDir: "{app}"; Flags: onlyifdoesntexist recursesubdirs;
 
