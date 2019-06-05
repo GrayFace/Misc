@@ -69,6 +69,7 @@ icon UI-FrMnu							+	+						Menu
 	479	6	95	15	R-5	0	+	-				34		Menu	Area: Overview, Main Menu
 	479+90	6	5	15	R	0	+	-				34		Menu	Area: Main Menu
 
+var w	10
 icon UI-FrGol			149-w				+	+						Food
 	80	1	99	21	2	0	+	+						Food	Food
 	419+w	1	48-w	21	R	0	+	+						Food	Rest
@@ -78,7 +79,6 @@ icon topbar	179	1	48-w	21	R	0	-	behind						Food	New Background
 
 SCREEN									HasAdv						INCLUDE s20
 
-var w	10
 icon UI-FrGol	R		144-w				+	+						Gold
 	171	1	142-w	21	0	0	+	+						Gold
 icon compcovr			18-w		124	3	-	erase						Gold
