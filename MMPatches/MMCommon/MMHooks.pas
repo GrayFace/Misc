@@ -413,6 +413,14 @@ end;
 
 procedure PaperDollInChestsDraw;
 asm
+{$IFDEF MM6}
+  cmp dword ptr [CurrentScreen], 10
+  jz @mine
+  cmp dword ptr [CurrentScreen], 15
+  jz @mine
+  ret
+@mine:
+{$ENDIF}
   cmp dword ptr [RingsShown], 0
   mov eax, m6*$412370 + m7*$43CC9F
   jz @norings
@@ -717,11 +725,21 @@ asm
 @ok:
 end;
 
+//----- Allow right click in item spell dialogs
+
+procedure EnchantItemRightClick;
+asm
+  cmp eax, 23 + m6*80
+  jnz @ok
+  mov [esp], m6*$4116F1 + m8*$416AB3
+@ok:
+end;
+
 //----- HooksList
 
 var
 {$IFDEF MM6}
-  Hooks: array[1..14] of TRSHookInfo = (
+  Hooks: array[1..15] of TRSHookInfo = (
     (p: $457567; newp: @WindowWidth; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $45757D; newp: @WindowHeight; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $454340; newp: @WindowProcHook; t: RShtFunctionStart; size: 8), // Window procedure hook
@@ -735,6 +753,7 @@ var
     (p: $419DBF; newp: @KeyControl; t: RShtBefore; size: 6), // Control certain dialogs with keyboard
     (p: $45472C; size: 6), // Control certain dialogs with keyboard (allow keyboard everywhere)
     (p: HookWindowProc; newp: @KeyControlCheckUnblock; t: RShtBefore), // Control certain dialogs with keyboard
+    (p: $41146D; newp: @EnchantItemRightClick; t: RShtAfter), // Allow right click in item spell dialogs
     ()
   );
 {$ELSEIF defined(MM7)}
@@ -768,7 +787,7 @@ var
     ()
   );
 {$ELSE}
-  Hooks: array[1..23] of TRSHookInfo = (
+  Hooks: array[1..24] of TRSHookInfo = (
     (p: $47AB35; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Monsters not visible on the sides of the screen
     (p: $47A55E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Items not visible on the sides of the screen
     (p: $48B37E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Effects not visible on the sides of the screen
@@ -791,6 +810,7 @@ var
     (p: $41C25D; newp: @KeyControl; t: RShtAfter; size: 6), // Control certain dialogs with keyboard
     (p: $461F41; size: 2), // Control certain dialogs with keyboard (allow keyboard everywhere)
     (p: HookWindowProc; newp: @KeyControlCheckUnblock; t: RShtBefore), // Control certain dialogs with keyboard
+    (p: $4163EA; newp: @EnchantItemRightClick; t: RShtAfter), // Allow right click in item spell dialogs
     ()
   );
 {$IFEND}

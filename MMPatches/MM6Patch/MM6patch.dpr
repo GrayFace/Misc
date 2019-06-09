@@ -243,6 +243,12 @@ Version 2.3:
 (MM6, MM7)
 [-] My bug: Quick load key during the death movie was causing a crash afterwards
 
+Version 2.3.1:
+(MM6, MM8)
+[+] Right click in Enchant Item dialog
+(MM6)
+[-] My bug: Enchant Item and Golden Touch spells were bugged, effected by PaperDollInChests option
+
 
 Если загрузить сейв, где все рожи одинаковые, а потом сейв с разными, будут черные пятна на месте рож
 

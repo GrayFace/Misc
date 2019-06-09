@@ -136,6 +136,8 @@ begin
 end;
 
 constructor TLayoutSupport.Create;
+var
+  v1, v2, v3, v4: int;
 begin
   DL:= TDrawLayout.Create;
   L:= DL.Layout;
@@ -154,6 +156,8 @@ begin
   DL.AddFixedCanvas(lvcPopupArea, nil, 0, 0);
   DL.AddFixedCanvas(lvcPopupArea2, nil, 0, 0);
   DL.AddFixedCanvas(lvcPartyBuffs, @PartyBuffs, length(PartyBuffs), 1);
+  if RSGetModuleVersion(v1, v2, v3, v4) then
+    L.Vars[lvVersion]:= v1*100 + v2 + v3/100;
   L.Vars[lvRenderCenterX]:= 0.5;
   L.Vars[lvRenderCenterY]:= 0.5;
   L.Vars[lvDebug]:= NaN;
@@ -245,6 +249,7 @@ begin
         sh:= bh;
         Dest:= nr;
         r:= Rect(0, 0, RectW(nr), RectH(nr));
+        RSSetResampleParams(ScalingParam1, ScalingParam2);
         info0.Init(min(r.Right, sw), min(r.Bottom, sh), r.Right, r.Bottom);
         IntersectRect(r, r, Bounds(-nr.Left, -nr.Top, ScreenW, ScreenH));
         info:= info0.ScaleRect(r);
@@ -541,12 +546,12 @@ begin
         Free;
       end;
     UpdateMinMax;
-    for i:= 0 to high(OnLoad) do
-      OnLoad[i]();
   except
     RSShowException;
     Halt;
   end;
+  for i:= 0 to high(OnLoad) do
+    OnLoad[i]();
 end;
 
 function TLayoutSupport.SwapCanvas(item: TLayoutContextSwap): Boolean;
@@ -803,17 +808,29 @@ begin
   Result:= Layout.Update;
 end;
 
-procedure UILayoutReadFile(Name: PChar); stdcall;
+procedure DoReadLayout(Name: PChar; str: Boolean);
 begin
   if _IsD3D^ then
     try
-      Layout.L.Read(Name);
+      if str then
+        Layout.L.DoRead(Name)
+      else
+        Layout.L.Read(Name);
       Layout.UpdateMinMax;
       Layout.Update;
     except
       RSShowException;
-      Halt;
     end;
+end;
+
+procedure UILayoutReadString(Name: PChar); stdcall;
+begin
+  DoReadLayout(Name, true);
+end;
+
+procedure UILayoutReadFile(Name: PChar); stdcall;
+begin
+  DoReadLayout(Name, false);
 end;
 
 procedure ChangeUILayout(Name: PChar); stdcall;
@@ -844,6 +861,7 @@ exports
   UILayoutAddCanvas,
   UILayoutUpdate,
   UILayoutReadFile,
+  UILayoutReadString,
   UILayoutClearCache,
   UILayoutOnLoad,
   ChangeUILayout;

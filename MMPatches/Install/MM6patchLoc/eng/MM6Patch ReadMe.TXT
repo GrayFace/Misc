@@ -1,4 +1,4 @@
-GrayFace MM6 Patch v2.3
+GrayFace MM6 Patch v2.3.1
 By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
@@ -7,6 +7,13 @@ Save files are, of course, fully compatible with the unpatched game in both dire
 The patch has no uninstaller to make things simpler.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
+
+New in version 2.3.1:
+  << MM6, MM8 >>
+[+] Right click menu works in item selection dialog of Enchant Item and similar spells. In MM7 it already works by default.
+  << MM6 >>
+[-] My bug: Enchant Item and Golden Touch spells were bugged, effected by PaperDollInChests option.
+
 
 New in version 2.3:
   << MM6 - MM8 >>
@@ -19,7 +26,6 @@ New in version 2.3:
 [-] My bug: Quick load key pressed during the death movie was causing a crash afterwards.
   << MM6 >>
 [-] Text files fixes for Russian (Buka) version by tolich.
-
 
 New in version 2.2:
   << MM6 - MM8 >>

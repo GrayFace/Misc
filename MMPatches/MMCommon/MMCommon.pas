@@ -1014,17 +1014,23 @@ var
   b: TBitmap;
 begin
   b:= TBitmap.Create;
-  case bits of
-    32:   b.PixelFormat:= pf32bit;
-    24:   b.PixelFormat:= pf24bit;
-    16,0: b.PixelFormat:= pf16bit;
-    15:   b.PixelFormat:= pf15bit;
-    else  Assert(false);
+  try
+    case bits of
+      32:   b.PixelFormat:= pf32bit;
+      24:   b.PixelFormat:= pf24bit;
+      16,0: b.PixelFormat:= pf16bit;
+      15:   b.PixelFormat:= pf15bit;
+      else  Assert(false);
+    end;
+    b.Width:= w;
+    b.Height:= h;
+    RSBufferToBitmap(buf, b);
+    RSCreateDir(ExtractFilePath(s));
+    b.SaveToFile(s);
+  except
+    RSShowException;
   end;
-  b.Width:= w;
-  b.Height:= h;
-  RSBufferToBitmap(buf, b);
-  b.SaveToFile(s);
+  b.Free;
 end;
 
 exports

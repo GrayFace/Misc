@@ -74,7 +74,6 @@ type
     procedure Error(const str: string; line: int);
     function CustomOp(const s: string; var k: int; var op: TRSOperator; kind: TRSCustomOpKind): Boolean;
     procedure ReadExpr(const s: string; var a: TRSOperatorArray; row, col: int);
-    procedure DoRead(const ss: string);
     procedure SetVar(const Name: string; idx: int; v: ext);
     function GetVar(const Name: string; idx: int): ext;
     function GetQVar(const s: string; var v: ext): Boolean;
@@ -98,6 +97,7 @@ type
     constructor Create;
     destructor Destroy; override;
     function AddCanvas(const Name: string): int;
+    procedure DoRead(const ss: string);
     procedure Read(const fname: string);
     function Update(JustLimits: Boolean = false): Boolean;
     function HasVar(const Name: string): Boolean;
@@ -181,6 +181,7 @@ const
   lvDebug = 'Game.dbg';
   lvUpdateCountdown = 'Game.UpdateCountdown';
   lvReloadLayout = 'Game.ReloadLayout';
+  lvVersion = 'Game.Version';
   lvKeyPressed = 'KeyPressed.';
   CanvasScreen = -1;
   CanvasTimer = -2;
@@ -491,8 +492,19 @@ var
     i: int;
   begin
     for i:= 0 to n - 1 do
-      if (TmpItems[i].Canvas = k) or (TmpItems[i].NewCanvas = k) then
-        TmpItems[i].Stage:= -1;
+      with TmpItems[i] do
+        if (Canvas = k) or (NewCanvas = k) or (IfCanvas = k) and (IfXY.X >= 0) then
+          Stage:= -1;
+  end;
+
+  procedure EraseDraw(n: int; k1, k2: int);
+  var
+    i: int;
+  begin
+    for i:= 0 to n - 1 do
+      with TmpItems[i] do
+        if (Canvas = k1) and (NewCanvas = k2) then
+          Stage:= -1;
   end;
 
 var
@@ -638,7 +650,9 @@ begin
             if SameText(CmdParam, 'stage') then
               EraseStage(n, Stages.IndexOf(CmdParam2))
             else if SameText(CmdParam, 'canvas') then
-              EraseCanvas(n, MainCanvas);
+              EraseCanvas(n, MainCanvas)
+            else if SameText(CmdParam, 'draw') then
+              EraseDraw(n, Canvas, NewCanvas);
         lcTimer:
           if not JustLimits and InScreen and CheckCond and AddTimer(TmpItems[n]) then
             inc(n);
