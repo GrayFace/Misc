@@ -1,4 +1,4 @@
-GrayFace MM7 Patch v2.3
+GrayFace MM7 Patch v2.3.1
 By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
@@ -7,6 +7,11 @@ Save files are, of course, fully compatible with the unpatched game in both dire
 The patch has no uninstaller to make things simpler.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
+
+New in version 2.3.1:
+  << MM7, MM8 >>
+[-] My bug: ScalingParam1 and ScalingParam2 options were ignored in flexible UI mode.
+
 
 New in version 2.3:
   << MM6 - MM8 >>
@@ -35,7 +40,6 @@ New in version 2.3:
 [-] Castle Gryphonheart (d33): Taken paintings were reappearing upon reentry.
 [-] The Haunted Mansion (d37): Taken painting was reappearing on the wall upon reentry.
 [-] In the fix for Thunderfist Mountain exits the party was facing in wrong direction upon entering/exiting the dungeon.
-
 
 New in version 2.2:
   << MM6 - MM8 >>

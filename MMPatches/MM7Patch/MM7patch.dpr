@@ -256,6 +256,11 @@ Version 2.3:
 [-] 'close rings view' in inventory was misplaced
 [-] Sound issue - quick load during taking damage
 
+Version 2.3.1:
+(MM7, MM8)
+[+] A few new UI layout commands
+[-] My bug: ScalingParam1 and ScalingParam2 were ignored in flexible UI mode
+
 
 [!!] HD textures
 [!!] Prioritize geometry near the center
@@ -267,6 +272,9 @@ Version 2.3:
 [!!] What about adding a right-click option that lets you exit conversations and houses?
 [!!] Configurable (Caps Lock) key for mouse look
 [!!] textures from bitmaps (and option to change their gamma or not to change??)
+
+The "of Spirit Magic" effect on the relic, Glory Shield, does not work.
+The "-30 Earth Resistance" on the relic, Kelebrim, does not work.
 
 - if whole party dies Zombies lose "zombie" status, but portrait gets stuck
 
