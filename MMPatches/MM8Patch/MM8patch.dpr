@@ -251,6 +251,13 @@ Version 2.3:
 [-] Enter key pressed in the main menu had an effect in the game
 [-] Screenshots of Saves were stretched vertically (fixed in D3D only for now)
 
+Version 2.3.1:
+(MM6, MM8)
+[+] Right click in Enchant Item dialog
+(MM7, MM8)
+[+] A few new UI layout commands
+[-] My bug: ScalingParam1 and ScalingParam2 were ignored in flexible UI mode
+
 
 
 

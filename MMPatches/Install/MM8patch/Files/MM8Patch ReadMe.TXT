@@ -1,4 +1,4 @@
-GrayFace MM8 Patch v2.3
+GrayFace MM8 Patch v2.3.1
 By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
@@ -7,6 +7,15 @@ Save files are, of course, fully compatible with the unpatched game in both dire
 The patch has no uninstaller to make things simpler.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
+
+New in version 2.3.1:
+  << MM6, MM8 >>
+[+] Right click menu works in item selection dialog of Enchant Item and similar spells. In MM7 it already works by default.
+  << MM7, MM8 >>
+[-] My bug: ScalingParam1 and ScalingParam2 options were ignored in flexible UI mode.
+  << MM8 >>
+[+] UI.txt: Clicking on the man that symbolizes party buffs now brings up the quest log. Turns out that's what happens if you click the top-left pixel of it in regular UI mode.
+
 
 New in version 2.3:
   << MM6 - MM8 >>
@@ -28,7 +37,6 @@ New in version 2.3:
 [-] Quickly pressing R, R, Esc to rest was glitching the game if monsters attacked you in your sleep.
 [-] Enter key pressed in the main menu had an effect in the game (when starting a new game).
 [-] Screenshots of Saves were shrinked horizontally (fixed in Hardware 3D mode only for now).
-
 
 New in version 2.2:
   << MM6 - MM8 >>

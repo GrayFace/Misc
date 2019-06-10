@@ -87,7 +87,7 @@ icon topbar	295	3	18-w	18	124	3	-	behind						Gold
 icon UI-Comp								+	Options.NoCompass=0					Compass
 	307	10	25	9	4	1		+	Options.NoCompass=0					Compass
 
-	0	0	20	20			+	-			67	67		Man	Click Area
+	0	0	1	1			+	-			67	67		Man	Click Area
 	0	1	61	63	3	B-1	-	+						Man	Icon
 icon asiL00		B	61	3	3	B-1	-	erase						Man	Remove Border
 icon UI-FrSp							-	behind						Man	Border
