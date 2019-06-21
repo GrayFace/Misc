@@ -15,8 +15,6 @@ procedure ApplyHooksD3D;
 
 implementation
 
-uses Types;
-
 //----- Attacking big monsters D3D
 
 var
@@ -442,9 +440,6 @@ begin
     Layout.SwapCanvas(lcsMenu);
 end;
 
-{var
-  LastItem: int;}
-
 procedure MouseItemDrawHook(f: TRightClickDrawProc; _, this: int);
 var
   p: TPoint;
@@ -550,83 +545,66 @@ asm
   call PreciseSky1
   mov ecx, eax
 end;
-{
-procedure PreciseSkyHook2;
-asm
-  fld qword ptr PreciseSky[8]
-  fst [ebp - $34]
-end;
 
-procedure PreciseSkyHook3;
-const
-  mul: int = 2;
-asm
-  fld qword ptr PreciseSky[8]
-  fimul mul
-  fisub dword ptr [$FFDEA8]
-end;
+//----- Draw sprites at an angle
+
+type
+  TVisibleSprite = packed record
+    Texture: int;
+    VertCount: int;
+    v1, v2, v3, v4: TD3DTLVertex;
+    ZBuf, _1, _2, ZBufAndObjKind, SpriteToDrawIndex: int;
+  end;
+
+{
+3D transform sprite rect:
+y = y0 / L0
+x = x0 / L0
+y' = y*cos(a)
+dL = y0*sin(a) = y*L0*sin(a)
+x' = x0 / (L0 + dL) = x / (1 + y*sin(a))
+
+0-3
+| |
+1-2
 }
 
-{const
-  PreciseSkyMul = 2;//$1000;
-type
-  TPreciseSky1 = procedure(_, a1, a2: int);
-
-procedure PreciseSky1(f: TPreciseSky1; a1, a2: int);
+procedure SpritesAngleProc(var sprite: TDrawSpriteD3D);
 var
-  mul: int;
-  r: TRect;
-  p: TPoint;
+  w, h, si, co, mul: ext;
 begin
-  mul:= 1;
-  if InRange(_Party_Angle^, -256, 256) then
-    mul:= PreciseSkyMul;
-  r:= _RenderRect^;
-  p:= _ScreenMiddle^;
-  with _RenderRect^, _ScreenMiddle^ do
+  SinCos(_Party_Angle^*Pi/1024/3, si, co);
+  with sprite do
   begin
-    Left:= Left*mul;
-    Top:= Top*mul;
-    Right:= Right*mul;
-    Bottom:= (Bottom + 1)*mul - 1;
-    X:= X*mul;
-    Y:= Y*mul;
+    //w:= Vert[3].sx - Vert[0].sx;
+    h:= Vert[1].sy - Vert[0].sy;
+    //w:= w/max(0.5, 1 + h/GetViewMul*si);
+    mul:= 1/EnsureRange(1 + h/GetViewMul*si, 0.9, 1.25);
+    Vert[0].sx:= (Vert[0].sx - _ScreenMiddle.X)*mul + _ScreenMiddle.X;
+    Vert[3].sx:= (Vert[3].sx - _ScreenMiddle.X)*mul + _ScreenMiddle.X;
+    Vert[0].sy:= Vert[1].sy - h*co;
+    Vert[3].sy:= Vert[0].sy;
   end;
-  //_ViewMulOutdoor^:= _ViewMulOutdoor^*mul;
-  try
-    f(0, a1, a2);
-  except
-  end;
-  //_ViewMulOutdoor^:= _ViewMulOutdoor^ div mul;
-  _RenderRect^:= r;
-  _ScreenMiddle^:= p;
 end;
 
-procedure PreciseSky2(v: PD3DTLVertex; n: int);
+{procedure SpritesAngleProc(var sprite: TDrawSpriteD3D);
 var
-  mul: ext;
+  a: ext;
 begin
-  if not InRange(_Party_Angle^, -256, 256) then  exit;
-  mul:= PreciseSkyMul;
-  for n:= n downto 1 do
-    with v^ do
+  a:= _Party_Angle^*Pi/1024/4*0;
+  with sprite do
+    if a <> 0 then
     begin
-      sx:= sx/mul;
-      sy:= sy/mul;
-      inc(v);
+      Vert[0].sy:= Vert[1].sy - (Vert[1].sy - Vert[0].sy)*cos(a);
+      Vert[3].sy:= Vert[0].sy;
     end;
-end;
-
-procedure PreciseSkyHook2;
-asm
-  mov edx, [esp + 8]
-  push eax
-  mov eax, [esp + 8]
-  push ecx
-  call PreciseSky2
-  pop ecx
-  pop eax
 end;}
+
+procedure SpritesAngleHook;
+asm
+  lea eax, $FC50D0[esi]
+  call SpritesAngleProc
+end;
 
 //----- HooksList
 
@@ -698,7 +676,7 @@ var
     ()
   );
 {$ELSE}
-  Hooks: array[1..58] of TRSHookInfo = (
+  Hooks: array[1..59] of TRSHookInfo = (
     (p: $4BE5D9; newp: @VisibleSpriteD3DHook8; t: RShtCall; size: 6), // Attacking big monsters D3D
     (p: $4A383A; newp: @TrueColorHook; t: RShtAfter; size: 6; Querry: hqTrueColor), // 32 bit color support
     (p: $45BDA1; newp: @TrueColorShotHook; t: RShtBefore; size: 6; Querry: hqTrueColor), // 32 bit color support
@@ -760,6 +738,7 @@ var
     (p: $478962; newp: @PreciseSkyHook1; t: RShtBefore; size: 6), // Fix for 'jumping' of the top part of the sky
     //(p: $47861A; newp: @PreciseSkyHook2; t: RShtCall; size: 6),
     //(p: $4788F0; newp: @PreciseSkyHook3; t: RShtCall; size: 6),
+    (p: $4A21DB; newp: @SpritesAngleHook; t: RShtAfter; size: 6), // Draw sprites at an angle
     ()
   );
 {$ENDIF}
