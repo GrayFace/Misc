@@ -12,8 +12,392 @@ uses
 
 procedure CheckHooksD3D;
 procedure ApplyHooksD3D;
+function LoadSpriteD3DHook(Name: PChar; PalIndex: int): PHwlBitmap; stdcall;
 
 implementation
+
+//----- No HWL for bitmaps
+
+procedure LoadPaletteD3D(var pal; PalIndex: int);
+var
+  i: int;
+  p, p1: PWordArray;
+begin
+  PalIndex:= _LoadPalette(0, 0, m7*$80D018 + m8*$84AFE0, PalIndex);
+  p:= @pal;
+  p1:= ptr(m7*$8DE618 + m8*$91C5E0 + PalIndex*32*256*2);
+  if _GreenColorBits^ = 6 then
+    for i := 0 to 255 do
+      p[i]:= p1[i] and $1F + (p1[i] and $FFC0) shr 1 + $8000
+  else
+    for i := 0 to 255 do
+      p[i]:= p1[i] or $8000;
+end;
+
+// HSV aka HSB:
+// V = max component
+// S = (max - min)/V
+// H = relative position of the middle component within [min, max] and info on which components are max and min
+var
+  CConvS, CConvV: Single;
+  CConvDesat: Boolean;
+  CConvTable: array[0..255] of array[0..255] of byte;
+  DivTable: array[0..255] of uint;  // = 2^24 / i
+
+procedure PrepareCConvTable;
+var
+  v: ext;
+  i, j: uint;
+begin
+  if (CConvS = Options.PaletteSMul) and (CConvV = Options.PaletteVMul) then
+    exit;
+  CConvS:= Options.PaletteSMul;
+  CConvV:= Options.PaletteVMul;
+  CConvDesat:= (Options.PaletteSMul <= 1);
+  for i:= 1 to 255 do
+  begin
+    v:= EnsureRange(i*256/255*Options.PaletteVMul, 0, 255.999999);
+    for j:= 0 to 255 do
+      CConvTable[i][j]:= Trunc(v*EnsureRange(1 - (1 - j/i)*Options.PaletteSMul, 0, 1));
+    DivTable[i]:= (1 shl 24 + 1 shl 16) div i;
+  end;
+end;
+
+procedure ConvertColorOversat(var a, b, c: byte); inline;
+var
+  i: uint;
+begin
+  i:= CConvTable[a][255];
+  b:= uint(b - c)*i*DivTable[a - c] shr 24;
+  a:= i;
+  c:= 0;
+end;
+
+// ordered: a > b > c
+// not ordered: a = max(a, b, c)
+procedure DoConvertColor(var a, b, c: byte; desat, ordered: Boolean); inline;
+var
+  i, j: uint;
+begin
+  if desat then  // normal case (SMul <= 1)
+  begin
+    b:= CConvTable[a][b];
+    c:= CConvTable[a][c];
+    a:= CConvTable[a][255];
+    exit;
+  end;
+  i:= CConvTable[a][b];
+  j:= CConvTable[a][c];
+  if (j = 0) and (ordered or (c < b)) then
+    ConvertColorOversat(a, b, c)
+  else if not ordered and (i = 0) and (b < c) then
+    ConvertColorOversat(a, c, b)
+  else begin
+    b:= i;
+    c:= j;
+    a:= CConvTable[a][255];
+  end;
+end;
+
+procedure ConvertColorSV(var r, g, b: byte; desat: Boolean); inline; overload;
+begin
+  if r > g then
+    if r > b then
+      DoConvertColor(r, g, b, desat, false)
+    else
+      DoConvertColor(b, r, g, desat, true)
+  else
+    if g > b then
+      DoConvertColor(g, r, b, desat, false)
+    else
+      DoConvertColor(b, g, r, desat, true);
+end;
+
+procedure ConvertColorSV(var r, g, b: byte); inline; overload;
+begin
+  ConvertColorSV(r, g, b, CConvDesat);
+end;
+
+{const
+  ColorHDMask = $1FFFFF;
+var
+  CachedColors: array[0..ColorHDMask] of Word;
+
+function ConvertColorHD(c: int): Word;
+const
+  mul: ext = 31.9999;
+var
+  R, G, B, H, S, V: Single;
+begin
+  Result:= CachedColors[c and ColorHDMask];
+  if Result = 0 then
+  begin
+    B:= (c and $7F)/$7F;
+    G:= (c and $3F80)/$3F80;
+    R:= (c and $1FC000)/$1FC000;
+    _RGBtoHSV(0, S, H, V, B, G, R);
+    V:= EnsureRange(V*Options.PaletteVMul, 0, 1);
+    S:= EnsureRange(S*Options.PaletteSMul, 0, 1);
+    _HSVtoRGB(0, G, R, V, S, H, B);
+    Result:= $8000 + Trunc(R*mul) shl 10 + Trunc(G*mul) shl 5 + Trunc(B*mul);
+    CachedColors[c and ColorHDMask]:= Result;
+  end;
+  Result:= Result and Word((c shr 8) or $7FFF);
+end;}
+
+function ConvertColorHD(c: int): Word;
+var
+  r, g, b: byte;
+begin
+  b:= byte(c);
+  g:= HiByte(c);
+  r:= c shr 16;
+  ConvertColorSV(r, b, g);
+  Result:= (r shr 3 shl 10 + g shr 3 shl 5 + b shr 3) or $8000;
+end;
+
+procedure LoadBitmapHD(p: PWord; p1: PChar; w, h, trans: int);
+var
+  HasTrans: Boolean;
+  i, c: int;
+begin
+  PrepareCConvTable;
+  HasTrans:= false;
+  for i:= w*h downto 1 do
+  begin
+    c:= pint(p1)^ and $FFFFFF;
+    if c = trans then
+    begin
+      p^:= 0;
+      HasTrans:= true;
+    end else
+      p^:= ConvertColorHD(c);
+    inc(p);
+    inc(p1, 3);
+  end;
+  dec(p, w*h);
+  if HasTrans then
+    PropagateIntoTransparent(ptr(p), w, h);
+end;
+
+var
+  DecodeBuf: TRSByteArray;
+
+function LoadBitmapD3DHook(n1, n2, this, PalIndex: int; Name: PChar): PHwlBitmap;
+var
+  bmp: TLodBitmap;
+  f: ptr;
+  pack: array of Byte;
+  p: PWordArray;
+  p1: PByteArray;
+  pal: array[0..255] of Word;
+  i, c: int;
+begin
+  Result:= nil;
+  f:= _LodFind(0, 0, _BitmapsLod, 0, Name);
+  if f = nil then
+    exit;
+
+  _fread(bmp, 1, $30, f); // read bitmap header
+  Result:= _new(SizeOf(THwlBitmap));
+  ZeroMemory(Result, SizeOf(THwlBitmap));
+  with bmp, Result^ do
+  begin
+    FullW:= w;
+    FullH:= h;
+    AreaW:= w;
+    AreaH:= h;
+    Buffer:= _new(BmpSize*2);
+    p:= Buffer;
+    p1:= Buffer;
+    i:= BmpSize;
+    if (Palette = 0) and ((UnpSize > BmpSize*2) or (UnpSize = 0) and (DataSize > BmpSize*2)) then
+    begin
+      i:= BmpSize*3;
+      if length(DecodeBuf) < i then
+        SetLength(DecodeBuf, i + 1);
+      p1:= ptr(DecodeBuf);
+      w:= PowerOf2[BmpWidthLn2];
+      h:= PowerOf2[BmpHeightLn2];
+    end;
+    BufW:= w;
+    BufH:= h;
+    // Read bitmap data
+    if UnpSize <> 0 then
+    begin
+      SetLength(pack, DataSize);
+      _fread(pack[0], 1, DataSize, f);
+      UnpSize:= min(UnpSize, i);
+      _Deflate(0, @UnpSize, p1^, DataSize, pack[0]);
+      pack:= nil;
+    end else
+      _fread(p1^, 1, min(DataSize, i), f);
+
+    if p <> ptr(p1) then
+    begin
+      _fread(c, 1, 4, f);  // check first color
+      LoadBitmapHD(ptr(p), ptr(p1), w, h, c);
+      exit;
+    end;
+
+    // Get Palette
+    c:= 0;
+    _fread(c, 1, 3, f);  // check first color
+    LoadPaletteD3D(pal, Palette);
+    if (c = $FFFF00) or (c = $FF00FF) or (c = $FC00FC) or (c = $FCFC00) then
+      pal[0]:= 0;  // Margenta/light blue for transparency
+
+    // Render
+    for i := BmpSize - 1 downto 0 do
+      p[i]:= pal[p1[i]];
+    if pal[0] = 0 then
+      PropagateIntoTransparent(p, w, h);
+  end;
+end;
+
+//----- No HWL for sprites
+
+function Power2(n: int):int;
+begin
+  Result:= 4;
+  while Result < n do
+    Result:= Result*2;
+end;
+
+function LoadSpriteD3DHook(Name: PChar; PalIndex: int): PHwlBitmap; stdcall;
+var
+  sprite: PSprite;
+  i, j, x1, x2, y1, y2: int;
+  pal: array[0..255] of word;
+  p: pword;
+begin
+  Result:= nil;
+  sprite:= FindSprite(Name);
+  if sprite = nil then
+    exit;
+
+  with sprite^ do
+  begin
+    Result:= _new(SizeOf(THwlBitmap));
+    //ZeroMemory(Result, SizeOf(THwlBitmap)); // now done always
+    // Find area bounds
+    x1:= w;
+    x2:= -1;
+    y1:= -1;
+    y2:= -1;
+    for i := 0 to h - 1 do
+      with Lines[i] do
+        if a1 >= 0 then
+        begin
+          if y1 < 0 then  y1:= i;
+          y2:= i;
+          if a1 < x1 then  x1:= a1;
+          if a2 > x2 then  x2:= a2;
+        end;
+    with Result^ do
+    begin
+      FullW:= w;
+      FullH:= h;
+      if y1 < 0 then  exit;
+      // Area dimensions must be powers of 2
+      inc(x2);
+      inc(y2);
+      BufW:= Power2(x2 - x1);
+      BufH:= Power2(y2 - y1);
+      AreaW:= BufW;
+      AreaH:= BufH;
+      x1:= (x1 + x2 - BufW) div 2;
+      //x1:= IntoRange(x1, 0, w - BufW);
+      x2:= x1 + BufW - 1;
+      y1:= (y1 + y2 - BufH) div 2;
+      //y1:= IntoRange(y1, 0, h - BufH);
+      y2:= y1 + BufH - 1;
+      AreaX:= x1;
+      AreaY:= y1;
+
+      // Get Palette
+      LoadPaletteD3D(pal, PalIndex);
+      pal[0]:= 0;
+
+      // Render
+      Buffer:= _new(BufW*BufH*2);
+      //ZeroMemory(Buffer, BufW*BufH*2); // now done always
+      p:= Buffer;
+      for i := y1 to y2 do
+        with Lines[i] do
+          if (i >= 0) and (i < h) and (a1 >= 0) then
+          begin
+            inc(p, a1 - x1);
+            for j := 0 to a2 - a1 do
+            begin
+              p^:= pal[ord((pos + j)^)];
+              inc(p);
+            end;
+            inc(p, x2 - a2);
+          end else
+            inc(p, BufW);
+      // Sparks spell ignores transparency bit, this check is to avoid interfering with it
+      if _MainMenuCode^ < 0 then
+        PropagateIntoTransparent(Buffer, BufW, BufH);
+    end;
+  end;
+end;
+
+//----- Take sprite contour into account when clicking it
+
+var
+  SpriteD3DHitStd: function(var draw: TDrawSpriteD3D; x, y: single): LongBool; stdcall;
+
+function FindSpriteD3D(texture: ptr): PSpriteD3D;
+var
+  i: int;
+begin
+  i:= _SpritesLodCount^ - 1;
+  Result:= @_SpritesD3D^[0];
+  while (i > 0) and (Result.Texture <> texture) do
+  begin
+    inc(Result);
+    dec(i);
+  end;
+  if i = 0 then
+    Result:= nil;
+end;
+
+function SpriteD3DHitHook(var draw: TDrawSpriteD3D; x, y: single): LongBool; stdcall;
+var
+  sp3d: PSpriteD3D;
+  sp: PSprite;
+  drX, drW, drY, drH: Single;
+  i, j: int;
+begin
+  Result:= SpriteD3DHitStd(draw, x, y);
+  if not Result then
+    exit;
+
+  sp3d:= FindSpriteD3D(draw.Texture);
+  if sp3d = nil then
+    exit;
+  with draw do
+  begin
+    drX:= Vert[0].sx;
+    drW:= Vert[3].sx - drX;
+    drY:= Vert[0].sy;
+    drH:= Vert[1].sy - drY;
+  end;
+  i:= sp3d.AreaX + Floor(sp3d.AreaW * (x + 0.5 - drX) / drW);
+  j:= sp3d.AreaY + Floor(sp3d.AreaH * (y + 0.5 - drY) / drH);
+  sp:= FindSprite(sp3d^);
+  if (sp = nil) or (sp.Lines = nil) then
+    exit;
+
+  Result:= false;
+  if (j < 0) or (j >= sp.h) then  exit;
+  with sp.Lines[j] do
+  begin
+    if (a1 < 0) or (i > a2) or (i < a1) then  exit;
+    Result:= ((pos + i - a1)^ <> #0);
+  end;
+end;
 
 //----- Attacking big monsters D3D
 
@@ -548,69 +932,67 @@ end;
 
 //----- Draw sprites at an angle
 
-type
-  TVisibleSprite = packed record
-    Texture: int;
-    VertCount: int;
-    v1, v2, v3, v4: TD3DTLVertex;
-    ZBuf, _1, _2, ZBufAndObjKind, SpriteToDrawIndex: int;
-  end;
-
 {
-3D transform sprite rect:
-y = y0 / L0
-x = x0 / L0
+3D transform sprite rect (if it was an option):
+y = y0 / L0    // height
+x = x0 / L0    // vertex pos
 y' = y*cos(a)
 dL = y0*sin(a) = y*L0*sin(a)
 x' = x0 / (L0 + dL) = x / (1 + y*sin(a))
 
+In reality I just had to use a ton of hacks.
+
+Vertexes:
 0-3
 | |
 1-2
 }
-
+{
 procedure SpritesAngleProc(var sprite: TDrawSpriteD3D);
+const
+  Dist = 5000;
 var
-  w, h, si, co, mul: ext;
+  x, dx, h, mul, si, co: ext;
 begin
-  SinCos(_Party_Angle^*Pi/1024/3, si, co);
+  SinCos(_Party_Angle^*Pi/1024/3, si, co); // use 1/3 of the angle
   with sprite do
   begin
-    //w:= Vert[3].sx - Vert[0].sx;
     h:= Vert[1].sy - Vert[0].sy;
-    //w:= w/max(0.5, 1 + h/GetViewMul*si);
-    mul:= 1/EnsureRange(1 + h/GetViewMul*si, 0.9, 1.25);
-    Vert[0].sx:= (Vert[0].sx - _ScreenMiddle.X)*mul + _ScreenMiddle.X;
-    Vert[3].sx:= (Vert[3].sx - _ScreenMiddle.X)*mul + _ScreenMiddle.X;
-    Vert[0].sy:= Vert[1].sy - h*co;
+    mul:= h/GetViewMul;
+    if si < 0 then  // look down
+      mul:= min(mul, 1)*0.75*EnsureRange(2 - ZBuf/Dist*2, 0, 1)
+    else
+      mul:= min(mul, 5)*0.3;
+    mul:= 1/EnsureRange(1 + mul*si, 0.7, 2);
+    if mul > 1 then  // look down
+      h:= h*min(1, co + (mul - 1))*mul
+    else
+      h:= min(h*co, h*mul);
+    Vert[0].sy:= Vert[1].sy - h;
     Vert[3].sy:= Vert[0].sy;
+    x:= (Vert[3].sx + Vert[0].sx)/2;
+    dx:= (Vert[3].sx - Vert[0].sx)/2*mul;
+    Vert[0].sx:= x - dx;
+    Vert[1].sx:= x - dx;
+    Vert[2].sx:= x + dx;
+    Vert[3].sx:= x + dx;
   end;
 end;
 
-{procedure SpritesAngleProc(var sprite: TDrawSpriteD3D);
-var
-  a: ext;
-begin
-  a:= _Party_Angle^*Pi/1024/4*0;
-  with sprite do
-    if a <> 0 then
-    begin
-      Vert[0].sy:= Vert[1].sy - (Vert[1].sy - Vert[0].sy)*cos(a);
-      Vert[3].sy:= Vert[0].sy;
-    end;
-end;}
-
 procedure SpritesAngleHook;
 asm
-  lea eax, $FC50D0[esi]
-  call SpritesAngleProc
+  lea eax, (m7*$EF5138 + m8*$FC50D0)[esi]
+  jmp SpritesAngleProc
 end;
-
+}
 //----- HooksList
 
 var
 {$IFDEF MM7}
-  Hooks: array[1..63] of TRSHookInfo = (
+  Hooks: array[1..67] of TRSHookInfo = (
+    (p: $4A4D93; old: $452504; newp: @LoadBitmapD3DHook; t: RShtCall; Querry: 13), // No HWL for bitmaps
+    (p: $49EAE3; old: $4523AB; new: $45246B; t: RShtCall; Querry: 13), // No HWL for bitmaps
+    (p: $49EB3B; size: 5; Querry: 13), // No HWL for bitmaps
     (p: $4C0A23; newp: @VisibleSpriteD3DHook7; t: RShtCall; size: 6), // Attacking big monsters D3D
     (p: $4A59A3; newp: @TrueColorHook; t: RShtAfter; size: 6; Querry: hqTrueColor), // 32 bit color support
     (p: $45E14D; newp: @TrueColorShotHook; t: RShtBefore; size: 6; Querry: hqTrueColor), // 32 bit color support
@@ -673,10 +1055,16 @@ var
     (p: $479577; newp: @PreciseSkyFtol; t: RShtCallStore), // Fix for 'jumping' of the top part of the sky
     (p: $4795EA; newp: @PreciseSkyFtol; t: RShtCallStore), // Fix for 'jumping' of the top part of the sky
     (p: $47978F; newp: @PreciseSkyHook1; t: RShtBefore; size: 6), // Fix for 'jumping' of the top part of the sky
+    (p: $4C1508; old: $4C1579; backup: @@SpriteD3DHitStd; newp: @SpriteD3DHitHook; t: RShtCall), // Take sprite contour into account when clicking it
+    {(p: $4A432B; newp: @SpritesAngleHook; t: RShtAfter; size: 6; Querry: hqSpriteAngleCompensation), // Sprite angle compensation (outdoor)
+    (p: $4A4667; newp: @SpritesAngleHook; t: RShtAfter; size: 6; Querry: hqSpriteAngleCompensation), // Sprite angle compensation (indoor)}
     ()
   );
 {$ELSE}
-  Hooks: array[1..59] of TRSHookInfo = (
+  Hooks: array[1..62] of TRSHookInfo = (
+    (p: $4A2C46; old: $44FD37; newp: @LoadBitmapD3DHook; t: RShtCall; Querry: 13), // No HWL for bitmaps
+    (p: $49C175; old: $44FBD0; new: $44FC90; t: RShtCall; Querry: 13), // No HWL for bitmaps
+    (p: $49C1CD; size: 5; Querry: 13), // No HWL for bitmaps
     (p: $4BE5D9; newp: @VisibleSpriteD3DHook8; t: RShtCall; size: 6), // Attacking big monsters D3D
     (p: $4A383A; newp: @TrueColorHook; t: RShtAfter; size: 6; Querry: hqTrueColor), // 32 bit color support
     (p: $45BDA1; newp: @TrueColorShotHook; t: RShtBefore; size: 6; Querry: hqTrueColor), // 32 bit color support
@@ -730,15 +1118,13 @@ var
     (p: $4BE2AE; newp: @PrioritizeCenterSpritesHook; t: RShtAfter; size: 6), // Space and A buttons selecting sprites on the sides of the screen
     (p: $4BE5C5; newp: @PrioritizeCenterSpritesHook2; t: RShtAfter), // Space and A buttons selecting sprites on the sides of the screen
     (p: $4BFFAA; newp: @FixCastRay; t: RShtJmp; size: 6), // On right/left sides of the screen bottom of sprites didn't react to clicks
-    //(p: $47847A; newp: @PreciseSky1; t: RShtFunctionStart; size: 9),
-    //(p: $4A0D07; newp: @PreciseSkyHook2; t: RShtBefore),
     (p: $4784AC; newp: @PreciseSkyFtol; t: RShtCallStore), // Fix for 'jumping' of the top part of the sky
     (p: $47851F; newp: @PreciseSkyFtol; t: RShtCallStore), // Fix for 'jumping' of the top part of the sky
     (p: $47867B; newp: @PreciseSkyHook1; t: RShtBefore; size: 6), // Fix for 'jumping' of the top part of the sky
     (p: $478962; newp: @PreciseSkyHook1; t: RShtBefore; size: 6), // Fix for 'jumping' of the top part of the sky
-    //(p: $47861A; newp: @PreciseSkyHook2; t: RShtCall; size: 6),
-    //(p: $4788F0; newp: @PreciseSkyHook3; t: RShtCall; size: 6),
-    (p: $4A21DB; newp: @SpritesAngleHook; t: RShtAfter; size: 6), // Draw sprites at an angle
+    (p: $4BF072; old: $4BF0E3; backup: @@SpriteD3DHitStd; newp: @SpriteD3DHitHook; t: RShtCall), // Take sprite contour into account when clicking it
+    {(p: $4A21DB; newp: @SpritesAngleHook; t: RShtAfter; size: 6; Querry: hqSpriteAngleCompensation), // Sprite angle compensation (outdoor)
+    (p: $4A2511; newp: @SpritesAngleHook; t: RShtAfter; size: 6; Querry: hqSpriteAngleCompensation), // Sprite angle compensation (indoor)}
     ()
   );
 {$ENDIF}
@@ -751,6 +1137,8 @@ end;
 procedure ApplyHooksD3D;
 begin
   RSApplyHooks(Hooks);
+  if Options.NoBitmapsHwl then
+    RSApplyHooks(Hooks, 13);
   if Options.SupportTrueColor then
     RSApplyHooks(Hooks, hqTrueColor);
   if Options.UILayout <> nil then

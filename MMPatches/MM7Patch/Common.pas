@@ -115,6 +115,8 @@ const
   _fread: function(var Buf; Size, Count: int; f: ptr): int cdecl = ptr($4CB8A5);
   _Deflate: procedure(n1: int; UnpSize: pint; var UnpBuf; PkSize: int; var Pk) = ptr($4C2F60);
   _LoadPalette: function(n1, n2, Palettes, PalId: int): int = ptr($48A3A2);
+  _RGBtoHSV: procedure(_: int; var S, H, V: Single; B, G, R: Single) = ptr($48A790);
+  _HSVtoRGB: procedure(_: int; var G, R: Single; V, S, H: Single; var B: Single) = ptr($48A629);
   //_LoadLodBitmap: function(_,__, lod: int; palKind: int; name: PChar): int = ptr($40FB2C);
   _LoadBitmapInPlace: function(_,__, lod: int; palKind: int; name: PChar; var bmp): int = ptr($41052E);
   _FreeBitmap: procedure(_,_1: int; var bmp) = ptr($40F788);
@@ -127,6 +129,8 @@ const
   _Chest_PlaceItem: procedure(n1, itemIndex, pos, chest: int) = ptr($4200E7);
   _ChestWidth = $4E2BEC;
   _ChestHeight = $4E2C0C;
+  _Chests = $5E4FD0;
+  _ChestOff_Size = 5324;
 
   _Character_GetWeaponDelay: function(n1, n2: int; this:ptr; ranged: LongBool):int = ptr($48E19B);
   _Character_IsAlive: function(a1,a2, member:ptr):Bool = ptr($492C03);
@@ -148,10 +152,10 @@ const
   _MonOff_vy = $96;
   _MonOff_Size = $344;
 
-const
   _SpritesLod = $6E2048;
   _SpritesOld = _SpritesLod + $23C;
   SpritesMax = 10000;
+  _SpritesLodCount = pint(_SpritesLod + $EC9C);
 
 function GameCursorPos:PPoint;
   

@@ -31,6 +31,7 @@ type
     Computed: ext;
   end;
 
+  PLayoutItem = ^TLayoutItem;
   TLayoutItem = record
     Base, New: TRect;
     Icon: string[16];
@@ -326,7 +327,7 @@ const
 var
   IfXY: TPoint;
   x, y: ext;
-  i, IfId, stag: int;
+  i, IfId, stag, n: int;
   IfCond, IfUsed: Boolean;
   IfItem: ^TLayoutStrItem;
 
@@ -381,15 +382,15 @@ var
       Error(Format('Negative coordinate: (%d, %d .. %d, %d)',
          [r.Left, r.Top, r.Right, r.Bottom]), Def[i].Line);
     if check and (canvas >= 0) then
-      with r do
+      with r, Canvases[canvas].Size do
         if Canvases[canvas].Recovered then
         begin
-          Right:= min(Right, Canvases[canvas].Size.X);
-          Bottom:= min(Bottom, Canvases[canvas].Size.Y);
+          Right:= min(Right, X);
+          Bottom:= min(Bottom, Y);
         end else
         begin
-          Canvases[canvas].Size.X:= max(Right, Canvases[canvas].Size.X);
-          Canvases[canvas].Size.Y:= max(Bottom, Canvases[canvas].Size.Y);
+          X:= max(Right, X);
+          Y:= max(Bottom, Y);
         end;
   end;
 
@@ -405,6 +406,14 @@ var
         a.IfUOp:= IfUOp;
         a.IfOp:= IfOp;
       end;
+  end;
+
+  function NewItem: PLayoutItem;
+  begin
+    if n >= length(TmpItems) then
+      SetLength(TmpItems, n + length(Def));
+    Result:= @TmpItems[n];
+    inc(n);
   end;
 
   function AddItem(var a: TLayoutItem): Boolean;
@@ -508,7 +517,7 @@ var
   end;
 
 var
-  n, j: int;
+  j: int;
   InScreen, CanAdd: Boolean;
 begin
   for i:= 0 to high(Canvases) do
@@ -548,10 +557,7 @@ begin
           if JustLimits or not IfCond then
             continue;
           if (IfOp <> lioNone) and not IfUsed then
-          begin
-            AddEmptyItem(TmpItems[n]);
-            inc(n);
-          end;
+            AddEmptyItem(NewItem^);
           UseCanvas(Canvas, true);
           XY(lpX, lpY, x, y, -1, 0);
           IfXY.X:= Round(x - Delta);
@@ -624,11 +630,11 @@ begin
         lcArea:
           if not JustLimits and InScreen and CheckCond then
           begin
-            CanAdd:= AddItem(TmpItems[n]);
+            CanAdd:= AddItem(NewItem^);
             if Assigned(OnCanAdd) then
-              OnCanAdd(TmpItems[n], CanAdd);
-            if CanAdd then
-              inc(n);
+              OnCanAdd(TmpItems[n - 1], CanAdd);
+            if not CanAdd then
+              dec(n);
           end;
         lcRecover:
           if not JustLimits and InScreen and CheckCond then
@@ -654,8 +660,8 @@ begin
             else if SameText(CmdParam, 'draw') then
               EraseDraw(n, Canvas, NewCanvas);
         lcTimer:
-          if not JustLimits and InScreen and CheckCond and AddTimer(TmpItems[n]) then
-            inc(n);
+          if not JustLimits and InScreen and CheckCond then
+            AddTimer(NewItem^);
         lcAction:
           if not JustLimits and InScreen and CheckCond then
           begin
@@ -946,7 +952,8 @@ begin
         end;
         if use then
           inc(k);
-        if (Cmd = lcErase) and SameText(CmdParam, 'layout') then
+        if (Cmd = lcErase) and SameText(CmdParam, 'layout') and
+           ((Params[lpCond] = nil) or (RSCalcExpr(Params[lpCond], GetVar2) <> 0)) then
         begin
           k:= 0;
           if stag = 0 then

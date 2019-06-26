@@ -2231,7 +2231,7 @@ procedure LoadCustomLods(Old: int; const Name: string; Chap: PChar);
 begin
   with TRSFindFile.Create('Data\*.' + Name) do
     try
-      while FindNextAttributes(0, FILE_ATTRIBUTE_DIRECTORY) do // Only files
+      while FindEachFile do
         DoLoadCustomLod(ptr(Old), PChar('Data\' + Data.cFileName), Chap);
     finally
       Free;

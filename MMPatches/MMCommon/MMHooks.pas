@@ -23,6 +23,10 @@ function LoadMLookBmp(const fname: string; fmt: TPixelFormat): TBitmap;
 procedure MLookDrawHD(const p: TPoint);
 procedure NeedScreenDraw(var scale: TRSResampleInfo; sw, sh, w, h: int);
 procedure DrawScaled(var scale: TRSResampleInfo; sw, sh: int; scan: ptr; pitch: int);
+{$IFNDEF MM6}
+function FindSprite(Name: PChar): PSprite; overload;
+function FindSprite(var sp3d: TSpriteD3D): PSprite; overload;
+{$ENDIF}
 
 var
   AllowMovieQuickLoad: Boolean;
@@ -735,11 +739,341 @@ asm
 @ok:
 end;
 
+//----- Place items in chests vertically
+
+procedure ChestVerticalHook;
+const
+  slot = -4;
+  w = -$10*m7 -$18*m8;
+asm
+  mov eax, [ebp + w]
+  add [ebp + slot], eax
+  cmp [ebp + slot], esi
+  jl @exit
+  sub [ebp + slot], esi
+  inc dword ptr [ebp + slot]
+  cmp [ebp + slot], eax
+  jl @exit
+  mov [ebp + slot], esi
+@exit:
+end;
+
+procedure ChestVerticalHook6;
+asm
+  jz @next
+  mov [esp], $41E09B
+  ret
+@next:
+  mov eax, [esp + $28 - $10]
+  add esi, eax
+  cmp esi, edi
+  jl @exit
+  sub esi, edi
+  inc esi
+  cmp esi, eax
+  jl @exit
+  mov esi, edi
+@exit:
+end;
+
+//----- Fix GM Axe
+
+{$IFNDEF MM6}
+procedure ShowArmorHalved;
+asm
+  mov ecx, SArmorHalved
+  push $41EC62
+end;
+
+function FixGMAxeProc1(pl: PChar): int;
+var
+  sk: int;
+begin
+  Result:= 0;
+  sk:= _Character_GetSkillWithBonuses(0,0, pl, 3);
+  if (sk and $100 <> 0) and (Random(60) < sk and $3F) then
+    Result:= 2;
+end;
+
+{$IFDEF MM7}
+procedure FixGMAxeHook1;
+asm
+  cmp [ebp - $2C], 3
+  jnz @std
+  push eax
+  mov eax, edi
+  call FixGMAxeProc1
+  mov [ebp - $34], eax
+  pop eax
+@std:
+end;
+{$ELSE}
+procedure FixGMAxeHook1;
+asm
+  cmp ebx, 3
+  jnz @std
+  push eax
+  mov eax, [ebp - 8]
+  call FixGMAxeProc1
+  mov [ebp - $38], eax
+  pop eax
+@std:
+end;
+{$ENDIF}
+
+procedure FixGMAxeProc2(pl, mon: PChar);
+var
+  sk: int;
+begin
+  sk:= _Character_GetSkillWithBonuses(0,0, pl, 3);
+  SetSpellBuff(mon + m7*340 + m8*556, _Time^ + (sk and $3F)*256, 4, 0,0,0);
+end;
+
+var
+  ParalyzedStr: ptr;
+
+procedure FixGMAxeHook2;
+const
+  effect = -$34*m7 -$38*m8;
+asm
+  cmp [ebp + effect], 2
+  jnz @std
+  mov edx, SArmorHalvedMessage
+  mov ParalyzedStr, edx
+  mov [esp+8], 4  // physical
+  pop edx
+  call eax  // Monster_CalcEffectResistance
+  test eax, eax
+  jz @resist
+{$IFDEF MM7}
+  mov eax, edi
+{$ELSE}
+  mov eax, [ebp - 8]
+{$ENDIF}
+  mov edx, esi
+  push m7*$439D33 + m8*$4377F2
+  jmp FixGMAxeProc2
+@resist:
+  push m7*$439D6E + m8*$437825
+  ret
+@std:
+  mov edx, [m7*$5E49F0 + m8*$601E38]
+  mov ParalyzedStr, edx
+  jmp eax
+end;
+{$ENDIF}
+
+//----- Fix chests by compacting
+
+function GetChestItemMask(p: pchar): string;
+var
+  i: int;
+begin
+  SetLength(Result, 140);
+  FillChar(Result[1], 140, 1);
+  inc(p, _ChestOff_Inventory);
+  for i:= 0 to 139 do
+    if pint2(p + i*2)^ > 0 then
+      Result[pint2(p + i*2)^]:= #2;
+end;
+
+procedure ChestPlaceItem(p: pchar; index: int);
+var
+  chest, x, y, w, h, kind: int;
+begin
+  kind:= pint(p + _ChestOff_Items + _ItemOff_Size*index)^;
+  if kind = 0 then  exit;
+  chest:= int(p - _Chests) div _ChestOff_Size;
+  w:= pint(_ChestWidth + 4*pword(p)^)^;
+  h:= pint(_ChestHeight + 4*pword(p)^)^;
+  inc(p, _ChestOff_Inventory);
+  for y:= 0 to h - 1 do
+    for x:= 0 to w - 1 do
+      if (pint2(p + (y*w + x)*2)^ = 0) and _Chest_CanPlaceItem(0, kind, y*w + x, chest) then
+      begin
+        _Chest_PlaceItem(0, index, y*w + x, chest);
+        exit;
+      end;
+end;
+
+procedure FixChestsCompactProc(p: pchar);
+var
+  buf: array[1..140] of int2;
+  s: string;
+  i: int;
+begin
+  s:= GetChestItemMask(p);
+  CopyMemory(@buf, p + _ChestOff_Inventory, 280);
+  ZeroMemory(p + _ChestOff_Inventory, 280);
+  for i:= 0 to 139 do
+    ChestPlaceItem(p, i);
+  if GetChestItemMask(p) > s then  exit;  // compact is better
+  CopyMemory(p + _ChestOff_Inventory, @buf, 280);
+end;
+
+procedure FixChestsCompact;
+asm
+  push eax
+  add eax, m6*(_Chests + 2) - 2
+  call FixChestsCompactProc
+  pop eax
+end;
+
+//----- Sprite angle compensation
+
+type
+  TSpriteDrawParams = packed record
+    ScreenBuf, ObjectRefBuf: ptr;
+    X, Y: int;
+    ScaleX{$IFNDEF MM6}, ScaleY{$ENDIF}: int;
+    _1,_2,_3,_4: int;
+    ObjKind: int2;
+    ZBuf: int2;
+    // ...
+  end;
+
+{$IFNDEF MM6}
+function FindSprite(Name: PChar): PSprite; overload;
+var
+  i: int;
+begin
+  i:= _SpritesLodCount^;
+  Result:= @Sprites;
+  while (i > 0) and (_strcmpi(@Result.Name, Name) <> 0) do
+  begin
+    inc(Result);
+    dec(i);
+  end;
+  if i = 0 then
+    Result:= nil;
+end;
+
+function FindSprite(var sp3d: TSpriteD3D): PSprite; overload;
+var
+  index: puint2;
+begin
+  index:= ptr(sp3d.Name + 18);  // there's 20 bytes allocated, so at the end is some unused space
+  if (index^ > 0) and (index^ <= _SpritesLodCount^) then
+  begin
+    Result:= @Sprites[index^ - 1];
+    exit;
+  end;
+  Result:= FindSprite(sp3d.Name);
+  if Result <> nil then
+    index^:= (PChar(Result) - @Sprites) div SizeOf(Result^) + 1;
+end;
+
+{
+3D transform sprite rect (if it was an option):
+y = y0 / L0    // height
+x = x0 / L0    // X coordinate of either of top vertexes
+y' = y*cos(a)
+dL = y0*sin(a) = y*L0*sin(a)
+x' = x0 / (L0 + dL) = x / (1 + y*sin(a))
+
+In reality I just had to use a ton of hacks.
+}
+
+procedure SpritesAngleProc(spi: int2; var params: TSpriteDrawParams);
+const
+  Dist = 5000;
+var
+  sprite: PSprite;
+  mul, si, co: ext;
+  n: int;
+begin
+  SinCos(_Party_Angle^*Pi/1024/3, si, co); // use 1/3 of the angle
+  n:= 0;
+  if _IsD3D^ then
+    sprite:= FindSprite(_SpritesD3D^[spi])
+  else
+    sprite:= @Sprites[spi];
+  with sprite^ do
+  begin
+    while (n < h) and ((Lines[n].a1 < 0) or (Lines[n].a1 > Lines[n].a2)) do
+      inc(n);
+    mul:= (h - n)*params.ScaleY/$10000/GetViewMul;
+  end;
+  if si < 0 then  // look down
+    mul:= min(mul, 1)*0.75*EnsureRange(2 - params.ZBuf/Dist*2, 0, 1)
+  else
+    mul:= min(mul, 5)*0.35;
+  mul:= 1/EnsureRange(1 + mul*si, 0.7, 2);
+  with params do
+  begin
+    ScaleX:= Round(ScaleX*mul);
+    if mul > 1 then  // look down
+      ScaleY:= Round(ScaleY*min(1, co + (mul - 1))*mul)
+    else
+      ScaleY:= Round(ScaleY*min(co, mul));
+  end;
+end;
+
+procedure SpritesAngleHook;
+asm
+  push eax
+  push edx
+  push ecx
+  mov ax, di
+  lea edx, [ebp - $60]
+  call SpritesAngleProc
+  pop ecx
+  pop edx
+  pop eax
+end;
+
+procedure SpritesAngleHook2;
+asm
+  push eax
+  push edx
+  push ecx
+  lea edx, [ebp - $50]
+  call SpritesAngleProc
+  pop ecx
+  pop edx
+  pop eax
+end;
+{$ENDIF}
+
+procedure SpritesAngleProc6(sprite: PSprite; var params: TSpriteDrawParams);
+const
+  Dist = 5000;
+var
+  mul, si, co: ext;
+  n: int;
+begin
+  SinCos(_Party_Angle^*Pi/1024*0.4, si, co); // use 1/3 of the angle
+  n:= 0;
+  with sprite^ do
+  begin
+    while (n < h) and ((Lines[n].a1 < 0) or (Lines[n].a1 > Lines[n].a2)) do
+      inc(n);
+    mul:= (h - n)*params.ScaleX/$10000/GetViewMul;
+  end;
+  if si < 0 then  // look down
+    mul:= min(mul, 1)*0.75*EnsureRange(2 - params.ZBuf/Dist*2, 0, 1)
+  else
+    mul:= min(mul, 5)*0.35;
+  mul:= 1/EnsureRange(1 + mul*si, 0.7, 2);
+  with params do
+    ScaleX:= Round(ScaleX*mul);
+end;
+
+procedure SpritesAngleHook6;
+asm
+  mov edx, [esp + 4]
+  push eax
+  push ecx
+  mov eax, ecx
+  call SpritesAngleProc6
+  pop ecx
+end;
+
 //----- HooksList
 
 var
 {$IFDEF MM6}
-  Hooks: array[1..15] of TRSHookInfo = (
+  Hooks: array[1..19] of TRSHookInfo = (
     (p: $457567; newp: @WindowWidth; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $45757D; newp: @WindowHeight; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $454340; newp: @WindowProcHook; t: RShtFunctionStart; size: 8), // Window procedure hook
@@ -754,10 +1088,14 @@ var
     (p: $45472C; size: 6), // Control certain dialogs with keyboard (allow keyboard everywhere)
     (p: HookWindowProc; newp: @KeyControlCheckUnblock; t: RShtBefore), // Control certain dialogs with keyboard
     (p: $41146D; newp: @EnchantItemRightClick; t: RShtAfter), // Allow right click in item spell dialogs
+    (p: $41E092; newp: @ChestVerticalHook6; t: RShtCall; Querry: hqPlaceChestItemsVertically), // Place items in chests vertically
+    (p: $41E4D7; newp: @FixChestsCompact; t: RShtAfter; size: 7; Querry: hqFixChestsByCompacting), // Fix chests by compacting
+    (p: $46B73E; newp: @SpritesAngleHook6; t: RShtCallStore; Querry: hqSpriteAngleCompensation), // Sprite angle compensation
+    (p: $4348BA; newp: @SpritesAngleHook6; t: RShtCallStore; Querry: hqSpriteAngleCompensation), // Sprite angle compensation
     ()
   );
 {$ELSEIF defined(MM7)}
-  Hooks: array[1..27] of TRSHookInfo = (
+  Hooks: array[1..35] of TRSHookInfo = (
     (p: $47B84E; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (monsters)
     (p: $47B296; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (items)
     (p: $47AD40; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (sprites)
@@ -784,10 +1122,18 @@ var
     (p: $463E05; size: 6), // Control certain dialogs with keyboard (allow keyboard everywhere)
     (p: HookWindowProc; newp: @KeyControlCheckUnblock; t: RShtBefore), // Control certain dialogs with keyboard
     (p: $4116FF; old: $FF; new: $53; t: RSht1; size: 4), // Spellbook misbehaves when controlled with keyboard
+    (p: $41FFB9; newp: @ChestVerticalHook; t: RShtCall; size: 6; Querry: hqPlaceChestItemsVertically), // Place items in chests vertically
+    (p: $41F432; old: $41ECC7; newp: @ShowArmorHalved; t: RSht4), // Fix GM Axe
+    (p: $4397C0; newp: @FixGMAxeHook1; t: RShtBefore; size: 7), // Fix GM Axe
+    (p: $439CDA; newp: @FixGMAxeHook2; t: RShtCallStore), // Fix GM Axe
+    (p: $439D57; newp: @ParalyzedStr; t: RSht4), // Fix GM Axe
+    (p: $42031F; newp: @FixChestsCompact; t: RShtAfter; size: 6; Querry: hqFixChestsByCompacting), // Fix chests by compacting
+    (p: $47BB77; newp: @SpritesAngleHook; t: RShtBefore; size: 7; Querry: hqSpriteAngleCompensation), // Sprite angle compensation
+    (p: $440D76; newp: @SpritesAngleHook2; t: RShtBefore; size: 7; Querry: hqSpriteAngleCompensation), // Sprite angle compensation
     ()
   );
 {$ELSE}
-  Hooks: array[1..24] of TRSHookInfo = (
+  Hooks: array[1..31] of TRSHookInfo = (
     (p: $47AB35; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Monsters not visible on the sides of the screen
     (p: $47A55E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Items not visible on the sides of the screen
     (p: $48B37E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Effects not visible on the sides of the screen
@@ -811,6 +1157,13 @@ var
     (p: $461F41; size: 2), // Control certain dialogs with keyboard (allow keyboard everywhere)
     (p: HookWindowProc; newp: @KeyControlCheckUnblock; t: RShtBefore), // Control certain dialogs with keyboard
     (p: $4163EA; newp: @EnchantItemRightClick; t: RShtAfter), // Allow right click in item spell dialogs
+    (p: $41F433; newp: @ChestVerticalHook; t: RShtCall; size: 6; Querry: hqPlaceChestItemsVertically), // Place items in chests vertically
+    (p: $4371A0; newp: @FixGMAxeHook1; t: RShtBefore), // Fix GM Axe
+    (p: $437798; newp: @FixGMAxeHook2; t: RShtCallStore), // Fix GM Axe
+    (p: $43780E; newp: @ParalyzedStr; t: RSht4), // Fix GM Axe
+    (p: $41F808; newp: @FixChestsCompact; t: RShtAfter; size: 6; Querry: hqFixChestsByCompacting), // Fix chests by compacting
+    (p: $47AE66; newp: @SpritesAngleHook; t: RShtBefore; size: 7; Querry: hqSpriteAngleCompensation), // Sprite angle compensation
+    (p: $43DCC2; newp: @SpritesAngleHook2; t: RShtBefore; size: 7; Querry: hqSpriteAngleCompensation), // Sprite angle compensation
     ()
   );
 {$IFEND}
@@ -819,6 +1172,12 @@ procedure ApplyMMHooks;
 begin
   CheckHooks(Hooks);
   RSApplyHooks(Hooks);
+  if PlaceChestItemsVertically then
+    RSApplyHooks(Hooks, hqPlaceChestItemsVertically);
+  if FixChestsByCompacting then
+    RSApplyHooks(Hooks, hqFixChestsByCompacting);
+  if SpriteAngleCompensation then
+    RSApplyHooks(Hooks, hqSpriteAngleCompensation);
 end;
 
 procedure ApplyMMDeferredHooks;

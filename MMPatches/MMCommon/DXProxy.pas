@@ -5,7 +5,7 @@ interface
 uses
   Forms, Windows, Messages, SysUtils, Classes, IniFiles, RSSysUtils, RSQ, Math,
   RSCodeHook, DirectDraw, Direct3D, TypInfo, Common, MMCommon, RSResample,
-  Graphics;
+  Graphics, Types;
 
 {$I MMPatchVer.inc}
 
@@ -575,6 +575,14 @@ var
   d: int;
 begin
   //FPS;
+  with Options, RenderRect do
+    if (_ScreenW^ > 640) and (Right < _RenderRect.Right) or
+       (_ScreenH^ > 480) and (Bottom < _RenderRect.Bottom + 1) then
+    begin
+      // MM7ResTool support
+      RenderRect:= Rect(0, 0, _ScreenW^, _ScreenH^);
+      RenderBottomPixel:= _ScreenH^ - 1;
+    end;
   if (scale.DestW <> RenderW) or (scale.DestH <> RenderH) then
   begin
     RSSetResampleParams(ScalingParam1, ScalingParam2);

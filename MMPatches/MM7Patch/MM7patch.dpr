@@ -261,19 +261,31 @@ Version 2.3.1:
 [+] A few new UI layout commands
 [-] My bug: ScalingParam1 and ScalingParam2 were ignored in flexible UI mode
 
+Version 2.4:
+(MM6-MM8)
+[+] FixChestsByCompacting
+[+] PlaceChestItemsVertically
+[+] SpriteAngleCompensation
+(MM7, MM8)
+[+] bitmaps.lwd support
+[-] GM Axe didn't halve armor class
+[-] My bug: Out-of-bounds write when layout definition has long loops.
+[-] My bug caused by Delphi bug: numbers in some layout expressions were read incorrectly
+[-] My bug: Memory leak when UI layout is reloaded
+(MM7)
+[+] SupportMM7ResTool
+[-] 'Of Spirit Magic' effect of Glory Shield wasn't working
+
 
 [!!] HD textures
+[!!] Smooth video sides
 [!!] Prioritize geometry near the center
-[!!] Place items in chests vertically - 41FFB9 (MM7)
-[!!] Compact chest population
-[!!] Not completely vertical trees
 [!!] Night sky, better day/night cycle, sun?
-[!!] Different configs for mouse look/no mouse look?
+[!!] Different configs for mouse look/no mouse look? No HKLM
 [!!] What about adding a right-click option that lets you exit conversations and houses?
 [!!] Configurable (Caps Lock) key for mouse look
 [!!] textures from bitmaps (and option to change their gamma or not to change??)
 
-The "of Spirit Magic" effect on the relic, Glory Shield, does not work.
 The "-30 Earth Resistance" on the relic, Kelebrim, does not work.
 
 - if whole party dies Zombies lose "zombie" status, but portrait gets stuck
@@ -337,9 +349,6 @@ Darkloke:
 
 На острове в Таталии магазин с оружием не активируется мышью (опять "здесь ничего нет"), а вот по быстрой клавише все нормально. С магазином с броней рядом все в порядке. На всякий случай проверил и указанный выше колодец, но тот и на быструю клавишу не реагирует.
 Аналогично не смог мышью (с быстрой клавиши нормально) открыть изнутри главный вход в Fort Riverstride в Эратии. И вставить ключи в центральную и правую колонны в Mist в Celeste.
-
-Из имеющихся у меня, цеп Justice дает бонус к мысли и телу (вижу его в комментарии к навыку),
- а шлем Taledon’s Helm к магии света и щит Glory Shield к духу - нет.
 
 нашел "положительный" баг, уже подходя к концу игры
 артефакт Келебрим -30 к устойчивости к земле не работает
@@ -421,15 +430,11 @@ with basic skill. This should be fixed in both MM7 and 8.
 
 Xfing:
 
-- The "of Light Magic" enchantment on Taledon's Helm doesn't work.
 - Character Awards do not display the count of Arcomage wins, only losses. It doesn't display in which inns you've won either, but I think this has always been a MM8-only thing anyway.
-- The cutscene of Archibald reconciling with the Ironfists plays every time you Town Portal out of Colony Zod.
 - the "remove magical aging" portion of the Sacrifice spell doesn't work.
 - There are 8 chest images in sprites.lod, yet the game only ever uses the 1st one. Some of the others could be put to use, I believe - especially since they fit!
-- Armsmaster bonuses do not apply to the Staff when it's used in conjunction with the Unarmed skill (the game thinks that you basically don't have a staff at all, so it can't apply further bonuses to it)
 - Instant hit spells on monsters do not work (Paralyze on Wizards). Also present in MM8
 - The dual-wielding damage calculation bug that I've made another thread about.
-- The Axe Grandmaster armor halving perk doesn't work.
 - Not sure if the Shield spell or the "of Shielding" effect/GM Shield perk works properly.
 - I think thresholds on items in regards to their identification and repair should be raised. As things are now, 30 points in ID/Repair is enough to handle the best items in the game, which defeats the purpose of Grandmaster training entirely. I suggest to raise the threshold for artifacts and relics to 45 (or 45 and 60 respectively if these two categories can be done separately) to make GM in these two skills even worth obtaining.
 }

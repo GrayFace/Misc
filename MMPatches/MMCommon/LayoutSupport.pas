@@ -43,6 +43,7 @@ type
     DownCanvas, MouseCanvas: int;
     Status: array[0..0] of Word;
     PartyBuffs: array[0..19] of Word;
+    CanvasBuf: array[0..1] of array[1..640*480] of Word;
     MLookPos: TPoint;
     LastContextMenu: TRect;
     LastContextMenuAlign: Boolean;
@@ -150,14 +151,14 @@ begin
   DL.AddFixedCanvas(lvcBase, nil, 640, 480);
   DL.AddFixedCanvas(lvcRender, nil, 0, 0);
   DL.AddFixedCanvas(lvcStatus, @Status, length(Status), 1);
-  DL.AddFixedCanvas(lvcPopup, GetMemory(640*480*2), 640, 480);
-  DL.AddFixedCanvas(lvcMouseItem, GetMemory(640*480*2), 640, 480);
+  DL.AddFixedCanvas(lvcPopup, @CanvasBuf[0], 640, 480);
+  DL.AddFixedCanvas(lvcMouseItem, @CanvasBuf[1], 640, 480);
   DL.AddFixedCanvas(lvcLockMouse, nil, 0, 0);
   DL.AddFixedCanvas(lvcPopupArea, nil, 0, 0);
   DL.AddFixedCanvas(lvcPopupArea2, nil, 0, 0);
   DL.AddFixedCanvas(lvcPartyBuffs, @PartyBuffs, length(PartyBuffs), 1);
   if RSGetModuleVersion(v1, v2, v3, v4) then
-    L.Vars[lvVersion]:= v1*100 + v2 + v3/100;
+    L.Vars[lvVersion]:= v1*10000 + v2*100 + v3;
   L.Vars[lvRenderCenterX]:= 0.5;
   L.Vars[lvRenderCenterY]:= 0.5;
   L.Vars[lvDebug]:= NaN;

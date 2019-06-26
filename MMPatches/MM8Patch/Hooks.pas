@@ -1135,123 +1135,6 @@ end;
 
 //----- No HWL for sprites
 
-function Power2(n: int):int;
-begin
-  Result:= 4;
-  while Result < n do
-    Result:= Result*2;
-end;
-
-function FindSprite(Name: PChar): PSprite;
-var
-  i: int;
-begin
-  i:= pint(_SpritesLod + $EC9C)^;
-  Result:= @Sprites;
-  while (i > 0) and (_strcmpi(@Result.Name, Name) <> 0) do
-  begin
-    inc(Result);
-    dec(i);
-  end;
-  if i = 0 then
-    Result:= nil;
-end;
-
-procedure LoadPaletteD3D(var pal; PalIndex: int);
-var
-  i: int;
-  p, p1: PWordArray;
-begin
-  PalIndex:= _LoadPalette(0, 0, $84AFE0, PalIndex);
-  p:= @pal;
-  p1:= ptr($91C5E0 + PalIndex*32*256*2);
-  if _GreenColorBits^ = 6 then
-    for i := 0 to 255 do
-      p[i]:= p1[i] and $1F + (p1[i] and $FFC0) shr 1 + $8000
-  else
-    for i := 0 to 255 do
-      p[i]:= p1[i] or $8000;
-end;
-
-function LoadSpriteD3DHook(Name: PChar; PalIndex: int): PHwlBitmap; stdcall;
-var
-  sprite: PSprite;
-  i, j, x1, x2, y1, y2: int;
-  pal: array[0..255] of word;
-  p: pword;
-begin
-  Result:= nil;
-  sprite:= FindSprite(Name);
-  if sprite = nil then
-    exit;
-
-  with sprite^ do
-  begin
-    Result:= _new(SizeOf(THwlBitmap));
-    //ZeroMemory(Result, SizeOf(THwlBitmap)); // now done always
-    // Find area bounds
-    x1:= w;
-    x2:= -1;
-    y1:= -1;
-    y2:= -1;
-    for i := 0 to h - 1 do
-      with Lines[i] do
-        if a1 >= 0 then
-        begin
-          if y1 < 0 then  y1:= i;
-          y2:= i;
-          if a1 < x1 then  x1:= a1;
-          if a2 > x2 then  x2:= a2;
-        end;
-    with Result^ do
-    begin
-      FullW:= w;
-      FullH:= h;
-      if y1 < 0 then  exit;
-      // Area dimensions must be powers of 2
-      inc(x2);
-      inc(y2);
-      BufW:= Power2(x2 - x1);
-      BufH:= Power2(y2 - y1);
-      AreaW:= BufW;
-      AreaH:= BufH;
-      x1:= (x1 + x2 - BufW) div 2;
-      //x1:= IntoRange(x1, 0, w - BufW);
-      x2:= x1 + BufW - 1;
-      y1:= (y1 + y2 - BufH) div 2;
-      //y1:= IntoRange(y1, 0, h - BufH);
-      y2:= y1 + BufH - 1;
-      AreaX:= x1;
-      AreaY:= y1;
-
-      // Get Palette
-      LoadPaletteD3D(pal, PalIndex);
-      pal[0]:= 0;
-
-      // Render
-      Buffer:= _new(BufW*BufH*2);
-      //ZeroMemory(Buffer, BufW*BufH*2); // now done always
-      p:= Buffer;
-      for i := y1 to y2 do
-        with Lines[i] do
-          if (i >= 0) and (i < h) and (a1 >= 0) then
-          begin
-            inc(p, a1 - x1);
-            for j := 0 to a2 - a1 do
-            begin
-              p^:= pal[ord((pos + j)^)];
-              inc(p);
-            end;
-            inc(p, x2 - a2);
-          end else
-            inc(p, BufW);
-      // Sparks spell ignores transparency bit, this check is to avoid interfering with it
-      if _MainMenuCode^ < 0 then
-        PropagateIntoTransparent(Buffer, BufW, BufH);
-    end;
-  end;
-end;
-
 procedure LoadSpriteD3DHook2;
 asm
   inc dword ptr [esi+0EC9Ch]
@@ -1261,7 +1144,7 @@ asm
 end;
 
 var
-  HaveIt: Boolean; // found sprite by name, but palette don't match
+  HaveIt: Boolean; // found sprite by name, but palette doesn't match
 
 procedure LoadSpriteD3DHook3;
 asm
@@ -1315,62 +1198,6 @@ begin
     Hook.p:= PatchCount[i];
     Hook.new:= (pint(Hook.p)^ div 1500) * SpritesMax;
     RSApplyHook(Hook);
-  end;
-end;
-
-//----- Take sprite contour into account when clicking it
-
-var
-  SpriteD3DHitStd: function(var draw: TDrawSpriteD3D; x, y: single): LongBool; stdcall;
-
-function FindSpriteD3D(texture: ptr): PSpriteD3D;
-var
-  i: int;
-begin
-  i:= pint(_SpritesLod + $EC9C)^ - 1;
-  Result:= pptr(_SpritesLod + $ECB0)^;
-  while (i > 0) and (Result.Texture <> texture) do
-  begin
-    inc(Result);
-    dec(i);
-  end;
-  if i = 0 then
-    Result:= nil;
-end;
-
-function SpriteD3DHitHook(var draw: TDrawSpriteD3D; x, y: single): LongBool; stdcall;
-var
-  sp3d: PSpriteD3D;
-  sp: PSprite;
-  drX, drW, drY, drH: Single;
-  i, j: int;
-begin
-  Result:= SpriteD3DHitStd(draw, x, y);
-  if not Result then
-    exit;
-
-  sp3d:= FindSpriteD3D(draw.Texture);
-  if sp3d = nil then
-    exit;
-  with draw do
-  begin
-    drX:= Vert[0].sx;
-    drW:= Vert[3].sx - drX;
-    drY:= Vert[0].sy;
-    drH:= Vert[1].sy - drY;
-  end;
-  i:= sp3d.AreaX + Floor(sp3d.AreaW * (x + 0.5 - drX) / drW);
-  j:= sp3d.AreaY + Floor(sp3d.AreaH * (y + 0.5 - drY) / drH);
-  sp:= FindSprite(sp3d.Name);
-  if (sp = nil) or (sp.Lines = nil) then
-    exit;
-
-  Result:= false;
-  if (j < 0) or (j >= sp.h) then  exit;
-  with sp.Lines[j] do
-  begin
-    if (a1 < 0) or (i > a2) or (i < a1) then  exit;
-    Result:= ((pos + i - a1)^ <> #0);
   end;
 end;
 
@@ -1534,67 +1361,6 @@ asm
   mov eax, 1
   mov [esp], $433DBC
 @norm:
-end;
-
-//----- No HWL for bitmaps
-
-function LoadBitmapD3DHook(n1, n2, this, PalIndex: int; Name: PChar): PHwlBitmap;
-var
-  bmp: TLodBitmap;
-  f: ptr;
-  pack: array of Byte;
-  p: PWordArray;
-  p1: PByteArray;
-  pal: array[0..255] of Word;
-  i, c: int;
-begin
-  Result:= nil;
-  f:= _LodFind(0, 0, _BitmapsLod, 0, Name);
-  if f = nil then
-    exit;
-
-  _fread(bmp, 1, $30, f); // read bitmap header
-  Result:= _new(SizeOf(THwlBitmap));
-  ZeroMemory(Result, SizeOf(THwlBitmap));
-  with bmp, Result^ do
-  begin
-    if BmpSize <> w*h then  // bitmapshd.lod support
-    begin
-      w:= PowerOf2[BmpWidthLn2];
-      h:= PowerOf2[BmpHeightLn2];
-    end;
-    FullW:= w;
-    FullH:= h;
-    AreaW:= w;
-    AreaH:= h;
-    BufW:= w;
-    BufH:= h;
-    Buffer:= _new(BmpSize*2);
-    p:= Buffer;
-    p1:= Buffer;
-    // Read bitmap data
-    if UnpSize <> 0 then
-    begin
-      SetLength(pack, DataSize);
-      _fread(pack[0], 1, DataSize, f);
-      _Deflate(0, @UnpSize, p1^, DataSize, pack[0]);
-      pack:= nil;
-    end else
-      _fread(p1^, 1, DataSize, f);
-
-    // Get Palette
-    c:= 0;
-    _fread(c, 1, 3, f);  // check first color
-    LoadPaletteD3D(pal, Palette);
-    if (c = $FFFF00) or (c = $FF00FF) or (c = $FC00FC) or (c = $FCFC00) then
-      pal[0]:= 0;  // Margenta/light blue for transparency
-
-    // Render
-    for i := BmpSize - 1 downto 0 do
-      p[i]:= pal[p1[i]];
-    if pal[0] = 0 then
-      PropagateIntoTransparent(p, w, h);
-  end;
 end;
 
 //----- Get rid of palettes limit in D3D
@@ -2395,7 +2161,7 @@ procedure DoLoadCustomLods(Old: int; const Name: string; Chap: PChar);
 begin
   with TRSFindFile.Create('Data\' + Name) do
     try
-      while FindNextAttributes(0, FILE_ATTRIBUTE_DIRECTORY) do // Only files
+      while FindEachFile do
         DoLoadCustomLod(ptr(Old), PChar('Data\' + Data.cFileName), Chap);
     finally
       Free;
@@ -2412,29 +2178,25 @@ begin
   DoLoadCustomLods(Old, '*.' + Name, Chap);
 end;
 
-{procedure LoadCustomLodsHD(Old: int; const Name: string; Chap: PChar);
+procedure LoadCustomLodsD3D(Old: int; const Name: string; Chap: PChar);
 var
   s: string;
-  i: int;
 begin
-  with TRSFindFile.Create('Data\*.' + Name + '*') do
+  s:= 'Data\' + Name + '.lwd';
+  if FileExists(s) then
+    DoLoadCustomLod(ptr(Old), PChar(s), Chap);
+  with TRSFindFile.Create('Data\*.' + Name + '.l?d') do
     try
-      while FindNextAttributes(0, FILE_ATTRIBUTE_DIRECTORY) do // Only files
+      while FindEachFile do
       begin
-        s:= Data.cFileName;
-        i:= LastDelimiter('.', s);
-        s[i]:= ':';
-        i:= LastDelimiter('.', s);
-        if
-
-
-        if ExtractFileExt(Data.cFileName)
-        DoLoadCustomLod(ptr(Old), PChar('Data\' + Data.cFileName), Chap);
+        s:= LowerCase(ExtractFileExt(Data.cFileName));
+        if (s = '.lod') or (s = '.lwd') then
+          DoLoadCustomLod(ptr(Old), PChar('Data\' + Data.cFileName), Chap);
       end;
     finally
       Free;
     end;
-end;}
+end;
 
 var
   LoadLodsOld: TProcedure;
@@ -2445,9 +2207,9 @@ var
   Lang: array[0..103] of Char;
 begin
   LoadCustomLods($70D3E8, 'icons.lod', 'icons');
-  {if _IsD3D^ then
-    LoadCustomLodsHD($72DC60, 'bitmaps.lod', 'bitmaps')
-  else}
+  if _IsD3D^ then
+    LoadCustomLodsD3D($72DC60, 'bitmaps', 'bitmaps')
+  else
     LoadCustomLods($72DC60, 'bitmaps.lod', 'bitmaps');
   LoadCustomLods($71EFA8, 'sprites.lod', 'sprites08');
   LoadCustomLods($6CE838, 'games.lod', 'chapter');
@@ -3611,7 +3373,7 @@ end;
 
 //----- Fix quick R+R+Esc press with encounter
 
-function FixRestEncounter: int;
+procedure FixRestEncounter;
 begin
   _ActionQueue.Count:= 0;
 end;
@@ -3619,7 +3381,7 @@ end;
 //----- HooksList
 
 var
-  HooksList: array[1..331] of TRSHookInfo = (
+  HooksList: array[1..327] of TRSHookInfo = (
     (p: $458E18; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $463862; old: $450493; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave/quicksave filenames localization
     (p: $4CD509; t: RShtNop; size: 12), // Fix Save/Load Slots: it resets SaveSlot, SaveScroll
@@ -3723,7 +3485,6 @@ var
     (p: $4AABF3; old: $4AACDC; newp: @LoadSpriteD3DHook4; t: RShtJmp6), // No HWL for sprites
     (p: $49C17A; size: 16), // No HWL for sprites
     (p: $49C1DA; size: 5), // No HWL for sprites
-    (p: $4BF072; old: $4BF0E3; backup: @@SpriteD3DHitStd; newp: @SpriteD3DHitHook; t: RShtCall), // Take sprite contour into account when clicking it
     (p: $4BECE5; old: $4BED9F; new: $4BEEF0; t: RShtCall), // Never can be sure a sprite obscures a facet
     (p: $4BECEA; size: 8), // Never can be sure a sprite obscures a facet
     (p: $4BF088; old: $4BE47D; new: $4BE7A9; t: RShtCall), // Don't check sprite visibility when clicking
@@ -3750,9 +3511,6 @@ var
     (p: $46C0B6; newp: @FacetCheckHook3; t: RShtCall; size: 7), // Fix facet interception checking out-of-bounds
     (p: $4981AC; newp: @NoVertexFacetHook; t: RShtCall), // There is a facet without a single vertex in Necromancers' Guild!
     (p: $433D91; newp: @NoVertexFacetHook2; t: RShtBefore; size: 6), // There is a facet without a single vertex in Necromancers' Guild!
-    (p: $4A2C46; old: $44FD37; newp: @LoadBitmapD3DHook; t: RShtCall; Querry: 13), // No HWL for bitmaps
-    (p: $49C175; old: $44FBD0; new: $44FC90; t: RShtCall; Querry: 13), // No HWL for bitmaps
-    (p: $49C1CD; size: 5; Querry: 13), // No HWL for bitmaps
     (p: $489EB1; newp: @PalettesHook; t: RShtCall), // Get rid of palettes limit in D3D
     (p: $4686D5; newp: ptr($4686FD); t: RShtJmp), // Ignore 'Invalid ID reached!'
     (p: $4AB73D; newp: ptr($4AB762); t: RShtJmp; size: 7), // Ignore 'Too many stationary lights!'
@@ -4037,8 +3795,6 @@ begin
     RSApplyHooks(HooksList, 11);
   if Options.DataFiles then
     RSApplyHooks(HooksList, 12);
-  if Options.NoBitmapsHwl then
-    RSApplyHooks(HooksList, 13);
   if Options.FixSkyBitmap then
     RSApplyHooks(HooksList, 18);
   if Options.FixChestsByReorder then

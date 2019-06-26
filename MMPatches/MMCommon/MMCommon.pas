@@ -29,6 +29,10 @@ const
   hqCloseRingsCloser = 43;
   hqPaperDollInChestsAndOldCloseRings = 44;
   hqPaperDollInChests2 = 45;
+  hqPlaceChestItemsVertically = 46;
+  hqFixInterfaceBugs2 = 47;
+  hqFixChestsByCompacting = 48;
+  hqSpriteAngleCompensation = 49;
 
 {$IFDEF mm6}
   m6 = 1;
@@ -144,12 +148,13 @@ var
   ScalingParam1, ScalingParam2: ext;
 
   RecoveryTimeInfo, PlayerNotActive, SDoubleSpeed, SNormalSpeed,
-  QuickSaveName, QuickSaveDigitSpace: string;
+  QuickSaveName, QuickSaveDigitSpace, SArmorHalved, SArmorHalvedMessage: string;
 
   CapsLockToggleRun, NoDeathMovie, FreeTabInInventory, ReputationNumber,
   AlwaysStrafe, StandardStrafe, MouseLookChanged, FixInfiniteScrolls,
   FixInactivePlayersActing, BorderlessFullscreen, BorderlessProportional,
-  MouseLookCursorHD, SmoothScaleViewSW, WasIndoor: Boolean;
+  MouseLookCursorHD, SmoothScaleViewSW, WasIndoor, SpriteAngleCompensation,
+  PlaceChestItemsVertically, FixChestsByCompacting: Boolean;
   {$IFNDEF mm6}
   NoIntro, NoVideoDelays, DisableAsyncMouse: Boolean;
   TurnBasedWalkDelay: int;
@@ -167,7 +172,7 @@ var
 
   MappedKeys, MappedKeysBack: array[0..255] of Byte;
 {$ELSEIF defined(mm7)}
-  UseMM7text: Boolean;
+  UseMM7text, SupportMM7ResTool: Boolean;
 {$ELSEIF defined(mm8)}
   NoWaterShoreBumpsSW, FixQuickSpell, FixIndoorFOV: Boolean;
   MouseBorder, StartupCopyrightDelay: int;
@@ -224,6 +229,9 @@ type
     AreaW: int;
     AreaH: int;
   end;
+  PPSpriteD3DArray = ^PSpriteD3DArray;
+  PSpriteD3DArray = ^TSpriteD3DArray;
+  TSpriteD3DArray = array[0..MaxInt div SizeOf(TSpriteD3D) - 1] of TSpriteD3D;
 
   PLodBitmap = ^TLodBitmap;
   TLodBitmap = packed record
@@ -360,6 +368,12 @@ const
   _DialogsHigh = pint(m6*$4D46BC + m7*$5074B0 + m8*$518CE8);
   _MoveToMap = PMoveToMap(m6*$551D20 + m7*$5B6428 + m8*$5CCCB8);
   _PartyBuffs = PPartyBuffs(m6*$908E34 + m7*$ACD6C4 + m8*$B21738);
+  _ShowHits = pbool(m6*$6107EC + m7*$6BE1F8 + m8*$6F39B8);
+  _ChestOff_Items = 4;
+  _ChestOff_Inventory = 4 + _ItemOff_Size*140;
+{$IFNDEF MM6}
+  _SpritesD3D = PPSpriteD3DArray(_SpritesLod + $ECB0);
+{$ENDIF}
 
 {$IFNDEF mm6}
 var
@@ -385,13 +399,17 @@ procedure Wnd_Sizing_SetWH(wnd: HWND; side: int; var r: TRect; dw, dh: int);
 procedure CheckHooks(const Hooks);
 procedure ClipCursorRel(r: TRect);
 function DynamicFovFactor(const x, y: int): ext;
-function GetViewMul: ext;
+function GetViewMul: ext; inline;
 procedure AddAction(action, info1, info2:int); stdcall;
 
 var
   SW, SH: int;
 
 procedure NeedScreenWH;
+procedure __SetSpellBuff;
+
+var
+  SetSpellBuff: procedure(this: ptr; time: int64; skill, power, overlay, caster: int); stdcall;
 
 implementation
 
@@ -480,7 +498,7 @@ begin
 {$ENDIF}
       CapsLockToggleRun:= ReadBool('CapsLockToggleRun', false);
 
-      QuickSavesCount:= ReadInteger('QuickSavesCount', 2);
+      QuickSavesCount:= ReadInteger('QuickSavesCount', 3);
 {$IFNDEF mm8}
       i:= ini.ReadInteger(sect, 'QuickSaveKey', 11) + VK_F1 - 1;
       if (i < VK_F1) or (i > VK_F24) then
@@ -592,6 +610,10 @@ begin
       {$ENDIF}
       PaperDollInChests:= ReadInteger('PaperDollInChests', 1);
       {$IFDEF mm7}HigherCloseRingsButton:= ReadBool('HigherCloseRingsButton', true);{$ENDIF}
+      PlaceChestItemsVertically:= ini.ReadBool(sect, 'PlaceChestItemsVertically', true);
+      {$IFDEF mm7}SupportMM7ResTool:= ini.ReadBool(sect, 'SupportMM7ResTool', false);{$ENDIF}
+      FixChestsByCompacting:= ini.ReadBool(sect, 'FixChestsByCompacting', true);
+      SpriteAngleCompensation:= ini.ReadBool(sect, 'SpriteAngleCompensation', true);
 
 {$IFDEF mm6}
       if FileExists(AppPath + 'mm6text.dll') then
@@ -648,6 +670,8 @@ begin
       PlayerNotActive:= ReadString('PlayerNotActive', 'That player is not active');
       SDoubleSpeed:= ReadString('DoubleSpeed', 'Double Speed');
       SNormalSpeed:= ReadString('NormalSpeed', 'Normal Speed');
+      {$IFDEF mm7}SArmorHalved:= ReadString('ArmorHalved', 'Armor Halved');{$ENDIF}
+      {$IFNDEF mm6}SArmorHalvedMessage:= ReadString('ArmorHalvedMessage', '%s halves armor of %s');{$ENDIF}
       HorsemanSpeakTime:= ReadInteger('HorsemanSpeakTime', 1500);
       BoatmanSpeakTime:= ReadInteger('BoatmanSpeakTime', 2500);
 
@@ -717,7 +741,7 @@ begin
   Result:= MipmapsCount;
   if (Result < 0) or (s = '') then
     exit;
-  w:= a.BufW;
+  w:= a.AreaW;
   if MipmapsBase.Find(s, i) then
     w:= int(MipmapsBase.Objects[i])
   else
@@ -752,50 +776,43 @@ begin
 end;
 {$ENDIF}
 
-function PropagateColor(p: PWordArray; x, y, w, h, dx, dy: int; need: Word): Boolean; inline;
+function PropagateColor(p: PWordArray; d: int; get: Boolean): Boolean; inline;
 var
   c: Word;
 begin
-  Result:= false;
-  if (dx < 0) and (x + dx < 0) then  exit;
-  if (dy < 0) and (y + dy < 0) then  exit;
-  if (dx > 0) and (x + dx >= w) then  exit;
-  if (dy > 0) and (y + dy >= h) then  exit;
-  c:= p[dx + dy*w];
-  Result:= (c > need);
+  c:= p[d];
+  Result:= get and (c > $7FFF) or not get and (c = 0);
   if Result then
-    p[0]:= c and $7FFF;
+    if get then
+      p[0]:= c and $7FFF
+    else
+      p[d]:= p[0] and $7FFF;
+end;
+
+function PropagateLoop(p: PWordArray; w, h, d1, d2: int): Boolean; inline;
+var
+  x, y: int;
+begin
+  Result:= false;
+  p:= @p[w];
+  for y:= h - 2 downto 0 do
+  begin
+    p:= @p[1];
+    for x:= w - 2 downto 0 do
+    begin
+      if p[0] = 0 then
+        Result:= PropagateColor(p, d1, true) or PropagateColor(p, d2, true) or Result
+      else if p[0] > $7FFF then
+        Result:= PropagateColor(p, d1, false) or PropagateColor(p, d2, false) or Result;
+      p:= @p[1];
+    end;
+  end;
 end;
 
 procedure PropagateIntoTransparent(p: PWordArray; w, h: int);
-var
-  found: Boolean;
-  x, y: int;
 begin
-  found:= false;
-  for y:= 0 to h - 1 do
-    for x:= 0 to w - 1 do
-    begin
-      found:= (p[0] = 0) and
-        (PropagateColor(p, x, y, w, h, -1, 0, $7FFF) or
-         PropagateColor(p, x, y, w, h, 1, 0, $7FFF) or
-         PropagateColor(p, x, y, w, h, 0, -1, $7FFF) or
-         PropagateColor(p, x, y, w, h, 0, 1, $7FFF)) or found;
-      inc(PWord(p));
-    end;
-  if not found then
-    exit;
-  dec(PWord(p), w*h);
-  for y:= 0 to h - 1 do
-    for x:= 0 to w - 1 do
-    begin
-      if (p[0] <> 0) or
-        PropagateColor(p, x, y, w, h, -1, 0, 0) or
-        PropagateColor(p, x, y, w, h, 1, 0, 0) or
-        PropagateColor(p, x, y, w, h, 0, -1, 0) or
-        PropagateColor(p, x, y, w, h, 0, 1, 0) then ;
-      inc(PWord(p));
-    end;
+  if PropagateLoop(p, w, h, -1, -w) then  // up, left
+    PropagateLoop(p, w, h, -w-1, -w+1);   // corders of top line
 end;
 
 var
@@ -985,6 +1002,13 @@ begin
   if SH = 0 then  SH:= 480;
 end;
 
+procedure __SetSpellBuff;
+asm
+  pop ecx
+  xchg ecx, [esp]
+  push m6*$44A970 + m7*$458519 + m8*$455D97
+end;
+
 { TMapExtra }
 
 function TMapExtra.GetPeriodicTimer(i: int; first: Boolean = false): int64;
@@ -1039,5 +1063,7 @@ exports
 {$ENDIF}
   GetOptions,
   SaveBufferToBitmap;
+initialization
+  @SetSpellBuff:= @__SetSpellBuff;
 end.
 

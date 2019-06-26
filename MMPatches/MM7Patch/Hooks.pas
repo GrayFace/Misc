@@ -1115,123 +1115,6 @@ end;
 
 //----- No HWL for sprites
 
-function Power2(n: int):int;
-begin
-  Result:= 4;
-  while Result < n do
-    Result:= Result*2;
-end;
-
-function FindSprite(Name: PChar): PSprite;
-var
-  i: int;
-begin
-  i:= pint(_SpritesLod + $EC9C)^;
-  Result:= @Sprites;
-  while (i > 0) and (_strcmpi(@Result.Name, Name) <> 0) do
-  begin
-    inc(Result);
-    dec(i);
-  end;
-  if i = 0 then
-    Result:= nil;
-end;
-
-procedure LoadPaletteD3D(var pal; PalIndex: int);
-var
-  i: int;
-  p, p1: PWordArray;
-begin
-  PalIndex:= _LoadPalette(0, 0, $80D018, PalIndex);
-  p:= @pal;
-  p1:= ptr($8DE618 + PalIndex*32*256*2);
-  if _GreenColorBits^ = 6 then
-    for i := 0 to 255 do
-      p[i]:= p1[i] and $1F + (p1[i] and $FFC0) shr 1 + $8000
-  else
-    for i := 0 to 255 do
-      p[i]:= p1[i] or $8000;
-end;
-
-function LoadSpriteD3DHook(Name: PChar; PalIndex: int): PHwlBitmap; stdcall;
-var
-  sprite: PSprite;
-  i, j, x1, x2, y1, y2: int;
-  pal: array[0..255] of word;
-  p: pword;
-begin
-  Result:= nil;
-  sprite:= FindSprite(Name);
-  if sprite = nil then
-    exit;
-
-  with sprite^ do
-  begin
-    Result:= _new(SizeOf(THwlBitmap));
-    //ZeroMemory(Result, SizeOf(THwlBitmap)); // now done always
-    // Find area bounds
-    x1:= w;
-    x2:= -1;
-    y1:= -1;
-    y2:= -1;
-    for i := 0 to h - 1 do
-      with Lines[i] do
-        if a1 >= 0 then
-        begin
-          if y1 < 0 then  y1:= i;
-          y2:= i;
-          if a1 < x1 then  x1:= a1;
-          if a2 > x2 then  x2:= a2;
-        end;
-    with Result^ do
-    begin
-      FullW:= w;
-      FullH:= h;
-      if y1 < 0 then  exit;
-      // Area dimensions must be powers of 2
-      inc(x2);
-      inc(y2);
-      BufW:= Power2(x2 - x1);
-      BufH:= Power2(y2 - y1);
-      AreaW:= BufW;
-      AreaH:= BufH;
-      x1:= (x1 + x2 - BufW) div 2;
-      //x1:= IntoRange(x1, 0, w - BufW);
-      x2:= x1 + BufW - 1;
-      y1:= (y1 + y2 - BufH) div 2;
-      //y1:= IntoRange(y1, 0, h - BufH);
-      y2:= y1 + BufH - 1;
-      AreaX:= x1;
-      AreaY:= y1;
-
-      // Get Palette
-      LoadPaletteD3D(pal, PalIndex);
-      pal[0]:= 0;
-
-      // Render
-      Buffer:= _new(BufW*BufH*2);
-      //ZeroMemory(Buffer, BufW*BufH*2); // now done always
-      p:= Buffer;
-      for i := y1 to y2 do
-        with Lines[i] do
-          if (i >= 0) and (i < h) and (a1 >= 0) then
-          begin
-            inc(p, a1 - x1);
-            for j := 0 to a2 - a1 do
-            begin
-              p^:= pal[ord((pos + j)^)];
-              inc(p);
-            end;
-            inc(p, x2 - a2);
-          end else
-            inc(p, BufW);
-      // Sparks spell ignores transparency bit, this check is to avoid interfering with it
-      if _MainMenuCode^ < 0 then
-        PropagateIntoTransparent(Buffer, BufW, BufH);
-    end;
-  end;
-end;
-
 procedure LoadSpriteD3DHook2;
 asm
   inc dword ptr [esi+0EC9Ch]
@@ -1241,7 +1124,7 @@ asm
 end;
 
 var
-  HaveIt: Boolean; // found sprite by name, but palette don't match
+  HaveIt: Boolean; // found sprite by name, but palette doesn't match
 
 procedure LoadSpriteD3DHook3;
 asm
@@ -1295,62 +1178,6 @@ begin
     Hook.p:= PatchCount[i];
     Hook.new:= (pint(Hook.p)^ div 1500) * SpritesMax;
     RSApplyHook(Hook);
-  end;
-end;
-
-//----- Take sprite contour into account when clicking it
-
-var
-  SpriteD3DHitStd: function(var draw: TDrawSpriteD3D; x, y: single): LongBool; stdcall;
-
-function FindSpriteD3D(texture: ptr): PSpriteD3D;
-var
-  i: int;
-begin
-  i:= pint(_SpritesLod + $EC9C)^ - 1;
-  Result:= pptr(_SpritesLod + $ECB0)^;
-  while (i > 0) and (Result.Texture <> texture) do
-  begin
-    inc(Result);
-    dec(i);
-  end;
-  if i = 0 then
-    Result:= nil;
-end;
-
-function SpriteD3DHitHook(var draw: TDrawSpriteD3D; x, y: single): LongBool; stdcall;
-var
-  sp3d: PSpriteD3D;
-  sp: PSprite;
-  drX, drW, drY, drH: Single;
-  i, j: int;
-begin
-  Result:= SpriteD3DHitStd(draw, x, y);
-  if not Result then
-    exit;
-
-  sp3d:= FindSpriteD3D(draw.Texture);
-  if sp3d = nil then
-    exit;
-  with draw do
-  begin
-    drX:= Vert[0].sx;
-    drW:= Vert[3].sx - drX;
-    drY:= Vert[0].sy;
-    drH:= Vert[1].sy - drY;
-  end;
-  i:= sp3d.AreaX + Floor(sp3d.AreaW * (x + 0.5 - drX) / drW);
-  j:= sp3d.AreaY + Floor(sp3d.AreaH * (y + 0.5 - drY) / drH);
-  sp:= FindSprite(sp3d.Name);
-  if (sp = nil) or (sp.Lines = nil) then
-    exit;
-
-  Result:= false;
-  if (j < 0) or (j >= sp.h) then  exit;
-  with sp.Lines[j] do
-  begin
-    if (a1 < 0) or (i > a2) or (i < a1) then  exit;
-    Result:= ((pos + i - a1)^ <> #0);
   end;
 end;
 
@@ -1486,67 +1313,6 @@ asm
   mov eax, 1
   mov [esp], $436478
 @norm:
-end;
-
-//----- No HWL for bitmaps
-
-function LoadBitmapD3DHook(n1, n2, this, PalIndex: int; Name: PChar): PHwlBitmap;
-var
-  bmp: TLodBitmap;
-  f: ptr;
-  pack: array of Byte;
-  p: PWordArray;
-  p1: PByteArray;
-  pal: array[0..255] of Word;
-  i, c: int;
-begin
-  Result:= nil;
-  f:= _LodFind(0, 0, _BitmapsLod, 0, Name);
-  if f = nil then
-    exit;
-
-  _fread(bmp, 1, $30, f); // read bitmap header
-  Result:= _new(SizeOf(THwlBitmap));
-  ZeroMemory(Result, SizeOf(THwlBitmap));
-  with bmp, Result^ do
-  begin
-    if BmpSize <> w*h then  // bitmapshd.lod support
-    begin
-      w:= PowerOf2[BmpWidthLn2];
-      h:= PowerOf2[BmpHeightLn2];
-    end;
-    FullW:= w;
-    FullH:= h;
-    AreaW:= w;
-    AreaH:= h;
-    BufW:= w;
-    BufH:= h;
-    Buffer:= _new(BmpSize*2);
-    p:= Buffer;
-    p1:= Buffer;
-    // Read bitmap data
-    if UnpSize <> 0 then
-    begin
-      SetLength(pack, DataSize);
-      _fread(pack[0], 1, DataSize, f);
-      _Deflate(0, @UnpSize, p1^, DataSize, pack[0]);
-      pack:= nil;
-    end else
-      _fread(p1^, 1, DataSize, f);
-
-    // Get Palette
-    c:= 0;
-    _fread(c, 1, 3, f);  // check first color
-    LoadPaletteD3D(pal, Palette);
-    if (c = $FFFF00) or (c = $FF00FF) or (c = $FC00FC) or (c = $FCFC00) then
-      pal[0]:= 0;  // Margenta/light blue for transparency
-
-    // Render
-    for i := BmpSize - 1 downto 0 do
-      p[i]:= pal[p1[i]];
-    if pal[0] = 0 then
-      PropagateIntoTransparent(p, w, h);
-  end;
 end;
 
 //----- Get rid of palettes limit in D3D
@@ -2380,7 +2146,7 @@ procedure DoLoadCustomLods(Old: int; const Name: string; Chap: PChar);
 begin
   with TRSFindFile.Create('Data\' + Name) do
     try
-      while FindNextAttributes(0, FILE_ATTRIBUTE_DIRECTORY) do // Only files
+      while FindEachFile do
         DoLoadCustomLod(ptr(Old), PChar('Data\' + Data.cFileName), Chap);
     finally
       Free;
@@ -2397,6 +2163,26 @@ begin
   DoLoadCustomLods(Old, '*.' + Name, Chap);
 end;
 
+procedure LoadCustomLodsD3D(Old: int; const Name: string; Chap: PChar);
+var
+  s: string;
+begin
+  s:= 'Data\' + Name + '.lwd';
+  if FileExists(s) then
+    DoLoadCustomLod(ptr(Old), PChar(s), Chap);
+  with TRSFindFile.Create('Data\*.' + Name + '.l?d') do
+    try
+      while FindEachFile do
+      begin
+        s:= LowerCase(ExtractFileExt(Data.cFileName));
+        if (s = '.lod') or (s = '.lwd') then
+          DoLoadCustomLod(ptr(Old), PChar('Data\' + Data.cFileName), Chap);
+      end;
+    finally
+      Free;
+    end;
+end;
+
 var
   LoadLodsOld: TProcedure;
 
@@ -2405,9 +2191,10 @@ procedure LoadLodsHook;
 begin
   LoadCustomLods($6D0490, 'icons.lod', 'icons');
   LoadCustomLods($6BE8D8, 'events.lod', 'icons');
-  LoadCustomLods($6F0D00, 'bitmaps.lod', 'bitmaps');
-  {if _IsD3D^ then
-    LoadCustomLods($6F0D00, 'bitmapshd.lod', 'bitmaps');}
+  if _IsD3D^ then
+    LoadCustomLodsD3D($6F0D00, 'bitmaps', 'bitmaps')
+  else
+    LoadCustomLods($6F0D00, 'bitmaps.lod', 'bitmaps');
   LoadCustomLods($6E2048, 'sprites.lod', 'sprites08');
   LoadCustomLods($6A08E0, 'games.lod', 'chapter');
   LoadLodsOld;
@@ -3586,10 +3373,21 @@ asm
 @std:
 end;
 
+//----- 'Of Spirit Magic' effect of Glory Shield wasn't working
+
+procedure FixGloryShield;
+asm
+  cmp esi, 38
+  jnz @std
+  mov eax, $48F1EC
+@std:
+  jmp eax
+end;
+
 //----- HooksList
 
 var
-  HooksList: array[1..316] of TRSHookInfo = (
+  HooksList: array[1..313] of TRSHookInfo = (
     (p: $45B0D1; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $4655FE; old: $452C75; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave file name localization
     (p: $45E5A4; old: $45E2D0; backup: @FillSaveSlotsStd; newp: @FillSaveSlotsHook; t: RShtCall), // Fix Save/Load Slots
@@ -3682,7 +3480,6 @@ var
     (p: $4AC768; old: $4AC851; newp: @LoadSpriteD3DHook4; t: RShtJmp6), // No HWL for sprites
     (p: $49EAE8; size: 16), // No HWL for sprites
     (p: $49EB49; size: 5), // No HWL for sprites
-    (p: $4C1508; old: $4C1579; backup: @@SpriteD3DHitStd; newp: @SpriteD3DHitHook; t: RShtCall), // Take sprite contour into account when clicking it
     (p: $4C115A; old: $4C1235; new: $4C1386; t: RShtCall), // Never can be sure a sprite obscures a facet
     (p: $4C115F; size: 8), // Never can be sure a sprite obscures a facet
     (p: $4C151E; old: $4C088F; new: $4C0C96; t: RShtCall), // Don't check sprite visibility when clicking
@@ -3705,9 +3502,6 @@ var
     (p: $46D60E; newp: @FacetCheckHook3; t: RShtCall; size: 7), // Fix facet interception checking out-of-bounds
     (p: $49AC92; newp: @NoVertexFacetHook; t: RShtCall), // There may be facets without vertexes
     (p: $43644F; newp: @NoVertexFacetHook2; t: RShtBefore), // There may be facets without vertexes
-    (p: $4A4D93; old: $452504; newp: @LoadBitmapD3DHook; t: RShtCall; Querry: 13), // No HWL for bitmaps
-    (p: $49EAE3; old: $4523AB; new: $45246B; t: RShtCall; Querry: 13), // No HWL for bitmaps
-    (p: $49EB3B; size: 5; Querry: 13), // No HWL for bitmaps
     (p: $48A5B9; newp: @PalettesHook; t: RShtCall), // Get rid of palettes limit in D3D
     (p: $46A364; newp: ptr($46A38C); t: RShtJmp), // Ignore 'Invalid ID reached!'
     (p: $44EC22; newp: ptr($44EC4A); t: RShtJmp), // Ignore 'Sprite outline currently Unsupported'
@@ -3899,12 +3693,13 @@ var
     (p: $4416E3; newp: @FixSimpleMessageSpells; t: RShtAfter), // Fly and Water Walk icon not drawn in simple message screen
     (p: $4E2A98; old: $16; new: $17; t: RSht2; Querry: hqFixInterfaceBugs), // Fix health bars position
     (p: $4E2A9C; old: $89; new: $8A; t: RSht2; Querry: hqFixInterfaceBugs), // Fix health bars position
-    (p: $4924FA; old: 385; new: 384; t: RSht4; Querry: hqFixInterfaceBugs), // Fix danger indicators position
-    (p: $4924AF; old: 385; new: 384; t: RSht4; Querry: hqFixInterfaceBugs), // Fix danger indicators position
-    (p: $434AA2; old: 470; new: 471; t: RSht4; Querry: hqFixInterfaceBugs), // Fix position of 'close rings view' in inventory
-    (p: $434AA2; old: 470; new: 518; t: RSht4; Querry: hqCloseRingsCloser), // Move 'close rings' button closer
+    (p: $4924FA; add: -1; t: RSht4; Querry: hqFixInterfaceBugs), // Fix danger indicators position
+    (p: $4924AF; add: -1; t: RSht4; Querry: hqFixInterfaceBugs), // Fix danger indicators position
+    (p: $434AA2; add: 1; t: RSht4; Querry: hqFixInterfaceBugs2), // Fix position of 'close rings view' in inventory
+    (p: $434AA2; add: 518 - 470; t: RSht4; Querry: hqCloseRingsCloser), // Move 'close rings' button closer
     (p: $434A9D; old: 445; new: 313; t: RSht4; Querry: hqCloseRingsCloser), // Move 'close rings' button closer
     (p: $43E8CA; old: $511748; new: $507558; t: RSht4; Querry: hqCloseRingsCloser), // Move 'close rings' button closer
+    (p: $48F694; old: $48F0AC; newp: @FixGloryShield; t: RShtCodePtrStore), // 'Of Spirit Magic' effect of Glory Shield wasn't working
     ()
   );
 
@@ -3922,12 +3717,22 @@ begin
     end
 end;
 
+const
+  MMResToolError = 'It appears that you are using an executable modified by MM7ResTool. '
+   + 'GrayFace patch does a far greater job at supporting HD mode now, so it''s recommended that '
+   + 'you restore the original executable for new UI to properly function. '
+   + 'If you still want to continue using MM7ResTool, add the line SupportMM7ResTool=1 to mm7.ini to disable this message.'#13#10#13#10
+   + 'Do you want to run MM7 with MM7ResTool support?';
+
 procedure HookAll;
 var
   LastDebugHook: DWord;
 begin
   CheckHooks(HooksList);
   CheckHooksD3D;
+  if not SupportMM7ResTool and (pint($434AA2)^ <> 470) then
+    if RSMessageBox(0, MMResToolError, 'GrayFace MM7 Patch', MB_ICONEXCLAMATION or MB_OKCANCEL) <> ID_OK then
+      ExitProcess(0);
   ExtendSpriteLimits;
   ReadDisables;
   RSApplyHooks(HooksList);
@@ -3986,8 +3791,6 @@ begin
     RSApplyHooks(HooksList, 11);
   if Options.DataFiles then
     RSApplyHooks(HooksList, 12);
-  if Options.NoBitmapsHwl then
-    RSApplyHooks(HooksList, 13);
   if Options.FixChestsByReorder then
     RSApplyHooks(HooksList, 19);
   if Options.FixGMStaff then
@@ -4004,6 +3807,8 @@ begin
     RSApplyHooks(HooksList, hqFixMonsterSummon);
   if Options.FixInterfaceBugs then
     RSApplyHooks(HooksList, hqFixInterfaceBugs);
+  if Options.FixInterfaceBugs and not Options.HigherCloseRingsButton then
+    RSApplyHooks(HooksList, hqFixInterfaceBugs2);
   if Options.HigherCloseRingsButton then
     RSApplyHooks(HooksList, hqCloseRingsCloser);
   ApplyMMDeferredHooks;
