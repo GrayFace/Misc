@@ -2244,7 +2244,7 @@ var
 // OnStart, just before loading any data
 procedure LoadLodsHook;
 begin
-  LoadCustomLods($4CB6D0, 'icons.lod', 'icons');
+  LoadCustomLods(_IconsLod, 'icons.lod', 'icons');
   LoadCustomLods($610AB8, 'bitmaps.lod', 'bitmaps');
   LoadCustomLods($61AA10, 'sprites.lod',  'sprites08');
   LoadCustomLods($6104F8, 'games.lod', 'chapter');
@@ -3236,6 +3236,19 @@ begin
     Result:= LoadCursor(hInstance, name);
 end;
 
+//----- Postpone intro
+
+procedure PostponeIntroHook;
+const
+  intro: PChar = 'mm6Intro';
+asm
+  push 1
+  xor edx, edx
+  mov ecx, intro
+  mov eax, $4A59A0
+  call eax
+end;
+
 //----- Fix Paralyze
 
 procedure FixParalyze;
@@ -3245,7 +3258,7 @@ end;
 //----- HooksList
 
 var
-  HooksList: array[1..283] of TRSHookInfo = (
+  HooksList: array[1..284] of TRSHookInfo = (
     (p: $42ADE7; newp: @RunWalkHook; t: RShtCall), // Run/Walk check
     (p: $453AD3; old: $42ADA0; newp: @KeysHook; t: RShtCall), // My keys handler
     (p: $45456E; old: $417F90; newp: @WindowProcCharHook; t: RShtCall), // Map Keys
@@ -3528,6 +3541,7 @@ var
     (p: $438A90; newp: @MinimapZoomHook; t: RShtFunctionStart; size: 6), // Remember minimap zoom indoors
     (p: $444CF5; old: $7F; new: $7D; t: RSht1), // TFT.bin was animated incorrectly (first frame was longer, last frame was shorter)
     (p: $4B9194; newp: @MyLoadCursor; t: RSht4), // Load cursors from Data
+    (p: $453650; newp: @PostponeIntroHook; t: RShtAfter; Querry: hqPostponeIntro), // Postpone intro
     //(p: $432084; newp: @FixParalyze; t: RShtBefore), // Fix Paralyze
     ()
   );
@@ -3597,6 +3611,8 @@ begin
     HookMP3;
   if Options.NoCD and FileExists('Anims\Anims2.vid') then
     RSApplyHooks(HooksList, 1);
+  if pint(_NoIntro)^ = 2 then
+    RSApplyHooks(HooksList, hqPostponeIntro);
   if Options.FixDualWeaponsRecovery then
     RSApplyHooks(HooksList, 5);
   if Options.ProgressiveDaggerTrippleDamage then

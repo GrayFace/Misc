@@ -49,7 +49,6 @@ const
   _TimeDelta = pint($4D519C);
   _Flying = pint($908CE8);
   _MapMonsters = $56F478;
-  _NoIntro = pbool($6A5F64);
   _Mouse_X = pint($6A6120);
   _Mouse_Y = pint($6A6124);
   _ScanlineOffset = PPIntegerArray($41F431);

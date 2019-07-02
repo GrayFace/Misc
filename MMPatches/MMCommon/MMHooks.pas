@@ -976,10 +976,11 @@ In reality I just had to use a ton of hacks.
 
 procedure SpritesAngleProc(spi: int2; var params: TSpriteDrawParams);
 const
-  Dist = 5000;
+  Dist = 5000;  // don't straighten objects in the distance
+  HLim = 500;  // don't straighten trees
 var
   sprite: PSprite;
-  mul, si, co: ext;
+  mul, si, co, h: ext;
   n: int;
 begin
   SinCos(_Party_Angle^*Pi/1024/3, si, co); // use 1/3 of the angle
@@ -994,11 +995,12 @@ begin
       inc(n);
     mul:= (h - n)*params.ScaleY/$10000/GetViewMul;
   end;
+  h:= mul*params.ZBuf;
   if si < 0 then  // look down
-    mul:= min(mul, 1)*0.75*EnsureRange(2 - params.ZBuf/Dist*2, 0, 1)
+    mul:= min(mul, 1)*0.75*EnsureRange(2 - params.ZBuf/Dist*2, 0, 1)*EnsureRange(2 - h/HLim*2, 0, 1)*2
   else
     mul:= min(mul, 5)*0.35;
-  mul:= 1/EnsureRange(1 + mul*si, 0.7, 2);
+  mul:= 1/EnsureRange(1 + mul*si, 0.73, 2);
   with params do
   begin
     ScaleX:= Round(ScaleX*mul);
@@ -1054,7 +1056,7 @@ begin
     mul:= min(mul, 1)*0.75*EnsureRange(2 - params.ZBuf/Dist*2, 0, 1)
   else
     mul:= min(mul, 5)*0.35;
-  mul:= 1/EnsureRange(1 + mul*si, 0.7, 2);
+  mul:= 1/EnsureRange(1 + mul*si, 0.73, 2);
   with params do
     ScaleX:= Round(ScaleX*mul);
 end;
@@ -1073,7 +1075,7 @@ end;
 
 var
 {$IFDEF MM6}
-  Hooks: array[1..19] of TRSHookInfo = (
+  Hooks: array[1..20] of TRSHookInfo = (
     (p: $457567; newp: @WindowWidth; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $45757D; newp: @WindowHeight; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $454340; newp: @WindowProcHook; t: RShtFunctionStart; size: 8), // Window procedure hook
@@ -1092,10 +1094,11 @@ var
     (p: $41E4D7; newp: @FixChestsCompact; t: RShtAfter; size: 7; Querry: hqFixChestsByCompacting), // Fix chests by compacting
     (p: $46B73E; newp: @SpritesAngleHook6; t: RShtCallStore; Querry: hqSpriteAngleCompensation), // Sprite angle compensation
     (p: $4348BA; newp: @SpritesAngleHook6; t: RShtCallStore; Querry: hqSpriteAngleCompensation), // Sprite angle compensation
+    (p: $44417B; old: $7F; new: $7D; t: RSht1; Querry: hqFixSFT), // SFT.bin was animated incorrectly (first frame was longer, last frame was shorter)
     ()
   );
 {$ELSEIF defined(MM7)}
-  Hooks: array[1..35] of TRSHookInfo = (
+  Hooks: array[1..36] of TRSHookInfo = (
     (p: $47B84E; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (monsters)
     (p: $47B296; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (items)
     (p: $47AD40; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (sprites)
@@ -1130,10 +1133,11 @@ var
     (p: $42031F; newp: @FixChestsCompact; t: RShtAfter; size: 6; Querry: hqFixChestsByCompacting), // Fix chests by compacting
     (p: $47BB77; newp: @SpritesAngleHook; t: RShtBefore; size: 7; Querry: hqSpriteAngleCompensation), // Sprite angle compensation
     (p: $440D76; newp: @SpritesAngleHook2; t: RShtBefore; size: 7; Querry: hqSpriteAngleCompensation), // Sprite angle compensation
+    (p: $44D93B; old: $7F; new: $7D; t: RSht1; Querry: hqFixSFT), // SFT.bin was animated incorrectly (first frame was longer, last frame was shorter)
     ()
   );
 {$ELSE}
-  Hooks: array[1..31] of TRSHookInfo = (
+  Hooks: array[1..32] of TRSHookInfo = (
     (p: $47AB35; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Monsters not visible on the sides of the screen
     (p: $47A55E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Items not visible on the sides of the screen
     (p: $48B37E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Effects not visible on the sides of the screen
@@ -1164,6 +1168,7 @@ var
     (p: $41F808; newp: @FixChestsCompact; t: RShtAfter; size: 6; Querry: hqFixChestsByCompacting), // Fix chests by compacting
     (p: $47AE66; newp: @SpritesAngleHook; t: RShtBefore; size: 7; Querry: hqSpriteAngleCompensation), // Sprite angle compensation
     (p: $43DCC2; newp: @SpritesAngleHook2; t: RShtBefore; size: 7; Querry: hqSpriteAngleCompensation), // Sprite angle compensation
+    (p: $44B020; old: $7F; new: $7D; t: RSht1; Querry: hqFixSFT), // SFT.bin was animated incorrectly (first frame was longer, last frame was shorter)
     ()
   );
 {$IFEND}
@@ -1188,6 +1193,8 @@ begin
     RSApplyHooks(Hooks, hqPaperDollInChests2);
   if (Options.PaperDollInChests > 0) and not Options.HigherCloseRingsButton then
     RSApplyHooks(Hooks, hqPaperDollInChestsAndOldCloseRings);
+  if Options.FixSFT then
+    RSApplyHooks(Hooks, hqFixSFT);
 end;
 
 procedure NeedWindowSize;

@@ -266,8 +266,12 @@ Version 2.4:
 [+] FixChestsByCompacting
 [+] PlaceChestItemsVertically
 [+] SpriteAngleCompensation
+[+] PostponeIntro
+[+] DisableHooks
+[-] FixSFT - SFT.bin was animated incorrectly (first frame was longer, last frame was shorter)
 (MM7, MM8)
 [+] bitmaps.lwd support
+[+] TrueColorTextures
 [-] GM Axe didn't halve armor class
 [-] My bug: Out-of-bounds write when layout definition has long loops.
 [-] My bug caused by Delphi bug: numbers in some layout expressions were read incorrectly
@@ -275,6 +279,8 @@ Version 2.4:
 (MM7)
 [+] SupportMM7ResTool
 [-] 'Of Spirit Magic' effect of Glory Shield wasn't working
+(MM8)
+[*] StartupCopyrightDelay option made hidden and 0 by default
 
 
 [!!] HD textures

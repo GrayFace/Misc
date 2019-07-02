@@ -17,13 +17,14 @@ procedure DXProxyDraw(SrcBuf: ptr; info: PDDSurfaceDesc2);
 procedure DXProxyDrawCursor(SrcBuf: ptr; info: PDDSurfaceDesc2);
 
 var
-  DXProxyRenderW, DXProxyRenderH, DXProxyMipmapCount: int;
+  DXProxyRenderW, DXProxyRenderH, DXProxyMipmapCount, DXProxyMipmapCountRes: int;
   DXProxyActive: Boolean;
   DXProxyCursorX, DXProxyCursorY: int;
   DXProxyCursorBmp: TBitmap;
   DXProxyMul, DXProxyShiftX, DXProxyShiftY: ext;
   DXProxyMinW: int = 640;
   DXProxyMinH: int = 480;
+  DXProxyTrueColorTexture: Boolean;
 
 implementation
 
@@ -119,6 +120,7 @@ type
     function Init(const Obj: IUnknown): IUnknown; override;
     function GetDisplayMode(out lpDDSurfaceDesc: TDDSurfaceDesc2): HResult stdcall; overload;
     function GetDisplayMode(out lpDDSurfaceDesc: TDDSurfaceDesc): HResult stdcall; overload;
+    procedure MakeSurfaceTrueColor(var desc: TDDSurfaceDesc2);
     function CreateSurface(const lpDDSurfaceDesc: TDDSurfaceDesc2;
         out lplpDDSurface: IDirectDrawSurface4;
         pUnkOuter: IUnknown): HResult stdcall; overload;
@@ -739,7 +741,10 @@ begin
     if (DXProxyMipmapCount > 0) and (dwMipMapCount > 1) and (dwFlags and DDSD_MIPMAPCOUNT <> 0) then
     begin
       desc:= lpDDSurfaceDesc;
+      if DXProxyTrueColorTexture then
+        MakeSurfaceTrueColor(desc);
       desc.dwMipMapCount:= min(desc.dwMipMapCount, DXProxyMipmapCount);
+      DXProxyMipmapCountRes:= desc.dwMipMapCount;
       Result:= DDraw.CreateSurface(desc, lplpDDSurface, pUnkOuter);
       if Result <> DD_OK then
       begin
@@ -781,7 +786,13 @@ begin
     exit;
   end;
 
-  Result:= DDraw.CreateSurface(lpDDSurfaceDesc, lplpDDSurface, pUnkOuter);
+  if DXProxyTrueColorTexture then
+  begin
+    desc:= lpDDSurfaceDesc;
+    MakeSurfaceTrueColor(desc);
+    Result:= DDraw.CreateSurface(desc, lplpDDSurface, pUnkOuter);
+  end else
+    Result:= DDraw.CreateSurface(lpDDSurfaceDesc, lplpDDSurface, pUnkOuter);
 
   // front buffer
   if (lpDDSurfaceDesc.ddsCaps.dwCaps and DDSCAPS_PRIMARYSURFACE <> 0) and (Result = DD_OK) then
@@ -847,6 +858,19 @@ begin
   InitVMT(Obj as IDirectDraw4, self as IDirectDraw4, @DDraw, $70);
   InitVMT(Obj as IDirect3D3, self as IDirect3D3, @D3D, $30);
   InitVMT(DDraw, Result, @DDraw, $70 - 5*4);
+end;
+
+procedure TMyDirectDraw.MakeSurfaceTrueColor(var desc: TDDSurfaceDesc2);
+begin
+  with desc.ddpfPixelFormat do
+  begin
+    dwRGBBitCount:= 32;
+    dwRBitMask:= $FF0000;
+    dwGBitMask:= $FF00;
+    dwBBitMask:= $FF;
+    dwRGBAlphaBitMask:= $FF000000;
+  end;
+  DXProxyTrueColorTexture:= false;
 end;
 
 function TMyDirectDraw.SetDisplayMode(dwWidth, dwHeight, dwBpp: DWORD): HResult;

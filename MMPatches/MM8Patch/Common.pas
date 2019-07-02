@@ -102,6 +102,7 @@ const
 
   _LodFind: function(n1, n2, Lod, NoSort: int; Name: PChar): ptr = ptr($45EFFF);
   _fread: function(var Buf; Size, Count: int; f: ptr): int cdecl = ptr($4DA641);
+  _fseek: function(f: ptr; Offset, Origin: int): int cdecl = ptr($4DA588);
   _Deflate: procedure(n1: int; UnpSize: pint; var UnpBuf; PkSize: int; var Pk) = ptr($4D1EC0);
   _LoadPalette: function(n1, n2, Palettes, PalId: int): int = ptr($489C9F);
   _RGBtoHSV: procedure(_: int; var S, H, V: Single; B, G, R: Single) = ptr($48A088);

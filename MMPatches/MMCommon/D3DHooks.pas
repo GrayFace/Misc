@@ -16,23 +16,88 @@ function LoadSpriteD3DHook(Name: PChar; PalIndex: int): PHwlBitmap; stdcall;
 
 implementation
 
-//----- No HWL for bitmaps
+//----- 32 and 16 bit color management
 
-procedure LoadPaletteD3D(var pal; PalIndex: int);
+function GetColor(p: ptr; bt: int): uint; inline;
+begin
+  if bt = 4 then
+    Result:= puint(p)^
+  else
+    Result:= pword(p)^;
+end;
+
+procedure SetColor(p: ptr; bt: int; c: uint); inline;
+begin
+  if bt = 4 then
+    puint(p)^:= c
+  else
+    pword(p)^:= c;
+end;
+
+function PropagateColor(p: PChar; d, bt: int; mask: uint; c0: uint; get: Boolean): Boolean; inline;
+var
+  c: uint;
+begin
+  c:= GetColor(p + d*bt, bt);
+  Result:= get and (c > mask) or not get and (c = 0);
+  if Result then
+    if get then
+      SetColor(p, bt, c and mask)
+    else
+      SetColor(p + d*bt, bt, c0 and mask);
+end;
+
+function PropagateLoop(p: PChar; w, h, d1, d2, bt: int; mask: uint): Boolean; inline;
+var
+  c: uint;
+  x, y: int;
+begin
+  Result:= false;
+  inc(p, w*bt); 
+  for y:= h - 2 downto 0 do
+  begin
+    inc(p, bt);
+    for x:= w - 2 downto 0 do
+    begin
+      c:= GetColor(p, bt);
+      if c = 0 then
+        Result:= PropagateColor(p, d1, bt, mask, c, true) or PropagateColor(p, d2, bt, mask, c, true) or Result
+      else if c > mask then
+        Result:= PropagateColor(p, d1, bt, mask, c, false) or PropagateColor(p, d2, bt, mask, c, false) or Result;
+      inc(p, bt);
+    end;
+  end;
+end;
+
+procedure DoPropagateIntoTransparent(p: PChar; w, h, bt, mask: int); inline;
+begin
+  if PropagateLoop(p, w, h, -1, -w, bt, mask) then  // up, left
+    PropagateLoop(p, w, h, -w-1, -w+1, bt, mask);   // corders of top line
+end;
+
+procedure PropagateIntoTransparent(p: ptr; w, h: int);
+begin
+  if Options.TrueColorTextures then
+    DoPropagateIntoTransparent(p, w, h, 4, $FFFFFF)
+  else
+    DoPropagateIntoTransparent(p, w, h, 2, $7FFF);
+end;
+
+procedure ReadPalettedColor(p, p0: PChar; n: int; pal: PDWordArray; bt: int); inline;
 var
   i: int;
-  p, p1: PWordArray;
 begin
-  PalIndex:= _LoadPalette(0, 0, m7*$80D018 + m8*$84AFE0, PalIndex);
-  p:= @pal;
-  p1:= ptr(m7*$8DE618 + m8*$91C5E0 + PalIndex*32*256*2);
-  if _GreenColorBits^ = 6 then
-    for i := 0 to 255 do
-      p[i]:= p1[i] and $1F + (p1[i] and $FFC0) shr 1 + $8000
-  else
-    for i := 0 to 255 do
-      p[i]:= p1[i] or $8000;
+  inc(p, bt*n);
+  inc(p0, n);
+  for i:= n - 1 downto 0 do
+  begin
+    dec(p, bt);
+    dec(p0);
+    SetColor(p, bt, pal[ord(p0^)]);
+  end;
 end;
+
+//----- HSV multiplication
 
 // HSV aka HSB:
 // V = max component
@@ -42,24 +107,27 @@ var
   CConvS, CConvV: Single;
   CConvDesat: Boolean;
   CConvTable: array[0..255] of array[0..255] of byte;
-  DivTable: array[0..255] of uint;  // = 2^24 / i
+  DivTable: array[0..255] of uint;  // = 2^16 / i
 
-procedure PrepareCConvTable;
+function PrepareCConvTable: Boolean;
 var
-  v: ext;
+  v, sat: ext;
   i, j: uint;
 begin
-  if (CConvS = Options.PaletteSMul) and (CConvV = Options.PaletteVMul) then
+  Result:= (CConvS <> Options.PaletteSMul) or (CConvV <> Options.PaletteVMul);
+  if not Result then
     exit;
   CConvS:= Options.PaletteSMul;
   CConvV:= Options.PaletteVMul;
   CConvDesat:= (Options.PaletteSMul <= 1);
+  // 15-bit mipmaps are a bit more saturated
+  sat:= IfThen(Options.TrueColorTextures, 1.025, 1)*Options.PaletteSMul;
   for i:= 1 to 255 do
   begin
-    v:= EnsureRange(i*256/255*Options.PaletteVMul, 0, 255.999999);
+    v:= EnsureRange(i*246/255*Options.PaletteVMul, 0, 256); // trying to mimic original
     for j:= 0 to 255 do
-      CConvTable[i][j]:= Trunc(v*EnsureRange(1 - (1 - j/i)*Options.PaletteSMul, 0, 1));
-    DivTable[i]:= (1 shl 24 + 1 shl 16) div i;
+      CConvTable[i][j]:= min(255, Trunc(v*EnsureRange(1 - (1 - j/i)*sat, 0, 1)));
+    DivTable[i]:= $10101 div i; // $10101*$FF = $FFFFFF
   end;
 end;
 
@@ -68,7 +136,7 @@ var
   i: uint;
 begin
   i:= CConvTable[a][255];
-  b:= uint(b - c)*i*DivTable[a - c] shr 24;
+  b:= uint(b - c)*i*DivTable[a - c] shr 16;
   a:= i;
   c:= 0;
 end;
@@ -118,87 +186,140 @@ begin
   ConvertColorSV(r, g, b, CConvDesat);
 end;
 
-{const
-  ColorHDMask = $1FFFFF;
-var
-  CachedColors: array[0..ColorHDMask] of Word;
+//----- Palettes
 
-function ConvertColorHD(c: int): Word;
-const
-  mul: ext = 31.9999;
-var
-  R, G, B, H, S, V: Single;
+function StartReadingBitmap(Name: PChar; var bmp: TLodBitmap; var f: ptr): Boolean;
 begin
-  Result:= CachedColors[c and ColorHDMask];
-  if Result = 0 then
-  begin
-    B:= (c and $7F)/$7F;
-    G:= (c and $3F80)/$3F80;
-    R:= (c and $1FC000)/$1FC000;
-    _RGBtoHSV(0, S, H, V, B, G, R);
-    V:= EnsureRange(V*Options.PaletteVMul, 0, 1);
-    S:= EnsureRange(S*Options.PaletteSMul, 0, 1);
-    _HSVtoRGB(0, G, R, V, S, H, B);
-    Result:= $8000 + Trunc(R*mul) shl 10 + Trunc(G*mul) shl 5 + Trunc(B*mul);
-    CachedColors[c and ColorHDMask]:= Result;
-  end;
-  Result:= Result and Word((c shr 8) or $7FFF);
-end;}
+  f:= _LodFind(0, 0, _BitmapsLod, 0, Name);
+  Result:= (f <> nil);
+  if Result then
+    _fread(bmp, 1, $30, f); // read bitmap header
+end;
 
-function ConvertColorHD(c: int): Word;
+function ConvertPalColor(c: int): uint;
+var
+  r, g, b: byte;
+begin
+  r:= byte(c);
+  g:= HiByte(c);
+  b:= c shr 16;
+  ConvertColorSV(r, b, g);
+  if Options.TrueColorTextures then
+    Result:= (r shl 16 + g shl 8 + b) or $FF000000
+  else
+    Result:= (r shr 3 shl 10 + g shr 3 shl 5 + b shr 3) or $8000;
+end;
+
+var
+  LoadedPalettes: array of array[-1..255] of uint;
+  LoadedPalN: int;
+
+function LoadPaletteD3D(Id: uint; Trans: Boolean): PDWordArray;
+var
+  pal: array[0..256*3] of byte;
+  bmp: TLodBitmap;
+  f: ptr;
+  i: int;
+begin
+  if PrepareCConvTable or Options.ResetPalettes then
+    LoadedPalN:= 0;
+  Options.ResetPalettes:= false;
+  if Trans then
+    inc(id, $10000);
+  for i:= LoadedPalN - 1 downto 0 do
+    if LoadedPalettes[i][-1] = Id then
+    begin
+      Result:= @LoadedPalettes[i][0];
+      exit;
+    end;
+  i:= LoadedPalN;
+  inc(LoadedPalN);
+  if high(LoadedPalettes) < i then
+    SetLength(LoadedPalettes, max(i*2, 128));
+  LoadedPalettes[i][-1]:= Id;
+  Result:= @LoadedPalettes[i][0];
+  if not StartReadingBitmap(ptr(Format('pal%.3d', [Word(Id)])), bmp, f) then
+    exit;
+  if bmp.DataSize <> 0 then
+    _fseek(f, bmp.DataSize, soFromCurrent);
+  _fread(pal, 1, 256*3, f); // read bitmap header
+  for i:= 0 to 255 do
+    Result[i]:= ConvertPalColor(pint(@pal[i*3])^);
+  if Trans then
+    Result[0]:= 0;
+end;
+
+//----- No HWL for bitmaps
+
+procedure ConvertColorHD(p: ptr; bt, c: int; desat: Boolean); inline;
 var
   r, g, b: byte;
 begin
   b:= byte(c);
   g:= HiByte(c);
   r:= c shr 16;
-  ConvertColorSV(r, b, g);
-  Result:= (r shr 3 shl 10 + g shr 3 shl 5 + b shr 3) or $8000;
+  ConvertColorSV(r, b, g, desat);
+  if bt = 4 then
+    puint(p)^:= (r shl 16 + g shl 8 + b) or $FF000000
+  else
+    pword(p)^:= (r shr 3 shl 10 + g shr 3 shl 5 + b shr 3) or $8000;
 end;
 
-procedure LoadBitmapHD(p: PWord; p1: PChar; w, h, trans: int);
+procedure DoLoadBitmapHD(p, p1: PChar; w, h, trans, bt: int; transOk, desat: Boolean); inline;
 var
   HasTrans: Boolean;
   i, c: int;
 begin
-  PrepareCConvTable;
   HasTrans:= false;
+  inc(p, w*h*bt);
+  inc(p1, w*h*3);
   for i:= w*h downto 1 do
   begin
-    c:= pint(p1)^ and $FFFFFF;
-    if c = trans then
+    dec(p, bt);
+    dec(p1, 3);
+    c:= pint(p1)^;
+    if transOk and (c and $FFFFFF = trans) then
     begin
-      p^:= 0;
+      SetColor(p, bt, 0);
       HasTrans:= true;
     end else
-      p^:= ConvertColorHD(c);
-    inc(p);
-    inc(p1, 3);
+      ConvertColorHD(p, bt, c, desat);
   end;
-  dec(p, w*h);
   if HasTrans then
-    PropagateIntoTransparent(ptr(p), w, h);
+    PropagateIntoTransparent(p, w, h);
+end;
+
+procedure LoadBitmapHD(p, p1: PChar; w, h, trans, bt: int); inline;
+begin
+  PrepareCConvTable;
+  if (trans and not $FFFFFF) = 0 then
+    if CConvDesat then
+      DoLoadBitmapHD(p, p1, w, h, trans, bt, true, true)
+    else
+      DoLoadBitmapHD(p, p1, w, h, trans, bt, true, false)
+  else
+    if CConvDesat then
+      DoLoadBitmapHD(p, p1, w, h, trans, bt, false, true)
+    else
+      DoLoadBitmapHD(p, p1, w, h, trans, bt, false, false);
 end;
 
 var
-  DecodeBuf: TRSByteArray;
+  TextureBuf: TRSByteArray;
+  TextureMipW: uint;
 
 function LoadBitmapD3DHook(n1, n2, this, PalIndex: int; Name: PChar): PHwlBitmap;
 var
   bmp: TLodBitmap;
   f: ptr;
   pack: array of Byte;
-  p: PWordArray;
-  p1: PByteArray;
-  pal: array[0..255] of Word;
-  i, c: int;
+  p, p1: ptr;
+  pal: PDWordArray;
+  hd, trans: Boolean;
+  i, c, bt: int;
 begin
   Result:= nil;
-  f:= _LodFind(0, 0, _BitmapsLod, 0, Name);
-  if f = nil then
-    exit;
-
-  _fread(bmp, 1, $30, f); // read bitmap header
+  if not StartReadingBitmap(Name, bmp, f) then  exit;
   Result:= _new(SizeOf(THwlBitmap));
   ZeroMemory(Result, SizeOf(THwlBitmap));
   with bmp, Result^ do
@@ -207,19 +328,35 @@ begin
     FullH:= h;
     AreaW:= w;
     AreaH:= h;
-    Buffer:= _new(BmpSize*2);
-    p:= Buffer;
-    p1:= Buffer;
+    if Options.TrueColorTextures then
+    begin
+      bt:= 4;
+      if length(TextureBuf) < BmpSize*4 then
+        SetLength(TextureBuf, BmpSize*4);
+      p:= ptr(TextureBuf);
+      DXProxyTrueColorTexture:= true;
+    end else
+    begin
+      bt:= 2;
+      Buffer:= _new(BmpSize*2);
+      p:= Buffer;
+    end;
+    p1:= p;
     i:= BmpSize;
-    if (Palette = 0) and ((UnpSize > BmpSize*2) or (UnpSize = 0) and (DataSize > BmpSize*2)) then
+    hd:= (Palette = 0) and ((UnpSize > BmpSize*2) or (UnpSize = 0) and (DataSize > BmpSize*2));
+    if hd then
     begin
       i:= BmpSize*3;
-      if length(DecodeBuf) < i then
-        SetLength(DecodeBuf, i + 1);
-      p1:= ptr(DecodeBuf);
+      if bt < 4 then
+      begin
+        if length(TextureBuf) < i then
+          SetLength(TextureBuf, i + 1);
+        p1:= ptr(TextureBuf);
+      end;
       w:= PowerOf2[BmpWidthLn2];
       h:= PowerOf2[BmpHeightLn2];
     end;
+    TextureMipW:= w;
     BufW:= w;
     BufH:= h;
     // Read bitmap data
@@ -233,24 +370,28 @@ begin
     end else
       _fread(p1^, 1, min(DataSize, i), f);
 
-    if p <> ptr(p1) then
+    if hd then
     begin
       _fread(c, 1, 4, f);  // check first color
-      LoadBitmapHD(ptr(p), ptr(p1), w, h, c);
+      if bt = 4 then
+        LoadBitmapHD(p, p1, w, h, c, 4)
+      else
+        LoadBitmapHD(p, p1, w, h, c, 2);
       exit;
     end;
 
     // Get Palette
     c:= 0;
-    _fread(c, 1, 3, f);  // check first color
-    LoadPaletteD3D(pal, Palette);
-    if (c = $FFFF00) or (c = $FF00FF) or (c = $FC00FC) or (c = $FCFC00) then
-      pal[0]:= 0;  // Margenta/light blue for transparency
+    _fread(c, 1, 3, f);  // check first color for transparency (margenta/light blue)
+    trans:= (c = $FFFF00) or (c = $FF00FF) or (c = $FC00FC) or (c = $FCFC00);
+    pal:= LoadPaletteD3D(Palette, trans);
 
     // Render
-    for i := BmpSize - 1 downto 0 do
-      p[i]:= pal[p1[i]];
-    if pal[0] = 0 then
+    if Options.TrueColorTextures then
+      ReadPalettedColor(p, p1, BmpSize, pal, 4)
+    else
+      ReadPalettedColor(p, p1, BmpSize, pal, 2);
+    if trans then
       PropagateIntoTransparent(p, w, h);
   end;
 end;
@@ -264,12 +405,31 @@ begin
     Result:= Result*2;
 end;
 
+function ReadSprite(sp: PSprite; pal: PDWordArray; BufW, BufH, x1, y1, y2, bt: int): ptr; inline;
+var
+  p: PChar;
+  i, j, w: int;
+begin
+  Result:= _new(BufW*BufH*bt);
+  p:= Result;
+  w:= BufW*bt;
+  for i := y1 to y2 do
+    with sp.Lines[i] do
+      if (i >= 0) and (a1 >= 0) then
+      begin
+        j:= (a1 - x1)*bt;
+        inc(p, j);
+        ReadPalettedColor(p, pos, a2 - a1 + 1, pal, bt);
+        inc(p, w - j);
+      end else
+        inc(p, w);
+end;
+
 function LoadSpriteD3DHook(Name: PChar; PalIndex: int): PHwlBitmap; stdcall;
 var
   sprite: PSprite;
-  i, j, x1, x2, y1, y2: int;
-  pal: array[0..255] of word;
-  p: pword;
+  i, x1, x2, y1, y2: int;
+  pal: PDWordArray;
 begin
   Result:= nil;
   sprite:= FindSprite(Name);
@@ -296,46 +456,32 @@ begin
         end;
     with Result^ do
     begin
+      DXProxyTrueColorTexture:= Options.TrueColorTextures;
       FullW:= w;
       FullH:= h;
       if y1 < 0 then  exit;
       // Area dimensions must be powers of 2
       inc(x2);
       inc(y2);
-      BufW:= Power2(x2 - x1);
-      BufH:= Power2(y2 - y1);
+      BufW:= Power2(x2 - x1 + 2); // 1 pixel on each side for smooth edge
+      BufH:= Power2(y2 - y1 + 2);
       AreaW:= BufW;
       AreaH:= BufH;
       x1:= (x1 + x2 - BufW) div 2;
       //x1:= IntoRange(x1, 0, w - BufW);
-      x2:= x1 + BufW - 1;
       y1:= (y1 + y2 - BufH) div 2;
       //y1:= IntoRange(y1, 0, h - BufH);
-      y2:= y1 + BufH - 1;
+      y2:= min(y1 + BufH, h) - 1;
       AreaX:= x1;
       AreaY:= y1;
 
       // Get Palette
-      LoadPaletteD3D(pal, PalIndex);
-      pal[0]:= 0;
-
+      pal:= LoadPaletteD3D(PalIndex, true);
       // Render
-      Buffer:= _new(BufW*BufH*2);
-      //ZeroMemory(Buffer, BufW*BufH*2); // now done always
-      p:= Buffer;
-      for i := y1 to y2 do
-        with Lines[i] do
-          if (i >= 0) and (i < h) and (a1 >= 0) then
-          begin
-            inc(p, a1 - x1);
-            for j := 0 to a2 - a1 do
-            begin
-              p^:= pal[ord((pos + j)^)];
-              inc(p);
-            end;
-            inc(p, x2 - a2);
-          end else
-            inc(p, BufW);
+      if Options.TrueColorTextures then
+        Buffer:= ReadSprite(sprite, pal, BufW, BufH, x1, y1, y2, 4)
+      else
+        Buffer:= ReadSprite(sprite, pal, BufW, BufH, x1, y1, y2, 2);
       // Sparks spell ignores transparency bit, this check is to avoid interfering with it
       if _MainMenuCode^ < 0 then
         PropagateIntoTransparent(Buffer, BufW, BufH);
@@ -930,66 +1076,182 @@ asm
   mov ecx, eax
 end;
 
-//----- Draw sprites at an angle
+//----- 32 bit sprites
 
-{
-3D transform sprite rect (if it was an option):
-y = y0 / L0    // height
-x = x0 / L0    // vertex pos
-y' = y*cos(a)
-dL = y0*sin(a) = y*L0*sin(a)
-x' = x0 / (L0 + dL) = x / (1 + y*sin(a))
-
-In reality I just had to use a ton of hacks.
-
-Vertexes:
-0-3
-| |
-1-2
-}
-{
-procedure SpritesAngleProc(var sprite: TDrawSpriteD3D);
-const
-  Dist = 5000;
+function DrawInfoSprite32(p: PChar; i: int; var desc: TDDSurfaceDesc2): Word;
 var
-  x, dx, h, mul, si, co: ext;
+  c, x: int;
 begin
-  SinCos(_Party_Angle^*Pi/1024/3, si, co); // use 1/3 of the angle
-  with sprite do
+  Result:= 0;
+  x:= i mod desc.lPitch;
+  if x < 0 then
+    dec(x, desc.lPitch);
+  if not InRange((i - x) div desc.lPitch, 0, desc.dwHeight - 1) then
+    exit;
+  c:= pint(p + i + x)^;
+  Result:= byte(c) shr 3 + c and $FC00 shr 5 + c and $F80000 shr 8;
+end;
+
+procedure DrawInfoSprite32Hook;
+asm
+  push ecx
+  add edx, edx
+  lea ecx, [ebp - $17C]
+  call DrawInfoSprite32
+  pop ecx
+  mov dx, ax
+end;
+
+//----- 32 bit textures
+
+var
+  mipN: int;
+
+function MixCl(c1, c2, c3, c4: uint): uint;
+begin
+  // Mipmap gets darker than the base texture and this matches how MM generates mipmaps
+  // This provides a nice slight shading effect
+  Result:= (c1 and $FCFCFCFC shr 2 + c2 and $FCFCFCFC shr 2 + c3 and $FCFCFCFC shr 2 + c4 and $FCFCFCFC shr 2);
+end;
+
+procedure MakeMip(p: PDWordArray; w, h: int);
+var
+  p1: PDWordArray;
+  x, y: int;
+begin
+  p1:= p;
+  for y:= h downto 1 do
   begin
-    h:= Vert[1].sy - Vert[0].sy;
-    mul:= h/GetViewMul;
-    if si < 0 then  // look down
-      mul:= min(mul, 1)*0.75*EnsureRange(2 - ZBuf/Dist*2, 0, 1)
-    else
-      mul:= min(mul, 5)*0.3;
-    mul:= 1/EnsureRange(1 + mul*si, 0.7, 2);
-    if mul > 1 then  // look down
-      h:= h*min(1, co + (mul - 1))*mul
-    else
-      h:= min(h*co, h*mul);
-    Vert[0].sy:= Vert[1].sy - h;
-    Vert[3].sy:= Vert[0].sy;
-    x:= (Vert[3].sx + Vert[0].sx)/2;
-    dx:= (Vert[3].sx - Vert[0].sx)/2*mul;
-    Vert[0].sx:= x - dx;
-    Vert[1].sx:= x - dx;
-    Vert[2].sx:= x + dx;
-    Vert[3].sx:= x + dx;
+    for x:= w downto 1 do
+    begin
+      p[0]:= MixCl(p1[0], p1[1], p1[w*2], p1[w*2+1]);
+      p:= @p[1];
+      p1:= @p1[2];
+    end;
+    p1:= @p1[w*2];
   end;
 end;
 
-procedure SpritesAngleHook;
-asm
-  lea eax, (m7*$EF5138 + m8*$FC50D0)[esi]
-  jmp SpritesAngleProc
+procedure MakePseudoMip(p: PDWordArray; w, h: int);
+var
+  c: uint;
+  x, y: int;
+begin
+  w:= w div 2;
+  h:= h div 2;
+  for y:= h downto 1 do
+  begin
+    for x:= w downto 1 do
+    begin
+      c:= MixCl(p[0], p[1], p[w*2], p[w*2+1]) and $FEFEFEFE shr 1;
+      c:= c + c and $FEFEFEFE shr 1;
+      //c:= 0;
+      p[0]:= p[0] and $FCFCFCFC shr 2 + c;
+      p[1]:= p[1] and $FCFCFCFC shr 2 + c;
+      p[w*2]:= p[w*2] and $FCFCFCFC shr 2 + c;
+      p[w*2+1]:= p[w*2+1] and $FCFCFCFC shr 2 + c;
+      p:= @p[2];
+    end;
+    p:= @p[w*2];
+  end;
 end;
-}
+
+procedure SmoothMip(p: PDWordArray; w, h, dx, dy: int);
+var
+  d: int;
+begin
+  d:= dx + dy*w;
+  p:= @p[max(-dx, 0) + max(-dy*w, 0)];
+  dx:= abs(dx);
+  dy:= abs(dy);
+  for h:= h - dy downto 1 do
+  begin
+    for w:= w - dx downto 1 do
+    begin
+      p[0]:= p[0] and $FEFEFEFE shr 1 + p[d] and $FEFEFEFE shr 1;
+      p:= @p[1];
+    end;
+    p:= @p[dx];
+  end;
+end;
+
+{// Visualize mipmaps
+var
+  mipN: int;
+
+procedure CopyBufToSurface32(p, p1: PChar; w, h, d: int);
+const
+  coloring: array[0..4] of uint = (0, $FF0000, $00FF00, $0000FF, $FFFF00);
+var
+  c, i: uint;
+begin
+  inc(mipN);
+  if w = TextureMipW then
+    mipN:= 0;
+  c:= coloring[mipN mod length(coloring)];
+  if mipN = DXProxyMipmapCountRes - 1 then
+    c:= $FFFFFF;
+  w:= w*4;
+  for h:= h downto 1 do
+  begin
+    for i:= 0 to w div 4 - 1 do
+      puint(p+i*4)^:= puint(p1+i*4)^ or c;
+    inc(p, d);
+    inc(p1, w);
+  end;
+end;{}
+
+procedure CopyBufToSurface32(p, p1: PChar; w, h, d: int);
+begin
+  w:= w*4;
+  for h:= h downto 1 do
+  begin
+    CopyMemory(p, p1, w);
+    inc(p, d);
+    inc(p1, w);
+  end;
+end;
+
+function CopyTexture32Bit(const surf: IDirectDrawSurface4; var desc: TDDSurfaceDesc2; flags: int): Bool; stdcall;
+var
+  i: int;
+begin
+  Result:= false;
+  if not LockSurface(ptr(surf), @desc, flags) then  exit;
+  with desc do
+  begin
+    if dwWidth <> TextureMipW then
+    begin
+      inc(mipN);
+      MakeMip(ptr(TextureBuf), dwWidth, dwHeight);
+      if (DXProxyMipmapCountRes > 3) and (mipN = DXProxyMipmapCountRes - 1) then
+        for i:= 1 to 100 do
+      begin
+        SmoothMip(ptr(TextureBuf), dwWidth, dwHeight, 1, 0);
+        SmoothMip(ptr(TextureBuf), dwWidth, dwHeight, 0, 1);
+        //SmoothMip(ptr(TextureBuf), dwWidth, dwHeight, -1, 0);
+        //SmoothMip(ptr(TextureBuf), dwWidth, dwHeight, 0, -1);
+      end;
+        //MakePseudoMip(ptr(TextureBuf), dwWidth, dwHeight);
+    end else
+      mipN:= 0;
+    for i:= 1 to 100 do
+      begin
+        SmoothMip(ptr(TextureBuf), dwWidth, dwHeight, 1, 0);
+        SmoothMip(ptr(TextureBuf), dwWidth, dwHeight, 0, 1);
+        //SmoothMip(ptr(TextureBuf), dwWidth, dwHeight, -1, 0);
+        //SmoothMip(ptr(TextureBuf), dwWidth, dwHeight, 0, -1);
+      end;
+    CopyBufToSurface32(lpSurface, ptr(TextureBuf), dwWidth, dwHeight, lPitch);
+  end;
+  surf.Unlock(nil);
+end;
+
 //----- HooksList
 
 var
 {$IFDEF MM7}
-  Hooks: array[1..67] of TRSHookInfo = (
+  Hooks: array[1..73] of TRSHookInfo = (
     (p: $4A4D93; old: $452504; newp: @LoadBitmapD3DHook; t: RShtCall; Querry: 13), // No HWL for bitmaps
     (p: $49EAE3; old: $4523AB; new: $45246B; t: RShtCall; Querry: 13), // No HWL for bitmaps
     (p: $49EB3B; size: 5; Querry: 13), // No HWL for bitmaps
@@ -1056,12 +1318,16 @@ var
     (p: $4795EA; newp: @PreciseSkyFtol; t: RShtCallStore), // Fix for 'jumping' of the top part of the sky
     (p: $47978F; newp: @PreciseSkyHook1; t: RShtBefore; size: 6), // Fix for 'jumping' of the top part of the sky
     (p: $4C1508; old: $4C1579; backup: @@SpriteD3DHitStd; newp: @SpriteD3DHitHook; t: RShtCall), // Take sprite contour into account when clicking it
-    {(p: $4A432B; newp: @SpritesAngleHook; t: RShtAfter; size: 6; Querry: hqSpriteAngleCompensation), // Sprite angle compensation (outdoor)
-    (p: $4A4667; newp: @SpritesAngleHook; t: RShtAfter; size: 6; Querry: hqSpriteAngleCompensation), // Sprite angle compensation (indoor)}
+    (p: $4A50B1; size: 2; Querry: hqTex32Bit), // 32 bit sprites
+    (p: $4A50C1; size: 2; Querry: hqTex32Bit), // 32 bit sprites
+    (p: $4A50D3; size: 2; Querry: hqTex32Bit), // 32 bit sprites
+    (p: $41E944; newp: @DrawInfoSprite32Hook; t: RShtCall; size: $41E957 - $41E944; Querry: hqTex32Bit), // 32 bit sprites (monster info)
+    (p: $4A4E6E; old: $4A0ED0; newp: @CopyTexture32Bit; t: RShtCall; Querry: hqTex32Bit2), // 32 bit textures
+    (p: $4A4F3C; old: $4A0ED0; newp: @CopyTexture32Bit; t: RShtCall; Querry: hqTex32Bit2), // 32 bit textures
     ()
   );
 {$ELSE}
-  Hooks: array[1..62] of TRSHookInfo = (
+  Hooks: array[1..68] of TRSHookInfo = (
     (p: $4A2C46; old: $44FD37; newp: @LoadBitmapD3DHook; t: RShtCall; Querry: 13), // No HWL for bitmaps
     (p: $49C175; old: $44FBD0; new: $44FC90; t: RShtCall; Querry: 13), // No HWL for bitmaps
     (p: $49C1CD; size: 5; Querry: 13), // No HWL for bitmaps
@@ -1123,8 +1389,12 @@ var
     (p: $47867B; newp: @PreciseSkyHook1; t: RShtBefore; size: 6), // Fix for 'jumping' of the top part of the sky
     (p: $478962; newp: @PreciseSkyHook1; t: RShtBefore; size: 6), // Fix for 'jumping' of the top part of the sky
     (p: $4BF072; old: $4BF0E3; backup: @@SpriteD3DHitStd; newp: @SpriteD3DHitHook; t: RShtCall), // Take sprite contour into account when clicking it
-    {(p: $4A21DB; newp: @SpritesAngleHook; t: RShtAfter; size: 6; Querry: hqSpriteAngleCompensation), // Sprite angle compensation (outdoor)
-    (p: $4A2511; newp: @SpritesAngleHook; t: RShtAfter; size: 6; Querry: hqSpriteAngleCompensation), // Sprite angle compensation (indoor)}
+    (p: $4A2F64; size: 2; Querry: hqTex32Bit), // 32 bit sprites
+    (p: $4A2F74; size: 2; Querry: hqTex32Bit), // 32 bit sprites
+    (p: $4A2F86; size: 2; Querry: hqTex32Bit), // 32 bit sprites
+    (p: $41DF2B; newp: @DrawInfoSprite32Hook; t: RShtCall; size: $41DF3E - $41DF2B; Querry: hqTex32Bit), // 32 bit sprites (monster info)
+    (p: $4A2D21; old: $49E9C0; newp: @CopyTexture32Bit; t: RShtCall; Querry: hqTex32Bit2), // 32 bit textures
+    (p: $4A2DEF; old: $49E9C0; newp: @CopyTexture32Bit; t: RShtCall; Querry: hqTex32Bit2), // 32 bit textures
     ()
   );
 {$ENDIF}
@@ -1141,6 +1411,10 @@ begin
     RSApplyHooks(Hooks, 13);
   if Options.SupportTrueColor then
     RSApplyHooks(Hooks, hqTrueColor);
+  if Options.TrueColorTextures then
+    RSApplyHooks(Hooks, hqTex32Bit);
+  if Options.TrueColorTextures and Options.NoBitmapsHwl then
+    RSApplyHooks(Hooks, hqTex32Bit2);
   if Options.UILayout <> nil then
   begin
     pint(_IconsLod + $11B8C)^:= 5;

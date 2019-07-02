@@ -9,6 +9,7 @@ uses
 {$I MMPatchVer.inc}
 
 const
+  hqPostponeIntro = 2;
   hqFixObelisks = 26;
   hqWindowSize = 27;
   hqBorderless = 28;
@@ -33,6 +34,10 @@ const
   hqFixInterfaceBugs2 = 47;
   hqFixChestsByCompacting = 48;
   hqSpriteAngleCompensation = 49;
+  hqTex32Bit = 50;
+  hqTex32Bit2 = 51;
+  hqFixSFT = 52;
+  hqPostponeIntro2 = 53;
 
 {$IFDEF mm6}
   m6 = 1;
@@ -55,60 +60,63 @@ const
 type
   TOptions = packed record
     Size: int;
-    MaxMLookAngle: int;                       // 4
-    MouseLook: LongBool;                      // 8
-    MouseLookUseAltMode: LongBool;            // 12
-    CapsLockToggleMouseLook: LongBool;        // 16
-    MouseFly: LongBool;                       // 20
-    MouseWheelFly: LongBool;                  // 24
-    MouseLookTempKey: int;                    // 28
-    MouseLookChangeKey: int;                  // 32
-    InventoryKey: int;                        // 36
-    CharScreenKey: int;                       // 40
-    DoubleSpeedKey: int;                      // 44
-    QuickLoadKey: int;                        // 48
-    AutorunKey: int;                          // 52
-    HDWTRCount: uint;                         // 56 (unused in MM6)
-    HDWTRDelay: uint;                         // 60 (unused in MM6)
-    HorsemanSpeakTime: int;                   // 64
-    BoatmanSpeakTime: int;                    // 68
-    PaletteSMul: single;                      // 72 (unused in MM6)
-    PaletteVMul: single;                      // 76 (unused in MM6)
-    NoBitmapsHwl: LongBool;                   // 80 (unused in MM6)
-    PlayMP3: LongBool;                        // 84
-    MusicLoopsCount: int;                     // 88
-    HardenArtifacts: LongBool;                // 92 (unused in MM6)
-    ProgressiveDaggerTrippleDamage: LongBool; // 96
-    FixChests: LongBool;                      // 100
-    DataFiles: LongBool;                      // 104
-    FixDualWeaponsRecovery: LongBool;         // 108 (MM6 only)
-    IncreaseRecoveryRateStrength: int;        // 112 (MM6 only)
-    BlasterRecovery: int;                     // 116 (unused in MM8)
-    FixSkyBitmap: LongBool;                   // 120 (MM8 only)
-    NoCD: LongBool;                           // 124
-    FixChestsByReorder: LongBool;             // 128
-    LastLoadedFileSize: int;                  // 132
-    FixTimers: LongBool;                      // 136
-    FixMovement: LongBool;                    // 140
-    MonsterJumpDownLimit: int;                // 144
-    FixHeroismPedestal: LongBool;             // 148 (MM8 only)
-    SkipUnsellableItemCheck: LongBool;        // 152 (MM7 only)
-    FixGMStaff: LongBool;                     // 156 (MM7 only)
-    FixObelisks: LongBool;                    // 160 (MM8 only)
-    BorderlessWindowed: LongBool;             // 164 (set to false only when the game is in Borderless Fullscreen)
-    CompatibleMovieRender: LongBool;          // 168
-    SmoothMovieScaling: LongBool;             // 172
-    SupportTrueColor: LongBool;               // 176
-    RenderRect: TRect;                        // 180
-    FixUnimplementedSpells: LongBool;         // 184 (MM8 only)
-    IndoorMinimapZoomMul: int;                // 188
-    IndoorMinimapZoomPower: int;              // 192
-    FixMonsterSummon: LongBool;               // 196 (unused in MM6)
-    FixInterfaceBugs: LongBool;               // 200 (MM7 only)
-    UILayout: PChar;                          // 204 (unused in MM6)
-    PaperDollInChests: int;                   // 208
-    HigherCloseRingsButton: LongBool;         // 208 (MM7 only)
-    RenderBottomPixel: int;                   // 208
+    MaxMLookAngle: int;                       //
+    MouseLook: LongBool;                      //
+    MouseLookUseAltMode: LongBool;            //
+    CapsLockToggleMouseLook: LongBool;        //
+    MouseFly: LongBool;                       //
+    MouseWheelFly: LongBool;                  //
+    MouseLookTempKey: int;                    //
+    MouseLookChangeKey: int;                  //
+    InventoryKey: int;                        //
+    CharScreenKey: int;                       //
+    DoubleSpeedKey: int;                      //
+    QuickLoadKey: int;                        //
+    AutorunKey: int;                          //
+    HDWTRCount: uint;                         // (unused in MM6)
+    HDWTRDelay: uint;                         // (unused in MM6)
+    HorsemanSpeakTime: int;                   //
+    BoatmanSpeakTime: int;                    //
+    PaletteSMul: single;                      // (unused in MM6)
+    PaletteVMul: single;                      // (unused in MM6)
+    NoBitmapsHwl: LongBool;                   // (unused in MM6)
+    PlayMP3: LongBool;                        //
+    MusicLoopsCount: int;                     //
+    HardenArtifacts: LongBool;                // (unused in MM6)
+    ProgressiveDaggerTrippleDamage: LongBool; //
+    FixChests: LongBool;                      //
+    DataFiles: LongBool;                      //
+    FixDualWeaponsRecovery: LongBool;         // (MM6 only)
+    IncreaseRecoveryRateStrength: int;        // (MM6 only)
+    BlasterRecovery: int;                     // (unused in MM8)
+    FixSkyBitmap: LongBool;                   // (MM8 only)
+    NoCD: LongBool;                           //
+    FixChestsByReorder: LongBool;             //
+    LastLoadedFileSize: int;                  //
+    FixTimers: LongBool;                      //
+    FixMovement: LongBool;                    //
+    MonsterJumpDownLimit: int;                //
+    FixHeroismPedestal: LongBool;             // (MM8 only)
+    SkipUnsellableItemCheck: LongBool;        // (MM7 only)
+    FixGMStaff: LongBool;                     // (MM7 only)
+    FixObelisks: LongBool;                    // (MM8 only)
+    BorderlessWindowed: LongBool;             // (set to false only when the game is in Borderless Fullscreen)
+    CompatibleMovieRender: LongBool;          //
+    SmoothMovieScaling: LongBool;             //
+    SupportTrueColor: LongBool;               //
+    RenderRect: TRect;                        //
+    FixUnimplementedSpells: LongBool;         // (MM8 only)
+    IndoorMinimapZoomMul: int;                //
+    IndoorMinimapZoomPower: int;              //
+    FixMonsterSummon: LongBool;               // (unused in MM6)
+    FixInterfaceBugs: LongBool;               // (MM7 only)
+    UILayout: PChar;                          // (unused in MM6)
+    PaperDollInChests: int;                   //
+    HigherCloseRingsButton: LongBool;         // (MM7 only)
+    RenderBottomPixel: int;                   //
+    TrueColorTextures: LongBool;              // (unused in MM6)
+    ResetPalettes: LongBool;                  // (unused in MM6)
+    FixSFT: LongBool;                         //
   end;
 
 var
@@ -156,13 +164,15 @@ var
   MouseLookCursorHD, SmoothScaleViewSW, WasIndoor, SpriteAngleCompensation,
   PlaceChestItemsVertically, FixChestsByCompacting: Boolean;
   {$IFNDEF mm6}
-  NoIntro, NoVideoDelays, DisableAsyncMouse: Boolean;
+  NoVideoDelays, DisableAsyncMouse: Boolean;
   TurnBasedWalkDelay: int;
   MipmapsBase, MipmapsBasePat: TStringList;
   ViewMulFactor: ext = 1;
   {$ENDIF}
 
   TimersValidated: int64;
+
+  DisabledHooks: TStringList;
 
 {$IFDEF mm6}
   GameSavedText: string;
@@ -185,14 +195,15 @@ type
     HwlPalette: int;
     FullW: int;
     FullH: int;
-    AreaW: int;
-    AreaH: int;
+    AreaW: int; // my added field
+    AreaH: int; // my added field
     BufW: int;
     BufH: int;
     AreaX: int;
     AreaY: int;
     Buffer: ptr;
   end;
+  PSpriteLine = ^TSpriteLine;
   TSpriteLine = packed record
     a1: int2;
     a2: int2;
@@ -369,6 +380,7 @@ const
   _MoveToMap = PMoveToMap(m6*$551D20 + m7*$5B6428 + m8*$5CCCB8);
   _PartyBuffs = PPartyBuffs(m6*$908E34 + m7*$ACD6C4 + m8*$B21738);
   _ShowHits = pbool(m6*$6107EC + m7*$6BE1F8 + m8*$6F39B8);
+  _NoIntro = pbool(m6*$6A5F64 + m7*$71FE8C + m8*$75CDF8);
   _ChestOff_Items = 4;
   _ChestOff_Inventory = 4 + _ItemOff_Size*140;
 {$IFNDEF MM6}
@@ -381,7 +393,6 @@ var
 {$ENDIF}
 
 procedure LoadIni;
-function GetOptions: ptr; stdcall;
 procedure LoadExeMods;
 {$IFNDEF mm6}
 function GetMipmapsCountProc(var a: THwlBitmap; p: PChar): int;
@@ -390,13 +401,12 @@ procedure AddMipmapBase(p: PChar; v: int);
 function GetMapExtra: PMapExtra;
 
 // make semi-transparent borders not black when scaling
-procedure PropagateIntoTransparent(p: PWordArray; w, h: int);
 procedure Wnd_CalcClientRect(var r: TRect);
 procedure Wnd_PaintBorders(wnd: HWND; wp: int);
 procedure Wnd_Sizing_GetWH(wnd: HWND; const r: TRect; var w, h: int);
 procedure Wnd_Sizing(wnd: HWND; side: int; var r: TRect);
 procedure Wnd_Sizing_SetWH(wnd: HWND; side: int; var r: TRect; dw, dh: int);
-procedure CheckHooks(const Hooks);
+procedure CheckHooks(var Hooks);
 procedure ClipCursorRel(r: TRect);
 function DynamicFovFactor(const x, y: int): ext;
 function GetViewMul: ext; inline;
@@ -412,6 +422,20 @@ var
   SetSpellBuff: procedure(this: ptr; time: int64; skill, power, overlay, caster: int); stdcall;
 
 implementation
+
+procedure ReadDisabledHooks(const ss: string);
+var
+  ps: TRSParsedString;
+  i: int;
+begin
+  DisabledHooks:= TStringList.Create;
+  DisabledHooks.Sorted:= true;
+  DisabledHooks.CaseSensitive:= true;
+  DisabledHooks.Duplicates:= dupIgnore;
+  ps:= RSParseString(ss, [',']);
+  for i:= 0 to RSGetTokensCount(ps, true) do
+    DisabledHooks.Add(Trim(RSGetToken(ps, i)));
+end;
 
 procedure LoadIni;
 var
@@ -466,6 +490,17 @@ var
     Result:= default;
   end;
 
+  function HasKey(const Key: string): Boolean;
+  begin
+    Result:= ini.ReadString(sect, key, #13#10) <> #13#10;
+  end;
+
+  procedure DeleteKey(const Key: string);
+  begin
+    if HasKey(Key) then
+      ini.DeleteKey(sect, Key);
+  end;
+
 {$IFDEF mm6}
 var
   i, j:int;
@@ -490,7 +525,7 @@ begin
       FixStarburst:= ini.ReadBool(sect, 'FixStarburst', true);
       PlaceItemsVertically:= ini.ReadBool(sect, 'PlaceItemsVertically', true);
       NoPlayerSwap:= ini.ReadBool(sect, 'NoPlayerSwap', true);
-      ini.DeleteKey(sect, 'FixCompatibility');
+      DeleteKey('FixCompatibility');
 {$ELSE}
       NoVideoDelays:= ini.ReadBool(sect, 'NoVideoDelays', true);
       HardenArtifacts:= ini.ReadBool(sect, 'HardenArtifacts', true);
@@ -504,20 +539,26 @@ begin
       if (i < VK_F1) or (i > VK_F24) then
         i:= VK_F11;
       QuickSaveKey:= ReadInteger('QuickSavesKey', i);
-      ini.DeleteKey(sect, 'QuickSaveKey');
-      ini.DeleteKey(sect, 'QuickSaveSlot1');
-      ini.DeleteKey(sect, 'QuickSaveSlot2');
-      ini.DeleteKey(sect, 'QuickSaveName');
+      DeleteKey('QuickSaveKey');
+      DeleteKey('QuickSaveSlot1');
+      DeleteKey('QuickSaveSlot2');
+      DeleteKey('QuickSaveName');
 {$ELSE}
       QuickSaveKey:= ReadInteger('QuickSavesKey', VK_F11);
-      ini.DeleteKey(sect, 'JumpSpeed');
+      DeleteKey('JumpSpeed');
 {$ENDIF}
       if (QuickSaveKey < 0) or (QuickSaveKey > 255) then
         QuickSaveKey:= VK_F11;
       QuickLoadKey:= ReadInteger('QuickLoadKey', 0);
 
       NoDeathMovie:= ReadBool('NoDeathMovie', false);
-      {$IFDEF mm6}_NoIntro^{$ELSE}NoIntro{$ENDIF}:= ReadBool('NoIntro', false);
+      if ReadBool('NoIntro', false) then
+      begin
+        i:= ini.ReadInteger(sect, 'PostponeIntro', 1);
+        if (i <> 0) and (i <> m7*2) then
+          i:= 1;
+        pint(_NoIntro)^:= 1 + i;
+      end;
       NoCD:= ini.ReadBool(sect, 'NoCD', true);
       InventoryKey:= ReadInteger('InventoryKey', ord('I'));
       CharScreenKey:= ReadInteger('ToggleCharacterScreenKey', 192);
@@ -534,7 +575,7 @@ begin
       FixChests:= ReadBool('FixChests', false);
       {$IFNDEF mm8}BlasterRecovery:= ReadInteger('BlasterRecovery', 4);{$ENDIF}
       DataFiles:= ini.ReadBool(sect, 'DataFiles', true);
-      {$IFNDEF mm6}NoBitmapsHwl:= ReadBool('NoD3DBitmapHwl', true);{$ENDIF}
+      {$IFNDEF mm6}NoBitmapsHwl:= ini.ReadBool(sect, 'NoD3DBitmapHwl', true);{$ENDIF}
       MouseLook:= ReadBool('MouseLook', false);
       MLookSpeed.X:= ReadInteger('MouseSensitivityX', 35);
       MLookSpeed.Y:= ini.ReadInteger(sect, 'MouseSensitivityY', MLookSpeed.X);
@@ -551,15 +592,14 @@ begin
       MouseLookRememberTime:= max(1, ini.ReadInteger(sect, 'MouseLookRememberTime', 10*1000));
       AlwaysStrafe:= ReadBool('AlwaysStrafe', false);
       StandardStrafe:= ini.ReadBool(sect, 'StandardStrafe', false);
-      {$IFDEF mm7}PaletteSMul:= ReadFloat('PaletteSMul', 0.65);{$ENDIF}
-      {$IFDEF mm8}PaletteSMul:= ReadFloat('PaletteSMul', 1);{$ENDIF}
+      {$IFNDEF mm6}PaletteSMul:= ReadFloat('PaletteSMul', m7*0.65 + m8*1);{$ENDIF}
       {$IFNDEF mm6}PaletteVMul:= ReadFloat('PaletteVMul', 1.1);{$ENDIF}
-      {$IFDEF mm8}StartupCopyrightDelay:= ReadInteger('StartupCopyrightDelay', 5000);{$ENDIF}
+      {$IFDEF mm8}StartupCopyrightDelay:= ini.ReadInteger(sect, 'StartupCopyrightDelay', 0);{$ENDIF}
       AutorunKey:= ReadInteger('AutorunKey', VK_F3);
 {$IFNDEF mm6}
       if NoBitmapsHwl then
       begin
-        HDWTRCount:= max(1, min(15, ini.ReadInteger(sect, 'HDWTRCount', {$IFDEF mm7}7{$ELSE}8{$ENDIF})));
+        HDWTRCount:= max(1, min(15, ini.ReadInteger(sect, 'HDWTRCount', 7 + m8)));
         HDWTRDelay:= max(1, ini.ReadInteger(sect, 'HDWTRDelay', 20));
       end else
       begin
@@ -614,6 +654,8 @@ begin
       {$IFDEF mm7}SupportMM7ResTool:= ini.ReadBool(sect, 'SupportMM7ResTool', false);{$ENDIF}
       FixChestsByCompacting:= ini.ReadBool(sect, 'FixChestsByCompacting', true);
       SpriteAngleCompensation:= ini.ReadBool(sect, 'SpriteAngleCompensation', true);
+      TrueColorTextures:= ini.ReadBool(sect, 'TrueColorTextures', true);
+      FixSFT:= ini.ReadBool(sect, 'FixSFT', true);
 
 {$IFDEF mm6}
       if FileExists(AppPath + 'mm6text.dll') then
@@ -658,6 +700,7 @@ begin
       if FileExists(AppPath + 'mm7text.dll') then
         UseMM7text:= ReadBool('UseMM7textDll', true);
 {$ENDIF}
+      ReadDisabledHooks(ini.ReadString(sect, 'DisableHooks', ''));
 
       iniOverride:= ini;
       ini:= TIniFile.Create(AppPath + SIni2);
@@ -741,7 +784,10 @@ begin
   Result:= MipmapsCount;
   if (Result < 0) or (s = '') then
     exit;
-  w:= a.AreaW;
+  if Options.NoBitmapsHwl then
+    w:= a.AreaW
+  else
+    w:= a.BufW;
   if MipmapsBase.Find(s, i) then
     w:= int(MipmapsBase.Objects[i])
   else
@@ -775,45 +821,6 @@ begin
   MipmapsBase.Objects[i]:= ptr(v);
 end;
 {$ENDIF}
-
-function PropagateColor(p: PWordArray; d: int; get: Boolean): Boolean; inline;
-var
-  c: Word;
-begin
-  c:= p[d];
-  Result:= get and (c > $7FFF) or not get and (c = 0);
-  if Result then
-    if get then
-      p[0]:= c and $7FFF
-    else
-      p[d]:= p[0] and $7FFF;
-end;
-
-function PropagateLoop(p: PWordArray; w, h, d1, d2: int): Boolean; inline;
-var
-  x, y: int;
-begin
-  Result:= false;
-  p:= @p[w];
-  for y:= h - 2 downto 0 do
-  begin
-    p:= @p[1];
-    for x:= w - 2 downto 0 do
-    begin
-      if p[0] = 0 then
-        Result:= PropagateColor(p, d1, true) or PropagateColor(p, d2, true) or Result
-      else if p[0] > $7FFF then
-        Result:= PropagateColor(p, d1, false) or PropagateColor(p, d2, false) or Result;
-      p:= @p[1];
-    end;
-  end;
-end;
-
-procedure PropagateIntoTransparent(p: PWordArray; w, h: int);
-begin
-  if PropagateLoop(p, w, h, -1, -w) then  // up, left
-    PropagateLoop(p, w, h, -w-1, -w+1);   // corders of top line
-end;
 
 var
   BaseClientRect: TRect;
@@ -941,14 +948,21 @@ begin
     inc(r.Bottom, dh);
 end;
 
-procedure CheckHooks(const Hooks);
+procedure CheckHooks(var Hooks);
 var
-  hk: array[0..0] of TRSHookInfo absolute Hooks;
+  hk: array[0..1] of TRSHookInfo absolute Hooks;
   i: int;
 begin
   i:= RSCheckHooks(Hooks);
   if i >= 0 then
     raise Exception.CreateFmt(SWrong, [hk[i].p]);
+  i:= 0;
+  while hk[i].p <> 0 do
+  begin
+    if DisabledHooks.IndexOf(IntToHex(hk[i].p, 0)) >= 0 then
+      hk[i].Querry:= -100;
+    inc(i);
+  end;
 end;
 
 procedure ClipCursorRel(r: TRect);

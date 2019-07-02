@@ -2127,6 +2127,8 @@ end;
 
 function LoadCustomLod(Old: PChar; Name: PChar): ptr; stdcall;
 begin
+  if int(Old) = _BitmapsLod then
+    Options.ResetPalettes:= true;
   Result:= DoLoadCustomLod(Old, Name, Old + LodChapOff);
 end;
 
@@ -2137,6 +2139,8 @@ begin
   for i := high(CustomLods) downto 0 do
     if CustomLods[i].Mine = Lod then
     begin
+      if int(CustomLods[i].Std) = _BitmapsLod then
+        Options.ResetPalettes:= true;
       ArrayDelete(CustomLods, i, SizeOf(CustomLods[0]));
       SetLength(CustomLods, length(CustomLods) - 1);
       LodClean(0,0, Lod);
@@ -2171,7 +2175,7 @@ end;
 procedure LoadCustomLods(Old: int; Name: string; Chap: PChar);
 begin
   DoLoadCustomLods(Old, '*.' + Name, Chap);
-  if (Options.UILayout = nil) or not _IsD3D^ or not Options.SupportTrueColor then
+  if Options.UILayout = nil then
     exit;
   Name:= ChangeFileExt(Name, '.' + Options.UILayout + '.lod');
   DoLoadCustomLods(Old, Name, Chap);
@@ -2206,12 +2210,14 @@ procedure LoadLodsHook;
 var
   Lang: array[0..103] of Char;
 begin
-  LoadCustomLods($70D3E8, 'icons.lod', 'icons');
+  if not _IsD3D^ or not Options.SupportTrueColor then
+    Options.UILayout:= '';
+  LoadCustomLods(_IconsLod, 'icons.lod', 'icons');
   if _IsD3D^ then
-    LoadCustomLodsD3D($72DC60, 'bitmaps', 'bitmaps')
+    LoadCustomLodsD3D(_BitmapsLod, 'bitmaps', 'bitmaps')
   else
-    LoadCustomLods($72DC60, 'bitmaps.lod', 'bitmaps');
-  LoadCustomLods($71EFA8, 'sprites.lod', 'sprites08');
+    LoadCustomLods(_BitmapsLod, 'bitmaps.lod', 'bitmaps');
+  LoadCustomLods(_SpritesLod, 'sprites.lod', 'sprites08');
   LoadCustomLods($6CE838, 'games.lod', 'chapter');
   LoadCustomLods($6F30D0, 'T.lod', 'language');
   LoadCustomLods($6F330C, 'D.lod', 'language');
@@ -3378,10 +3384,20 @@ begin
   _ActionQueue.Count:= 0;
 end;
 
+//----- Postpone intro
+
+procedure PostponeIntroHook;
+asm
+  push 0
+  push 5
+  mov eax, $4A7B7D
+  call eax
+end;
+
 //----- HooksList
 
 var
-  HooksList: array[1..327] of TRSHookInfo = (
+  HooksList: array[1..324] of TRSHookInfo = (
     (p: $458E18; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $463862; old: $450493; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave/quicksave filenames localization
     (p: $4CD509; t: RShtNop; size: 12), // Fix Save/Load Slots: it resets SaveSlot, SaveScroll
@@ -3401,10 +3417,6 @@ var
     (p: $44C84E; old: VK_F11; newp: @QuickSaveKey; newref: true; t: RSht1), // QuickSaveKey
     (p: $42E54A; newp: @CapsLockHook; t: RShtCall; size: 6; Querry: 4), // CapsLockToggleRun
     (p: $4614FF; backup: @@oldDeathMovie; newp: @DeathMovieHook; t: RShtCall), // Allow loading quick save from death movie + NoDeathMovie
-    (p: $4A7C62; old: $4A7BCC; new: $4A7C45; t: RSht4; Querry: 2), // No intro: 3dologo
-    (p: $4A7C66; old: $4A7BD9; new: $4A7C45; t: RSht4; Querry: 2), // No intro: new world logo
-    (p: $4A7C6A; old: $4A7BE6; new: $4A7C45; t: RSht4; Querry: 2), // No intro: jvc
-    (p: $4A7C72; old: $4A7BF3; new: $4A7C45; t: RSht4; Querry: 2), // No intro: Intro
     (p: $463477; new: $4634C8; t: RShtJmp; size: 6; Querry: 1), // NoCD
     (p: $4AA751; old: $840F; new: $E990; t: RSht2), // Fix XP compatibility
     (p: $46092C; old: int($FC458BA5); new: int($FFB0C031); t: RSht4), // Fix XP compatibility
@@ -3710,6 +3722,7 @@ var
     (p: $4CDFA7; old: 635; new: 635-6; t: RSht4), // Wrong minimap placement
     (p: $43DA21; newp: @FixIndoorFOVProcSW; t: RShtAfter; Querry: hqFixIndoorFOV), // Indoor FOV wasn't extended like outdoor
     (p: $431A7A; newp: @FixRestEncounter; t: RShtBefore), // Fix quick R+R+Esc press with encounter
+    (p: $460FA2; newp: @PostponeIntroHook; t: RShtAfter; size: 7; Querry: hqPostponeIntro), // Postpone intro
     ()
   );
 
@@ -3736,8 +3749,6 @@ begin
   ExtendSpriteLimits;
   ReadDisables;
   RSApplyHooks(HooksList);
-  if NoIntro then
-    RSApplyHooks(HooksList, 2);
   if not CapsLockToggleRun then
     RSApplyHooks(HooksList, 4);
   if NoVideoDelays then
@@ -3787,6 +3798,8 @@ begin
     HookMP3;
   if Options.NoCD and FileExists('Anims\Magicdod.vid') then
     RSApplyHooks(HooksList, 1);
+  if pint(_NoIntro)^ = 2 then
+    RSApplyHooks(HooksList, hqPostponeIntro);
   if Options.HardenArtifacts then
     RSApplyHooks(HooksList, 9);
   if Options.ProgressiveDaggerTrippleDamage then

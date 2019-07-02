@@ -487,14 +487,6 @@ asm
   ret 4
 end;
 
-//----- NoIntro
-
-procedure IntroHook;
-asm
-  mov ecx, $4EFE74 // "Intro"
-  push $4BE671 // ShowMovie
-end;
-
 //----- Multiple fauntain drinks bug
 
 function InactiveMemberEventsProc: int;
@@ -2112,6 +2104,8 @@ end;
 
 function LoadCustomLod(Old: PChar; Name: PChar): ptr; stdcall;
 begin
+  if int(Old) = _BitmapsLod then
+    Options.ResetPalettes:= true;
   Result:= DoLoadCustomLod(Old, Name, Old + LodChapOff);
 end;
 
@@ -2122,6 +2116,8 @@ begin
   for i := high(CustomLods) downto 0 do
     if CustomLods[i].Mine = Lod then
     begin
+      if int(CustomLods[i].Std) = _BitmapsLod then
+        Options.ResetPalettes:= true;
       ArrayDelete(CustomLods, i, SizeOf(CustomLods[0]));
       SetLength(CustomLods, length(CustomLods) - 1);
       LodClean(0,0, Lod);
@@ -2156,7 +2152,7 @@ end;
 procedure LoadCustomLods(Old: int; Name: string; Chap: PChar);
 begin
   DoLoadCustomLods(Old, '*.' + Name, Chap);
-  if (Options.UILayout = nil) or not _IsD3D^ or not Options.SupportTrueColor then
+  if Options.UILayout = nil then
     exit;
   Name:= ChangeFileExt(Name, '.' + Options.UILayout + '.lod');
   DoLoadCustomLods(Old, Name, Chap);
@@ -2189,13 +2185,15 @@ var
 // OnStart, just before loading any data
 procedure LoadLodsHook;
 begin
-  LoadCustomLods($6D0490, 'icons.lod', 'icons');
+  if not _IsD3D^ or not Options.SupportTrueColor then
+    Options.UILayout:= '';
+  LoadCustomLods(_IconsLod, 'icons.lod', 'icons');
   LoadCustomLods($6BE8D8, 'events.lod', 'icons');
   if _IsD3D^ then
-    LoadCustomLodsD3D($6F0D00, 'bitmaps', 'bitmaps')
+    LoadCustomLodsD3D(_BitmapsLod, 'bitmaps', 'bitmaps')
   else
-    LoadCustomLods($6F0D00, 'bitmaps.lod', 'bitmaps');
-  LoadCustomLods($6E2048, 'sprites.lod', 'sprites08');
+    LoadCustomLods(_BitmapsLod, 'bitmaps.lod', 'bitmaps');
+  LoadCustomLods(_SpritesLod, 'sprites.lod', 'sprites08');
   LoadCustomLods($6A08E0, 'games.lod', 'chapter');
   LoadLodsOld;
   if _IsD3D^ then
@@ -3384,10 +3382,20 @@ asm
   jmp eax
 end;
 
+//----- Postpone intro
+
+procedure PostponeIntroHook;
+asm
+  push 1
+  push 5
+  mov eax, $4A94BD
+  call eax
+end;
+
 //----- HooksList
 
 var
-  HooksList: array[1..313] of TRSHookInfo = (
+  HooksList: array[1..309] of TRSHookInfo = (
     (p: $45B0D1; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $4655FE; old: $452C75; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave file name localization
     (p: $45E5A4; old: $45E2D0; backup: @FillSaveSlotsStd; newp: @FillSaveSlotsHook; t: RShtCall), // Fix Save/Load Slots
@@ -3402,12 +3410,6 @@ var
     (p: $45F84E; old: $461B85; backup: @@SaveSetPauseStd; newp: @SaveSetPauseHook; t: RShtCall), // Autosave didn't pause time
     (p: $42FC46; newp: @CapsLockHook; t: RShtCall; size: 6; Querry: 4), // CapsLockToggleRun
     (p: $463541; backup: @@oldDeathMovie; newp: @DeathMovieHook; t: RShtCall), // Allow loading quick save from death movie + NoDeathMovie
-    (p: $4A95B2; old: $4A950F; new: $4A9595; t: RSht4; Querry: 2), // No intro: 3dologo
-    (p: $4A95B6; old: $4A951C; new: $4A9595; t: RSht4; Querry: 2), // No intro: new world logo
-    (p: $4A95BA; old: $4A9529; new: $4A9595; t: RSht4; Querry: 2), // No intro: jvc
-    (p: $4A95C2; old: $4A9536; new: $4A9595; t: RSht4; Querry: 2), // No intro: Intro
-    (p: $4A953C; newp: @IntroHook; t: RShtCall; size: 7; Querry: 2), // No intro: Intro Post
-    (p: $4A95BE; old: $4A9543; new: $4A9536; t: RSht4; Querry: 2), // No intro: Intro Post - include Intro too
     (p: $4651F0; new: $465241; t: RShtJmp; size: 6; Querry: 1), // NoCD
     (p: $4AC2D7; old: $840F; new: $E990; t: RSht2), // Fix XP compatibility
     (p: $462D9D; old: $2024448B; new: int($FFB0C031); t: RSht4), // Fix XP compatibility
@@ -3700,6 +3702,8 @@ var
     (p: $434A9D; old: 445; new: 313; t: RSht4; Querry: hqCloseRingsCloser), // Move 'close rings' button closer
     (p: $43E8CA; old: $511748; new: $507558; t: RSht4; Querry: hqCloseRingsCloser), // Move 'close rings' button closer
     (p: $48F694; old: $48F0AC; newp: @FixGloryShield; t: RShtCodePtrStore), // 'Of Spirit Magic' effect of Glory Shield wasn't working
+    (p: $463007; newp: @PostponeIntroHook; t: RShtBefore; Querry: hqPostponeIntro), // Postpone intro
+    (p: $462FEB; newp: @PostponeIntroHook; t: RShtAfter; Querry: hqPostponeIntro2), // Postpone intro
     ()
   );
 
@@ -3720,7 +3724,7 @@ end;
 const
   MMResToolError = 'It appears that you are using an executable modified by MM7ResTool. '
    + 'GrayFace patch does a far greater job at supporting HD mode now, so it''s recommended that '
-   + 'you restore the original executable for new UI to properly function. '
+   + 'you restore and run the original mm7.exe for new UI to properly function. '
    + 'If you still want to continue using MM7ResTool, add the line SupportMM7ResTool=1 to mm7.ini to disable this message.'#13#10#13#10
    + 'Do you want to run MM7 with MM7ResTool support?';
 
@@ -3736,8 +3740,6 @@ begin
   ExtendSpriteLimits;
   ReadDisables;
   RSApplyHooks(HooksList);
-  if NoIntro then
-    RSApplyHooks(HooksList, 2);
   if NoDeathMovie then
     RSApplyHooks(HooksList, 3);
   if not CapsLockToggleRun then
@@ -3783,6 +3785,10 @@ begin
     HookMP3;
   if Options.NoCD and FileExists('Anims\Magic7.vid') then
     RSApplyHooks(HooksList, 1);
+  case pint(_NoIntro)^ of
+    2: RSApplyHooks(HooksList, hqPostponeIntro);
+    3: RSApplyHooks(HooksList, hqPostponeIntro2);
+  end;
   if Options.HardenArtifacts then
     RSApplyHooks(HooksList, 9);
   if Options.ProgressiveDaggerTrippleDamage then
