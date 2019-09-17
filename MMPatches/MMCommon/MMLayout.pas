@@ -184,6 +184,8 @@ const
   lvReloadLayout = 'Game.ReloadLayout';
   lvVersion = 'Game.Version';
   lvKeyPressed = 'KeyPressed.';
+  lvQuestion = 'Game.Question';
+  lvTreeHints = 'Game.TreeHints';
   CanvasScreen = -1;
   CanvasTimer = -2;
   CanvasBase = 0;       lvcBase = 'Game.BaseUI';

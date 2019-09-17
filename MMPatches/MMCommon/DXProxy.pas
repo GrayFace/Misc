@@ -480,18 +480,31 @@ procedure CalcRenderLim;
 var
   i: int;
 begin
-  RenderLimX:= Screen.Width;
-  RenderLimY:= Screen.Height;
-  for i:= 0 to Screen.MonitorCount - 1 do
-    with Screen.Monitors[i] do
-    begin
-      RenderLimX:= max(RenderLimX, Width);
-      RenderLimY:= max(RenderLimY, Height);
-    end;
+  if _IsD3D^ then
+  begin
+    RenderLimX:= 2048;
+    RenderLimY:= 2048;
+  end else
+  begin
+    RenderLimX:= Screen.Width;
+    RenderLimY:= Screen.Height;
+    for i:= 0 to Screen.MonitorCount - 1 do
+      with Screen.Monitors[i] do
+      begin
+        RenderLimX:= max(RenderLimX, Width);
+        RenderLimY:= max(RenderLimY, Height);
+      end;
+  end;
   if RenderMaxWidth >= 640 then
     RenderLimX:= RenderMaxWidth;
   if RenderMaxHeight >= 480 then
     RenderLimY:= RenderMaxHeight;
+  // old DirectX doesn't support anything bigger than 2048
+  if _IsD3D^ then
+  begin
+    RenderLimX:= min(RenderLimX, 2048);
+    RenderLimY:= min(RenderLimY, 2048);
+  end;
   CalcRenderSize;
 end;
 

@@ -249,6 +249,20 @@ Version 2.3.1:
 (MM6)
 [-] My bug: Enchant Item and Golden Touch spells were bugged, effected by PaperDollInChests option
 
+Version 2.4:
+(MM6-MM8)
+[+] FixChestsByCompacting
+[+] PlaceChestItemsVertically
+[+] SpriteAngleCompensation
+[+] PostponeIntro
+[+] ClickThroughEffects
+[+] DisableHooks
+[+] Map entrance dialog can now be called from NPC topic anywhere
+[-] FixSFT - SFT.bin was animated incorrectly (first frame was longer, last frame was shorter)
+[-] My bug: keyboard control of dialogs was breaking evt.Question in houses
+(MM6)
+[-] Static Charge cost at Expert was incorrect. Spells cost wasn't taken from Speels.txt
+
 
 ≈сли загрузить сейв, где все рожи одинаковые, а потом сейв с разными, будут черные п€тна на месте рож
 
@@ -280,8 +294,6 @@ Paralyzed targets do not take damage from Fireball and Rock Blast
  то по партии они бить все-равно будут успешно, хот€ € им даже уже и из луков
  нанести урон не могу. Ёто нормально? —просил в теме и вроде говор€т, что нет.
 
-
-1) Blackshire +5 Intellect & +5 Personality fountain (north of Temple of Snake) and Kreigspire +10 Magic Resistance fountain (town center) appear to share flag. You can only get one or the other.
 
 2) "This spell lasts one hour per point of skill in Air/Earth/Body magic" (taken from Protection from Cold)
  should be added to spell description text of following spells: Protection from Electricity,
@@ -322,12 +334,6 @@ Paralyzed targets do not take damage from Fireball and Rock Blast
  for all skill levels, which doesn't make sense. Seems spell should give 2, 3 & 4 times duration compared
  to individual spells, dependent on skill level same as "Day of the Gods. Points are 2x, 3x & 4x rather
  then 1x, 2x & 3x of individual spells, dependent on skill level, which makes sense.
-
-
-The Alter in the Temple of the moon gives an abnormal amount of luck, every other Alter gives + 5 Accuracy,
- Might, Endurance and Speed to all characters.
-Luck + 2 1st character
-Luck + 5 2nd, 3rd and 4th character
 
 
 The official game bug where you must choose between the +5 Int/Per (B2 well) or +10 Magic Resistance (B1 well) is annoying because I just realized I took one well before the other before deciding which I rather have.

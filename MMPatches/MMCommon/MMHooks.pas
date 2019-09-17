@@ -11,6 +11,7 @@ uses
 
 procedure ApplyMMHooks;
 procedure ApplyMMDeferredHooks;
+procedure ApplyMMHooksSW;
 function GetCoordCorrectionIndoorX: ext;
 function GetCoordCorrectionIndoorY: ext;
 function IsLayoutActive(CanActivate: Boolean = true): Boolean; inline;
@@ -558,6 +559,10 @@ begin
 end;
 
 procedure PaperDollInChestsDraw;
+const
+  Screen = $EC1980;
+  Begin2D: int = $4A2FF2;
+  End2D: int = $4A30A4;
 asm
   cmp dword ptr [CurrentScreen], 15
   jz @draw
@@ -578,7 +583,10 @@ asm
   mov ecx, [$B7CA4C + ecx*4]
   push ecx
   call UpdatePaperDoll
+  mov ecx, Screen
+  call Begin2D            // begin 2d
   pop ecx
+
   cmp dword ptr [RingsShown], 0
   mov eax, $43A363
   jz @norings
@@ -586,10 +594,12 @@ asm
 @norings:
   push dword ptr [$F01A64]
   mov dword ptr [$F01A64], 1
-  call eax
+  call eax                // paper doll
   pop dword ptr [$F01A64]
   mov eax, ebx
-  call DrawPaperDollStuff
+  call DrawPaperDollStuff // other stuff
+  mov ecx, Screen
+  call End2D              // end 2d
 // std:
   mov ecx, ebx
 end;
@@ -677,8 +687,6 @@ asm
   mov KeyControlMouseBlocked, esi
 {$IFDEF mm6}
   sub edx, $22
-{$ELSE}
-  sub ecx, $22
 {$ENDIF}
 @ok:
   cmp KeyControlMouseBlocked, 0
@@ -690,12 +698,39 @@ asm
   mov [esp], m6*$419F47 + m7*$41D015 + m8*$41C40F
 end;
 
+procedure KeyControlCancel;
+asm
+{$IFDEF mm6}
+  mov edx, 0
+{$ELSEIF defined(mm7)}
+  mov ecx, 0
+{$ELSE}
+  mov eax, 0
+{$IFEND}
+  mov KeyControlMouseBlocked, 0
+  cmp KeyControlMouseBlocked, 0
+end;
+
 procedure KeyControl;
 asm
 {$IFDEF mm6}
   cmp edx, $22
 {$ENDIF}
   jz KeyControlMouse
+
+  // bugfix: messing with evt.Question
+  cmp dword ptr [esi + m6*$4D48F8 + m7*$506DD0 + $30], 0
+  jz @ok
+  push eax
+  mov eax, [m6*$4D46BC + m7*$5074B0 + m8*$518CE8]
+{$IFDEF mm6}
+  cmp eax, [esp + $20 + 8]
+{$ELSE}
+  cmp eax, [ebp - $10]
+{$ENDIF}
+  pop eax
+  jnz KeyControlCancel
+@ok:
 
 {$IFDEF mm6}
   cmp edx, VK_RETURN
@@ -791,7 +826,7 @@ var
 begin
   Result:= 0;
   sk:= _Character_GetSkillWithBonuses(0,0, pl, 3);
-  if (sk and $100 <> 0) and (Random(60) < sk and $3F) then
+  if (sk and $100 <> 0) and (Random(Options.AxeGMFullProbabilityAt) < sk and $3F) then
     Result:= 2;
 end;
 
@@ -997,7 +1032,7 @@ begin
   end;
   h:= mul*params.ZBuf;
   if si < 0 then  // look down
-    mul:= min(mul, 1)*0.75*EnsureRange(2 - params.ZBuf/Dist*2, 0, 1)*EnsureRange(2 - h/HLim*2, 0, 1)*2
+    mul:= min(mul, 1)*0.75*EnsureRange(2 - params.ZBuf/Dist*2, 0, 1)*EnsureRange(2 - h/HLim*2, 0, 1)
   else
     mul:= min(mul, 5)*0.35;
   mul:= 1/EnsureRange(1 + mul*si, 0.73, 2);
@@ -1044,7 +1079,7 @@ var
   mul, si, co: ext;
   n: int;
 begin
-  SinCos(_Party_Angle^*Pi/1024*0.4, si, co); // use 1/3 of the angle
+  SinCos(_Party_Angle^*Pi/1024*0.4, si, co); // use 0.4 of the angle
   n:= 0;
   with sprite^ do
   begin
@@ -1071,11 +1106,143 @@ asm
   pop ecx
 end;
 
+//----- Save game bug in Windows Vista and higher (bug of OS or other software)
+
+procedure SaveGameBugHook(old, new: PChar); cdecl;
+var
+  i: int;
+begin
+  for i:= 1 to 2000 do
+  begin
+    if MoveFile(old, new) then
+      exit;
+    Sleep(1);
+    DeleteFileA(new);
+  end;
+  if not FileExists(new) then
+  begin
+    RSMessageBox(_MainWindow^, Format('Failed to rename %s. Check file permisions. Game wasn''t saved.', [old]), 'Saving Error');
+    exit;
+  end;
+  // failed to delete - rename it
+  for i:= 0 to 999999 do
+    if MoveFile(new, pchar(ChangeFileExt(new, Format('.%.3d', [i])))) or not FileExists(Format('.%.3d', [i])) then
+    begin
+      RSMessageBox(_MainWindow^,
+         Format('Failed to delete %s. Check file permisions. %s',
+            [new, IfThen(MoveFile(old, new), 'Game was saved, but temporary file is left in Saves folder.',
+             'Game may have been saved to Data\new.lod.')]),
+         'Saving Error');
+      exit;
+    end;
+end;
+
+//----- Click through effects SW
+
+function IsEffectSprite(i: int): Boolean;
+const
+  MapItems_TypeIndex = m6*$5C9AD8 + m7*$6650B0 + m8*$692FB8 + 2;
+  MapItems_Sz = 112 - m6*12;
+  ObjList = pint(m6*$5F6DF4 + m7*$680634 + m8*$6AE53C);
+  ObjList_Bits = $26;
+  ObjList_Sz = 56 - m6*4;
+begin
+  Result:= false;
+  if i and 7 <> 2 then  exit;
+  i:= i shr 3;
+  i:= pint2(MapItems_TypeIndex + i*MapItems_Sz)^;
+  i:= pbyte(ObjList^ + i*ObjList_Sz + ObjList_Bits)^;
+  Result:= (i and $10) <> 0; // non-interactable object
+end;
+
+var
+  ObjectByPixelBackup: array of int;
+  WasSpriteIndex: array of int2;
+
+procedure DrawEffectsHook(draw: TProcedure);
+var
+  i: int;
+begin
+  NeedScreenWH;
+  while length(WasSpriteIndex) < _SpritesToDrawCount^ do
+    SetLength(WasSpriteIndex, max(length(WasSpriteIndex)*2, 500));
+  // disable effects sprites
+  for i:= 0 to _SpritesToDrawCount^ - 1 do
+    with _SpritesToDraw^^[i] do
+    begin
+      WasSpriteIndex[i]:= SpriteIndex;
+      if (SpriteIndex >= 0) and IsEffectSprite(ObjKind) then
+        SpriteIndex:= -1;
+    end;
+  draw;
+  // backup ObjectByPixel without effects
+  SetLength(ObjectByPixelBackup, SW*SH);
+  Move(_ObjectByPixel^^[0], ObjectByPixelBackup[0], length(ObjectByPixelBackup)*4);
+  // enable effects sprites, disable other sprites
+  for i:= 0 to _SpritesToDrawCount^ - 1 do
+    with _SpritesToDraw^^[i] do
+      if WasSpriteIndex[i] >= 0 then
+        if SpriteIndex < 0 then
+          SpriteIndex:= WasSpriteIndex[i]
+        else
+          SpriteIndex:= -1;
+  draw;
+  // enable all sprites
+  for i:= 0 to _SpritesToDrawCount^ - 1 do
+    with _SpritesToDraw^^[i] do
+      SpriteIndex:= WasSpriteIndex[i];
+end;
+
+procedure DrawDoneHook;
+begin
+  // restore ObjectByPixel without effects
+  Move(ObjectByPixelBackup[0], _ObjectByPixel^[0], length(ObjectByPixelBackup)*4);
+end;
+
+//----- Proper D3DRend->Init error messages
+
+procedure D3DErrorMessageHook;
+asm
+  mov eax, [esi + $40088]
+  add eax, $48
+  mov [esp + 4], eax
+end;
+
+//----- Allow entering maps from NPC dialog
+
+procedure CloseNPCDialog;
+var
+  last: int;
+begin
+  while _CurrentScreen^ in [4, 13] do
+  begin
+    AddAction(113, 0, 0);
+    last:= _SoundVolume^;
+    _SoundVolume^:= 0;
+    _ProcessActions;
+    _SoundVolume^:= last;
+  end;
+end;
+
+procedure CloseNPCDialog2;
+begin
+  if (_CurrentScreen^ <> 4) and (m6 = 0) or (_CurrentScreen^ <> 13) then  exit;
+  CloseNPCDialog;
+  _NeedRedraw^:= 0;
+end;
+
+procedure CloseNPCDialog6;
+asm
+  pushad
+  call CloseNPCDialog
+  popad
+end;
+
 //----- HooksList
 
 var
 {$IFDEF MM6}
-  Hooks: array[1..20] of TRSHookInfo = (
+  Hooks: array[1..28] of TRSHookInfo = (
     (p: $457567; newp: @WindowWidth; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $45757D; newp: @WindowHeight; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $454340; newp: @WindowProcHook; t: RShtFunctionStart; size: 8), // Window procedure hook
@@ -1095,10 +1262,18 @@ var
     (p: $46B73E; newp: @SpritesAngleHook6; t: RShtCallStore; Querry: hqSpriteAngleCompensation), // Sprite angle compensation
     (p: $4348BA; newp: @SpritesAngleHook6; t: RShtCallStore; Querry: hqSpriteAngleCompensation), // Sprite angle compensation
     (p: $44417B; old: $7F; new: $7D; t: RSht1; Querry: hqFixSFT), // SFT.bin was animated incorrectly (first frame was longer, last frame was shorter)
+    (p: $44D861; newp: @SaveGameBugHook; t: RShtCall), // Save game bug in Windows Vista and higher (bug of OS or other software)
+    (p: $434737; old: $4347E0; newp: @DrawEffectsHook; t: RShtCallStore; Querry: hqClickThruEffects), // Click through effects SW (indoor)
+    (p: $4371BE; newp: @DrawDoneHook; t: RShtAfter; Querry: hqClickThruEffects), // Click through effects SW (indoor)
+    (p: $46A242; old: $46B650; newp: @DrawEffectsHook; t: RShtCallStore; Querry: hqClickThruEffects), // Click through effects SW (outdoor)
+    (p: $4371FA; newp: @DrawDoneHook; t: RShtAfter; Querry: hqClickThruEffects), // Click through effects SW (outdoor)
+    (p: $435296; newp: @DrawDoneHook; t: RShtAfter; Querry: hqClickThruEffects), // Click through effects SW (outdoor)
+    (p: $43E37F; newp: @CloseNPCDialog6; t: RShtBefore; size: 6), // Allow entering maps from NPC dialog
+    (p: $43DE74; newp: @CloseNPCDialog2; t: RShtBefore), // Allow entering maps from NPC dialog
     ()
   );
 {$ELSEIF defined(MM7)}
-  Hooks: array[1..36] of TRSHookInfo = (
+  Hooks: array[1..51] of TRSHookInfo = (
     (p: $47B84E; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (monsters)
     (p: $47B296; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (items)
     (p: $47AD40; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (sprites)
@@ -1134,10 +1309,25 @@ var
     (p: $47BB77; newp: @SpritesAngleHook; t: RShtBefore; size: 7; Querry: hqSpriteAngleCompensation), // Sprite angle compensation
     (p: $440D76; newp: @SpritesAngleHook2; t: RShtBefore; size: 7; Querry: hqSpriteAngleCompensation), // Sprite angle compensation
     (p: $44D93B; old: $7F; new: $7D; t: RSht1; Querry: hqFixSFT), // SFT.bin was animated incorrectly (first frame was longer, last frame was shorter)
+    (p: $461EFF; newp: @SaveGameBugHook; t: RShtCall), // Save game bug in Windows Vista and higher (bug of OS or other software)
+    (p: $4C078B; size: 2; Querry: hqSpriteInteractIgnoreId), // Don't consider sprites with Id interactable
+    (p: $440C36; old: $440CDB; newp: @DrawEffectsHook; t: RShtCallStore; Querry: hqClickThruEffects), // Click through effects SW (indoor)
+    (p: $441D10; newp: @DrawDoneHook; t: RShtAfter; Querry: hqClickThruEffects), // Click through effects SW (indoor)
+    (p: $47A808; old: $47BAD3; newp: @DrawEffectsHook; t: RShtCallStore; Querry: hqClickThruEffects), // Click through effects SW (outdoor)
+    (p: $441D42; newp: @DrawDoneHook; t: RShtAfter; Querry: hqClickThruEffects), // Click through effects SW (outdoor)
+    (p: $4A0063; newp: @D3DErrorMessageHook; t: RShtAfter), // Proper D3DRend->Init error messages
+    (p: $4A0662; newp: @D3DErrorMessageHook; t: RShtAfter), // Proper D3DRend->Init error messages
+    (p: $48DF69; old: 8; new: 7; t: RSht1), // Poison2 and Poison3 swapped
+    (p: $48DF75; old: 6; new: 9; t: RSht1), // Disease3 instead of Disease1
+    (p: $48DF80; old: 8; new: 10; t: RSht1), // Disease2 and Disease3 not working
+    (p: $48E12D+9*4; old: $48E0C8; new: $48DF73; t: RSht4), // Disease2 and Disease3 not working
+    (p: $48E12D+10*4; old: $48E0C8; new: $48DF73; t: RSht4), // Disease2 and Disease3 not working
+    (p: $4483D8; newp: @CloseNPCDialog; t: RShtBefore; size: 6), // Allow entering maps from NPC dialog
+    (p: $448017; newp: @CloseNPCDialog2; t: RShtBefore; size: 7), // Allow entering maps from NPC dialog
     ()
   );
 {$ELSE}
-  Hooks: array[1..32] of TRSHookInfo = (
+  Hooks: array[1..47] of TRSHookInfo = (
     (p: $47AB35; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Monsters not visible on the sides of the screen
     (p: $47A55E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Items not visible on the sides of the screen
     (p: $48B37E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Effects not visible on the sides of the screen
@@ -1169,6 +1359,21 @@ var
     (p: $47AE66; newp: @SpritesAngleHook; t: RShtBefore; size: 7; Querry: hqSpriteAngleCompensation), // Sprite angle compensation
     (p: $43DCC2; newp: @SpritesAngleHook2; t: RShtBefore; size: 7; Querry: hqSpriteAngleCompensation), // Sprite angle compensation
     (p: $44B020; old: $7F; new: $7D; t: RSht1; Querry: hqFixSFT), // SFT.bin was animated incorrectly (first frame was longer, last frame was shorter)
+    (p: $45F91B; newp: @SaveGameBugHook; t: RShtCall), // Save game bug in Windows Vista and higher (bug of OS or other software)
+    (p: $4BE379; size: 2; Querry: hqSpriteInteractIgnoreId), // Don't consider sprites with Id interactable
+    (p: $43DB82; old: $43DC27; newp: @DrawEffectsHook; t: RShtCallStore; Querry: hqClickThruEffects), // Click through effects SW (indoor)
+    (p: $43E967; newp: @DrawDoneHook; t: RShtAfter; Querry: hqClickThruEffects), // Click through effects SW (indoor)
+    (p: $4799FF; old: $47ADC2; newp: @DrawEffectsHook; t: RShtCallStore; Querry: hqClickThruEffects), // Click through effects SW (outdoor)
+    (p: $43E999; newp: @DrawDoneHook; t: RShtAfter; Querry: hqClickThruEffects), // Click through effects SW (outdoor)
+    (p: $49D6C6; newp: @D3DErrorMessageHook; t: RShtAfter), // Proper D3DRend->Init error messages
+    (p: $49DD01; newp: @D3DErrorMessageHook; t: RShtAfter), // Proper D3DRend->Init error messages
+    (p: $48D3F2; old: 8; new: 7; t: RSht1), // Poison2 and Poison3 swapped
+    (p: $48D40D; old: 6; new: 9; t: RSht1), // Disease3 instead of Disease1
+    (p: $48D419; old: 8; new: 10; t: RSht1), // Disease2 and Disease3 not working
+    (p: $48D5BC+9*4; old: $48D557; new: $48D40B; t: RSht4), // Disease2 and Disease3 not working
+    (p: $48D5BC+10*4; old: $48D557; new: $48D40B; t: RSht4), // Disease2 and Disease3 not working
+    (p: $4456ED; newp: @CloseNPCDialog; t: RShtBefore; size: 7), // Allow entering maps from NPC dialog
+    (p: $44533D; newp: @CloseNPCDialog2; t: RShtBefore; size: 7), // Allow entering maps from NPC dialog
     ()
   );
 {$IFEND}
@@ -1183,6 +1388,8 @@ begin
     RSApplyHooks(Hooks, hqFixChestsByCompacting);
   if SpriteAngleCompensation then
     RSApplyHooks(Hooks, hqSpriteAngleCompensation);
+  if SpriteInteractIgnoreId then
+    RSApplyHooks(Hooks, hqSpriteInteractIgnoreId);
 end;
 
 procedure ApplyMMDeferredHooks;
@@ -1195,6 +1402,12 @@ begin
     RSApplyHooks(Hooks, hqPaperDollInChestsAndOldCloseRings);
   if Options.FixSFT then
     RSApplyHooks(Hooks, hqFixSFT);
+end;
+
+procedure ApplyMMHooksSW;
+begin
+  if ClickThroughEffects then
+    RSApplyHooks(Hooks, hqClickThruEffects);
 end;
 
 procedure NeedWindowSize;

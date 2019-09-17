@@ -2249,6 +2249,7 @@ begin
   LoadCustomLods($61AA10, 'sprites.lod',  'sprites08');
   LoadCustomLods($6104F8, 'games.lod', 'chapter');
   LoadLodsOld;
+  ApplyMMHooksSW;
 end;
 
 //----- Custom LODs - Vid
@@ -2435,17 +2436,6 @@ begin
   for i := 1 to 255 do
     MyGetAsyncKeyState(i);
   GetCursorPos(MLastPos);
-end;
-
-//----- Save game bug in Windows Vista and higher (bug of OS or other software)
-
-procedure SaveGameBugHook(old, new: PChar); cdecl;
-begin
-  while not MoveFile(old, new) do
-  begin
-    Sleep(1);
-    DeleteFileA(new);
-  end;
 end;
 
 //----- Strafe in MouseLook
@@ -3249,6 +3239,17 @@ asm
   call eax
 end;
 
+//----- Fix Static Charge cost, sync spells cost
+
+procedure FixSpellsCost;
+var
+  i, j: int;
+begin
+  for i:= 1 to 99 do
+    for j:= 1 to 3 do
+      pword($4BDD6E + i*$E + j*2)^:= pbyte($56ABD0 + i*$1C + j + $18)^;
+end;
+
 //----- Fix Paralyze
 
 procedure FixParalyze;
@@ -3420,7 +3421,6 @@ var
     (p: $48E0D0; newp: @OpenSndHook; t: RShtCall), // Custom LODs - Snd
     (p: $48E3E3; newp: @OpenSndHook2; t: RShtCall), // Custom LODs - Snd
     (p: $44C880; newp: @ClearKeyStatesHook; t: RShtJmp; size: 8), // Clear my keys as well
-    (p: $44D861; newp: @SaveGameBugHook; t: RShtCall), // Save game bug in Windows Vista and higher (bug of OS or other software)
     (p: $460D18; newp: @FixStrafeMonster1; t: RShtCall; Querry: 23), // Fix movement rounding problems
     (p: $460D38; newp: @FixStrafe1; t: RShtCall; Querry: 23), // Fix movement rounding problems
     (p: $460D5B; newp: @FixStrafe1; t: RShtCall; Querry: 23), // Fix movement rounding problems
@@ -3542,6 +3542,7 @@ var
     (p: $444CF5; old: $7F; new: $7D; t: RSht1), // TFT.bin was animated incorrectly (first frame was longer, last frame was shorter)
     (p: $4B9194; newp: @MyLoadCursor; t: RSht4), // Load cursors from Data
     (p: $453650; newp: @PostponeIntroHook; t: RShtAfter; Querry: hqPostponeIntro), // Postpone intro
+    (p: $448F66; newp: @FixSpellsCost; t: RShtAfter), // Fix Static Charge cost, sync spells cost
     //(p: $432084; newp: @FixParalyze; t: RShtBefore), // Fix Paralyze
     ()
   );

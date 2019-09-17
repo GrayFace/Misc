@@ -38,6 +38,9 @@ const
   hqTex32Bit2 = 51;
   hqFixSFT = 52;
   hqPostponeIntro2 = 53;
+  hqTreeHints = 54;
+  hqSpriteInteractIgnoreId = 55;
+  hqClickThruEffects = 56;
 
 {$IFDEF mm6}
   m6 = 1;
@@ -117,6 +120,7 @@ type
     TrueColorTextures: LongBool;              // (unused in MM6)
     ResetPalettes: LongBool;                  // (unused in MM6)
     FixSFT: LongBool;                         //
+    AxeGMFullProbabilityAt: int;              //
   end;
 
 var
@@ -162,10 +166,11 @@ var
   AlwaysStrafe, StandardStrafe, MouseLookChanged, FixInfiniteScrolls,
   FixInactivePlayersActing, BorderlessFullscreen, BorderlessProportional,
   MouseLookCursorHD, SmoothScaleViewSW, WasIndoor, SpriteAngleCompensation,
-  PlaceChestItemsVertically, FixChestsByCompacting: Boolean;
+  PlaceChestItemsVertically, FixChestsByCompacting,
+  SpriteInteractIgnoreId, ClickThroughEffects: Boolean;
   {$IFNDEF mm6}
-  NoVideoDelays, DisableAsyncMouse: Boolean;
-  TurnBasedWalkDelay: int;
+  NoVideoDelays, DisableAsyncMouse, ShowTreeHints: Boolean;
+  TurnBasedWalkDelay, TreeHintsVal: int;
   MipmapsBase, MipmapsBasePat: TStringList;
   ViewMulFactor: ext = 1;
   {$ENDIF}
@@ -321,6 +326,34 @@ type
     Hint: array[1..103] of Char;
   end;
 
+  PSpriteToDraw = ^TSpriteToDraw;
+  TSpriteToDraw = packed record
+    ScaleX: int;
+{$IFNDEF mm6}
+    ScaleY: int;
+    ScaleXfl, ScaleYfl: Single;
+{$ENDIF}
+    ObjKind: uint2;
+    ZBuf: int2;
+{$IFNDEF mm6}
+    Id: int;
+{$ENDIF}
+    SpriteIndex: int2;
+    PalIndex: int2;
+    Room: int2;
+    Bits: int2;
+    X, Y, Z: int2;
+    ScreenX, ScreenY: int2;
+    DarkenValue: int2;
+{$IFNDEF mm6}
+    TintColor: int;
+{$ENDIF}
+    SFTItem: int;
+  end;
+  PSpriteToDrawArray = ^TSpriteToDrawArray;
+  PPSpriteToDrawArray = ^PSpriteToDrawArray;
+  TSpriteToDrawArray = array[0..499] of TSpriteToDraw;
+
   PDrawSpriteD3D = ^TDrawSpriteD3D;
   TDrawSpriteD3D = record
     Texture: ptr;
@@ -383,9 +416,15 @@ const
   _NoIntro = pbool(m6*$6A5F64 + m7*$71FE8C + m8*$75CDF8);
   _ChestOff_Items = 4;
   _ChestOff_Inventory = 4 + _ItemOff_Size*140;
+  _SpritesToDraw: PPSpriteToDrawArray = ptr(m6*$4338A6 + m7*$43FC6D + m8*$43CBF1);
+  _SpritesToDrawCount: pint = ptr(m6*$4DA9B8 + m7*$518660 + m8*$529F40);
 {$IFNDEF MM6}
   _SpritesD3D = PPSpriteD3DArray(_SpritesLod + $ECB0);
 {$ENDIF}
+  _SoundVolume = pint(m6*$6107E3 + m7*$6BE1EF + m8*$6F39AF);
+
+const
+  _ProcessActions:TProcedure = ptr(m6*$42ADA0 + m7*$4304D6 + m8*$42EDD8);
 
 {$IFNDEF mm6}
 var
@@ -575,7 +614,6 @@ begin
       FixChests:= ReadBool('FixChests', false);
       {$IFNDEF mm8}BlasterRecovery:= ReadInteger('BlasterRecovery', 4);{$ENDIF}
       DataFiles:= ini.ReadBool(sect, 'DataFiles', true);
-      {$IFNDEF mm6}NoBitmapsHwl:= ini.ReadBool(sect, 'NoD3DBitmapHwl', true);{$ENDIF}
       MouseLook:= ReadBool('MouseLook', false);
       MLookSpeed.X:= ReadInteger('MouseSensitivityX', 35);
       MLookSpeed.Y:= ini.ReadInteger(sect, 'MouseSensitivityY', MLookSpeed.X);
@@ -592,11 +630,12 @@ begin
       MouseLookRememberTime:= max(1, ini.ReadInteger(sect, 'MouseLookRememberTime', 10*1000));
       AlwaysStrafe:= ReadBool('AlwaysStrafe', false);
       StandardStrafe:= ini.ReadBool(sect, 'StandardStrafe', false);
-      {$IFNDEF mm6}PaletteSMul:= ReadFloat('PaletteSMul', m7*0.65 + m8*1);{$ENDIF}
-      {$IFNDEF mm6}PaletteVMul:= ReadFloat('PaletteVMul', 1.1);{$ENDIF}
       {$IFDEF mm8}StartupCopyrightDelay:= ini.ReadInteger(sect, 'StartupCopyrightDelay', 0);{$ENDIF}
       AutorunKey:= ReadInteger('AutorunKey', VK_F3);
 {$IFNDEF mm6}
+      PaletteSMul:= ReadFloat('PaletteSMul', m7*0.65 + m8*1);
+      PaletteVMul:= ReadFloat('PaletteVMul', 1.1);
+      NoBitmapsHwl:= ini.ReadBool(sect, 'NoD3DBitmapHwl', true);
       if NoBitmapsHwl then
       begin
         HDWTRCount:= max(1, min(15, ini.ReadInteger(sect, 'HDWTRCount', 7 + m8)));
@@ -630,8 +669,8 @@ begin
       CompatibleMovieRender:= ini.ReadBool(sect, 'CompatibleMovieRender', true);
       SmoothMovieScaling:= ini.ReadBool(sect, 'SmoothMovieScaling', true);
       SupportTrueColor:= ini.ReadBool(sect, 'SupportTrueColor', true);
-      RenderMaxWidth:= ReadInteger('RenderMaxWidth', 0);
-      RenderMaxHeight:= ReadInteger('RenderMaxHeight', 0);
+      RenderMaxWidth:= ini.ReadInteger(sect, 'RenderMaxWidth', 0);
+      RenderMaxHeight:= ini.ReadInteger(sect, 'RenderMaxHeight', 0);
       ScalingParam1:= ini.ReadFloat(sect, 'ScalingParam1', 3);
       ScalingParam2:= ini.ReadFloat(sect, 'ScalingParam2', 0.2);
       {$IFNDEF mm6}MipmapsCount:= ReadInteger('MipmapsCount', 3);{$ENDIF}
@@ -656,6 +695,11 @@ begin
       SpriteAngleCompensation:= ini.ReadBool(sect, 'SpriteAngleCompensation', true);
       TrueColorTextures:= ini.ReadBool(sect, 'TrueColorTextures', true);
       FixSFT:= ini.ReadBool(sect, 'FixSFT', true);
+      {$IFNDEF mm6}TreeHintsVal:= ReadInteger('TreeHints', m7);{$ENDIF}
+      {$IFNDEF mm6}ShowTreeHints:= (TreeHintsVal <> 0);{$ENDIF}
+      {$IFNDEF mm6}SpriteInteractIgnoreId:= ini.ReadBool(sect, 'SpriteInteractIgnoreId', true);{$ENDIF}
+      {$IFNDEF mm6}AxeGMFullProbabilityAt:= ini.ReadInteger(sect, 'AxeGMFullProbabilityAt', 60);{$ENDIF}
+      ClickThroughEffects:= ini.ReadBool(sect, 'ClickThroughEffects', true);
 
 {$IFDEF mm6}
       if FileExists(AppPath + 'mm6text.dll') then

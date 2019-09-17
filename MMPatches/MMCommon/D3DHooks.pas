@@ -121,7 +121,7 @@ begin
   CConvV:= Options.PaletteVMul;
   CConvDesat:= (Options.PaletteSMul <= 1);
   // 15-bit mipmaps are a bit more saturated
-  sat:= IfThen(Options.TrueColorTextures, 1.025, 1)*Options.PaletteSMul;
+  sat:= IfThen(Options.TrueColorTextures, 1.027, 1)*Options.PaletteSMul;
   for i:= 1 to 255 do
   begin
     v:= EnsureRange(i*246/255*Options.PaletteVMul, 0, 256); // trying to mimic original
@@ -893,23 +893,27 @@ end;
 
 function GetShotRect(w, h: int): TRect;
 var
-  r: TRect;
   fw, fh: int;
 begin
-  r:= Options.RenderRect;
-  fw:= RectW(r);
-  fh:= RectH(r);
-  if w*fh >= h*fw then
+  Result:= DXProxyScaleRect(Options.RenderRect);
+  with Result do
   begin
-    h:= RDiv(h*fw, w);
-    r:= Bounds(r.Left, r.Top + (fh - h) div 2, fw, h);
-  end
-  else
-  begin
-    w:= RDiv(w*fh, h);
-    r:= Bounds(r.Left + (fw - w) div 2, r.Top, w, fh);
+    Left:= max(Left, 0);
+    Top:= max(Top, 0);
+    Right:= min(Right, DXProxyRenderW);
+    Bottom:= min(Bottom, DXProxyRenderH);
+    fw:= RectW(Result);
+    fh:= RectH(Result);
+    if w*fh >= h*fw then
+    begin
+      h:= RDiv(h*fw, w);
+      Result:= Bounds(Left, Top + (fh - h) div 2, fw, h);
+    end else
+    begin
+      w:= RDiv(w*fh, h);
+      Result:= Bounds(Left + (fw - w) div 2, Top, w, fh);
+    end;
   end;
-  Result:= DXProxyScaleRect(r);
 end;
 
 procedure TrueColorShotProc(info: PDDSurfaceDesc2; ps: PWord; w, h: int);
@@ -1104,10 +1108,7 @@ end;
 
 //----- 32 bit textures
 
-var
-  mipN: int;
-
-function MixCl(c1, c2, c3, c4: uint): uint;
+function MixCl(c1, c2, c3, c4: uint): uint; inline;
 begin
   // Mipmap gets darker than the base texture and this matches how MM generates mipmaps
   // This provides a nice slight shading effect
@@ -1132,75 +1133,6 @@ begin
   end;
 end;
 
-procedure MakePseudoMip(p: PDWordArray; w, h: int);
-var
-  c: uint;
-  x, y: int;
-begin
-  w:= w div 2;
-  h:= h div 2;
-  for y:= h downto 1 do
-  begin
-    for x:= w downto 1 do
-    begin
-      c:= MixCl(p[0], p[1], p[w*2], p[w*2+1]) and $FEFEFEFE shr 1;
-      c:= c + c and $FEFEFEFE shr 1;
-      //c:= 0;
-      p[0]:= p[0] and $FCFCFCFC shr 2 + c;
-      p[1]:= p[1] and $FCFCFCFC shr 2 + c;
-      p[w*2]:= p[w*2] and $FCFCFCFC shr 2 + c;
-      p[w*2+1]:= p[w*2+1] and $FCFCFCFC shr 2 + c;
-      p:= @p[2];
-    end;
-    p:= @p[w*2];
-  end;
-end;
-
-procedure SmoothMip(p: PDWordArray; w, h, dx, dy: int);
-var
-  d: int;
-begin
-  d:= dx + dy*w;
-  p:= @p[max(-dx, 0) + max(-dy*w, 0)];
-  dx:= abs(dx);
-  dy:= abs(dy);
-  for h:= h - dy downto 1 do
-  begin
-    for w:= w - dx downto 1 do
-    begin
-      p[0]:= p[0] and $FEFEFEFE shr 1 + p[d] and $FEFEFEFE shr 1;
-      p:= @p[1];
-    end;
-    p:= @p[dx];
-  end;
-end;
-
-{// Visualize mipmaps
-var
-  mipN: int;
-
-procedure CopyBufToSurface32(p, p1: PChar; w, h, d: int);
-const
-  coloring: array[0..4] of uint = (0, $FF0000, $00FF00, $0000FF, $FFFF00);
-var
-  c, i: uint;
-begin
-  inc(mipN);
-  if w = TextureMipW then
-    mipN:= 0;
-  c:= coloring[mipN mod length(coloring)];
-  if mipN = DXProxyMipmapCountRes - 1 then
-    c:= $FFFFFF;
-  w:= w*4;
-  for h:= h downto 1 do
-  begin
-    for i:= 0 to w div 4 - 1 do
-      puint(p+i*4)^:= puint(p1+i*4)^ or c;
-    inc(p, d);
-    inc(p1, w);
-  end;
-end;{}
-
 procedure CopyBufToSurface32(p, p1: PChar; w, h, d: int);
 begin
   w:= w*4;
@@ -1213,35 +1145,13 @@ begin
 end;
 
 function CopyTexture32Bit(const surf: IDirectDrawSurface4; var desc: TDDSurfaceDesc2; flags: int): Bool; stdcall;
-var
-  i: int;
 begin
   Result:= false;
   if not LockSurface(ptr(surf), @desc, flags) then  exit;
   with desc do
   begin
     if dwWidth <> TextureMipW then
-    begin
-      inc(mipN);
       MakeMip(ptr(TextureBuf), dwWidth, dwHeight);
-      if (DXProxyMipmapCountRes > 3) and (mipN = DXProxyMipmapCountRes - 1) then
-        for i:= 1 to 100 do
-      begin
-        SmoothMip(ptr(TextureBuf), dwWidth, dwHeight, 1, 0);
-        SmoothMip(ptr(TextureBuf), dwWidth, dwHeight, 0, 1);
-        //SmoothMip(ptr(TextureBuf), dwWidth, dwHeight, -1, 0);
-        //SmoothMip(ptr(TextureBuf), dwWidth, dwHeight, 0, -1);
-      end;
-        //MakePseudoMip(ptr(TextureBuf), dwWidth, dwHeight);
-    end else
-      mipN:= 0;
-    for i:= 1 to 100 do
-      begin
-        SmoothMip(ptr(TextureBuf), dwWidth, dwHeight, 1, 0);
-        SmoothMip(ptr(TextureBuf), dwWidth, dwHeight, 0, 1);
-        //SmoothMip(ptr(TextureBuf), dwWidth, dwHeight, -1, 0);
-        //SmoothMip(ptr(TextureBuf), dwWidth, dwHeight, 0, -1);
-      end;
     CopyBufToSurface32(lpSurface, ptr(TextureBuf), dwWidth, dwHeight, lPitch);
   end;
   surf.Unlock(nil);

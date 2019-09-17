@@ -172,6 +172,7 @@ begin
   Options.RenderRect:= _RenderRect^;
   ViewMulFactor:= 1;
   _ViewMulOutdoor^:= 300;
+  ShowTreeHints:= (TreeHintsVal <> 0);
 {$IFDEF MM7}
   if _UITextColor^ and $10000 <> 0 then
   begin
@@ -591,6 +592,8 @@ begin
   Result:= false;
   if not WasActive then
     exit;
+
+  // prepare  
   if (ScreenW <> DXProxyRenderW) or (ScreenH <> DXProxyRenderH) then
     Scale:= nil;
   ScreenW:= DXProxyRenderW;
@@ -624,6 +627,7 @@ begin
       KeyDepressed[i]:= not b;
     end;
   L.Vars[lvPaperDollInChests]:= Options.PaperDollInChests;
+  L.Vars[lvTreeHints]:= TreeHintsVal;
 {$IFDEF MM7}
   if _UITextColor^ and $10000 = 0 then
   begin
@@ -644,13 +648,15 @@ begin
   if Rendering then
     L.Vars[lvCustomRightSide]:= BoolToInt[_IsScreenWithCustomRightSide];
   Updating:= false;
+  i:= pint($507A64)^;
+  L.Vars[lvQuestion]:= BoolToInt[(_CurrentScreen^ = 19) and (i <> 0) and (pint(i + $1C)^ = 26)];
 {$ELSE}
   L.Vars[lvPlayers]:= _Party_MemberCount^;
-  //L.Vars[lvTopbar2]:= BoolToInt[(_LPicTopbar^ >= 0) and (_IconsLodLoaded.Items[_LPicTopbar^].Rec.h <= 23)];
 {$ENDIF}
   Result:= not L.Updated;
   if L.Updated then  exit;
 
+  // do update
   FillChar(CanvasUsed, length(CanvasUsed)*SizeOf(CanvasUsed[CanvasMax]), 0);
   FillChar(CanvasUsedRect, length(CanvasUsedRect)*SizeOf(CanvasUsedRect[CanvasMax]), 0);
   FillChar(CanvasUsedOnScreen, length(CanvasUsedOnScreen)*SizeOf(CanvasUsedOnScreen[CanvasMax]), 0);
@@ -675,6 +681,7 @@ begin
   UpdateRenderRect(RenderRect);
   if not IsNan(L.Locals[lvDebug]) then
     SetWindowText(_MainWindow^, PChar(FloatToStr(L.Locals[lvDebug])));
+  ShowTreeHints:= (L.Locals[lvTreeHints] <> 0);
 {$IFDEF MM7}
   _UITextColor^:= Round(L.Locals[lvTextColor]) or $10000;
   _UITextShadowColor^:= Round(L.Locals[lvTextShadowColor]);

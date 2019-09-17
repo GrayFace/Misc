@@ -1,19 +1,34 @@
-GrayFace MM6 Patch v2.3.1
+GrayFace MM6 Patch v2.4
 By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
 Official patches, Mok's patch and Angel's patch are included.
 Save files are, of course, fully compatible with the unpatched game in both directions.
 The patch has no uninstaller to make things simpler.
+All configuration is done via mm6.ini, which is populated with main options on the first run.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
+
+New in version 2.4:
+  << MM6 - MM8 >>
+[+] Chests are populated with compact non-random stacking if more items fit this way. This can be disabled by adding FixChestsByCompacting=0 line to INI.
+[+] Items are stacked vertically when you place them into chests. This can be disabled by adding PlaceChestItemsVertically=0 line to INI.
+[+] Sprites dimensions are tweaked based on vertical view angle. This makes them behave more realistically, especially when looking up at big monsters. Can be disabled by adding SpriteAngleCompensation=0 line to INI.
+[+] If NoIntro=1 the intro is shown when you click the New Game button in MM6 or start a new game in MM8. In MM7 this was already the case. Add PostponeIntro=0 to INI to disable the intro entirely. In MM7 you can also set PostponeIntro=2 to have the first intro shown when you click the New Game button.
+[+] Now in software rendering mode explosions and missiles are ignored during targeting. Before, party wasn't able to target monsters when whole screen is covered with explosions. You can disable this fix by adding ClickThroughEffects=0 line to the INI.
+[+] Low level stuff you shouldn't need to use: DisableHooks option lets you disable hooks effecting certain addresses. It's a comma-separated list of hex addresses. Avoid the old way of disabling hooks by index, because hooks indexes change from version to version.
+[+] Technical: Map entrance dialog can now be called from NPC topic anywhere.
+[-] Sprite animations were played incorrectly - first frame was longer, last frame was shorter. This fix can be disabled by adding FixSFT=0 to INI.
+[-] My bug: keyboard control of dialogs was breaking evt.Question command in houses (used for Escaton riddles in MM8).
+  << MM6 >>
+[-] Static Charge cost at Expert was incorrect. Spells cost wasn't taken from Spells.txt.
+
 
 New in version 2.3.1:
   << MM6, MM8 >>
 [+] Right click menu works in item selection dialog of Enchant Item and similar spells. In MM7 it already works by default.
   << MM6 >>
 [-] My bug: Enchant Item and Golden Touch spells were bugged, effected by PaperDollInChests option.
-
 
 New in version 2.3:
   << MM6 - MM8 >>
@@ -221,6 +236,10 @@ Create "DataFiles" folder in the game directory. To modify a file in icons.lod e
 "DataFiles" option controls this. Default is 1 (enabled).
 
 --------------------------------------------------------------------------------
+Custom Archives
+Custom archives are the best way to distribute new and modified content of a mod. Here's an explanation of their loading order: https://www.dropbox.com/s/iv9c2jc8abbrj6a/CustomLods.txt?dl=0
+
+--------------------------------------------------------------------------------
 Mouse Look
 
 To enable mouse look set MouseLook option to 1.
@@ -236,10 +255,6 @@ MouseLookFly option lets you fly up/down by pointing your view in the desired di
 MouseWheelFly option lets you fly up and down by scrolling your wheel. This is particularly useful for take off in mouse look mode.
 
 Cursor used in mouse look mode is located in Data\MouseLookCursor.bmp
-
---------------------------------------------------------------------------------
-Wide Screens
-This isn't related to the patch, but note that on wide screens you can set up your video card properties not to stretch the image. At least Nvidia drivers allow setting this in Nvidia control panel.
 
 --------------------------------------------------------------------------------
 Errors Reporting
