@@ -8,7 +8,9 @@
   Str(Local[0])+"."+Str(Local[1])+((Local[2] || Local[3]) ? "."+Str(Local[2]) : "")+(Local[3] ? "."+Str(Local[3]) : "")
 #define DragonMD5() GetMD5OfFile(AddBackslash(SourcePath) + "OptData\01 dragon.games.lod")
 #define TunnelsMD5() GetMD5OfFile(AddBackslash(SourcePath) + "OptData\01 tunnels.events.lod")
-#define WaterMD5() GetMD5OfFile(AddBackslash(SourcePath) + "OptData\00 patch.bitmaps.lod")
+#define OldWaterMD5() GetMD5OfFile(AddBackslash(SourcePath) + "OptData\old\00 patch.bitmaps.lod")
+#define BaseWaterMD5() GetMD5OfFile(AddBackslash(SourcePath) + "BaseWater\00 patch.bitmaps.lod")
+#define HDWaterMD5() GetMD5OfFile(AddBackslash(SourcePath) + "OptData\01 water.bitmaps.lwd")
 #define IconsMD5() GetMD5OfFile(AddBackslash(SourcePath) + "OptData\00 patch.icons.lod")
 
 [Setup]
@@ -123,14 +125,14 @@ Type: files; Name: "{app}\{#MM}.ICD";
 [Files]
 #define FlagsOlder (loc ? "Flags: promptifolder;" : "")
 #define FlagOlder (loc ? "promptifolder" : "")
-Source: "Files\*.*"; Excludes: "*.bak"; DestDir: "{app}"; Flags: {#FlagOlder} ignoreversion recursesubdirs; AfterInstall: AfterInst;
+Source: "Files\*.*"; Excludes: "*.bak"; DestDir: "{app}"; Flags: {#FlagOlder} ignoreversion recursesubdirs; BeforeInstall: BeforeInst;
 Source: "Data\*"; Excludes: "*.bak"; DestDir: "{app}\Data\"; {#FlagsOlder} Tasks: lods1 lods2;
-Source: "OldWater\00 patch.bitmaps.lod"; DestDir: "{app}\Data\"; Check: OldWaterCheck;
+Source: "BaseWater\00 patch.bitmaps.lod"; DestDir: "{app}\Data\"; Check: BaseWaterCheck;
 Source: "OptData\01 dragon.games.lod"; DestDir: "{app}\Data\"; Flags: promptifolder; Tasks: dragon1 dragon2;
 Source: "OptData\01 tunnels.events.lod"; DestDir: "{app}\Data\"; {#FlagsOlder} Tasks: tun1 tun2;
-Source: "OptData\00 patch.bitmaps.lod"; DestDir: "{app}\Data\"; Tasks: water1 water2;
+Source: "OptData\01 water.bitmaps.lwd"; DestDir: "{app}\Data\"; Tasks: water1 water2;
 Source: "OptData\00 patch.icons.lod"; DestDir: "{app}\Data\"; Tasks: icons1 icons2;
-Source: "OptFiles\*"; Excludes: "*.bak"; DestDir: "{app}"; Flags: onlyifdoesntexist recursesubdirs;
+Source: "OptFiles\*"; Excludes: "*.bak"; DestDir: "{app}"; Flags: onlyifdoesntexist recursesubdirs; AfterInstall: AfterInst;
 #if loc
 Source: "tmp\*.*"; DestDir: "{tmp}"; Flags: deleteafterinstall; Tasks: lods1 lods2 tun1 tun2;
 Source: "tmpRU\*.*"; DestDir: "{tmp}"; Flags: deleteafterinstall; Tasks: RusFiles1 RusFiles2;
@@ -156,6 +158,19 @@ Filename: "{app}\{#MM}Patch ReadMe_rus.TXT"; Flags: shellexec skipifdoesntexist 
 
 [Code]
 
+function GetMD5(s: string): string;
+begin
+  s:= ExpandConstant(s);
+  Result:= '';
+  if FileExists(s) then
+    Result:= GetMD5OfFile(s);
+end;
+
+function Exists(const s: string): Boolean;
+begin
+  Result:= FileExists(ExpandConstant(s));
+end;
+
 function GetInstallDir(param: string): string;
 begin
   if not RegQueryStringValue(HKLM, 'SOFTWARE\New World Computing\Might and Magic VII\1.0', 'AppPath', Result) then
@@ -179,7 +194,7 @@ function RussianTaskCheck(checked: Boolean): Boolean;
 begin
   if not RussianGameChecked then
     RussianGame:= (GetIniString('Install', 'GameLanguage', '', ExpandConstant('{app}\{#m}lang.ini')) = 'rus') or
-     (ExpandConstant('{language}') = 'ru') and not FileExists(ExpandConstant('{app}\{#MM}Patch ReadMe.TXT'));
+     (ExpandConstant('{language}') = 'ru') and not Exists('{app}\{#MM}Patch ReadMe.TXT');
   RussianGameChecked:= true;
   Result:= (RussianGame = checked);
 end;
@@ -204,11 +219,14 @@ begin
 end;
 
 function CheckOptLod(var t: TTask; var vis: Boolean; path, md5: string; checked: Boolean; ver: Integer): Boolean;
+var
+  md: string;
 begin
-  vis:= not FileExists(path) or (GetMD5OfFile(path) <> md5);
+  md:= GetMD5(path);
+  vis:= (md <> md5);
   Result:= vis and not t.Checked;
   if Result then
-    t.On:= FileExists(path) or not CheckVer(ver);
+    t.On:= (md <> '') or not CheckVer(ver);
   t.Checked:= t.Checked or vis;
   vis:= vis and (t.On = checked);
 end;
@@ -221,7 +239,7 @@ function LodsTaskCheck(checked: Boolean): Boolean;
 begin
   if not PatchLodsChecked then
     if CheckVer($20001) then
-      PatchLods:= FileExists(ExpandConstant('{app}\Data\00 patch.games.lod'))
+      PatchLods:= Exists('{app}\Data\00 patch.games.lod')
     else
       PatchLods:= GetIniBool('Install', 'PatchLods', true, MMIni);
   PatchLodsChecked:= true;
@@ -234,7 +252,7 @@ var
 
 function DragonTaskCheck(checked: Boolean): Boolean;
 begin
-  CheckOptLod(Dragon, Result, ExpandConstant('{app}\Data\01 dragon.games.lod'), '{#DragonMD5}', checked, $20001);
+  CheckOptLod(Dragon, Result, '{app}\Data\01 dragon.games.lod', '{#DragonMD5}', checked, $20001);
 end;
 
 
@@ -243,7 +261,7 @@ var
 
 function TunnelTaskCheck(checked: Boolean): Boolean;
 begin
-  CheckOptLod(Tunnel, Result, ExpandConstant('{app}\Data\01 tunnels.events.lod'), '{#TunnelsMD5}', checked, $20001);
+  CheckOptLod(Tunnel, Result, '{app}\Data\01 tunnels.events.lod', '{#TunnelsMD5}', checked, $20001);
 end;
 
 
@@ -252,39 +270,46 @@ var
 
 function IconsTaskCheck(checked: Boolean): Boolean;
 begin
-  CheckOptLod(Icons, Result, ExpandConstant('{app}\Data\00 patch.icons.lod'), '{#IconsMD5}', checked, $20002);
+  CheckOptLod(Icons, Result, '{app}\Data\00 patch.icons.lod', '{#IconsMD5}', checked, $20002);
 end;
 
 
 var
   Water: TTask;
+  SavedWaterKind: Integer;
 
-function WaterTaskCheck(checked: Boolean): Boolean;
+function GetWaterKind: Integer;  // -2 = base, 0 = none, 1 = base yet need wavy, 2 = need wavy, 3 = wavy
 var
-  path: string;
+  md: string;
 begin
-  if not Water.Checked then
-  begin
-    path:= ExpandConstant('{app}\Data\00 patch.bitmaps.lod');
-    if FileExists(path) then
-      Water.On:= (GetMD5OfFile(path) = '{#WaterMD5}') or not CheckVer($20002)
-    else
-      Water.On:= not CheckVer($20000);
-    Water.Checked:= true;
-  end;
-  Result:= (Water.On = checked);
+  Result:= 2;
+  md:= GetMD5('{app}\Data\01 water.bitmaps.lwd');
+  if md = '{#HDWaterMD5}' then
+    Result:= 3;
+  if md <> '' then
+    exit;
+
+  md:= GetMD5('{app}\Data\00 patch.bitmaps.lod');
+  if CheckVer($20000) then
+    Result:= 0;
+  if md <> '' then
+    Result:= 1;
+  if (md <> '') and CheckVer($20002) then
+    Result:= -2;
+  if md = '{#OldWaterMD5}' then
+    Result:= 3;
 end;
 
-function OldWaterCheck: Boolean;
-var
-  path: string;
+function WaterTaskCheck(checked: Boolean): Boolean;
 begin
-  Result:= not IsTaskSelected('water1 water2');
-  path:= ExpandConstant('{app}\Data\00 patch.bitmaps.lod');
-  if FileExists(path) then
-    Result:= Result and (GetMD5OfFile(path) = '{#WaterMD5}')
-  else
-    Result:= Result and not CheckVer($20000);
+  if not Water.Checked then
+    Water.On:= (GetWaterKind > 0);
+  Result:= CheckTask(Water, checked)
+end;
+
+function BaseWaterCheck: Boolean;
+begin
+  Result:= not IsTaskSelected('water1 water2') and (SavedWaterKind <> 0);
 end;
 
 
@@ -295,32 +320,52 @@ function UITaskCheck(checked: Boolean): Boolean;
 begin
   if not UI.Checked then
     UI.On:= not CheckVer($20003);
-  Result:= (UpperCase(GetIniString('Settings', 'UILayout', '', MMIni)) <> 'UI') and CheckTask(UI, checked);
+  Result:= ((UpperCase(GetIniString('Settings', 'UILayout', '', MMIni)) <> 'UI') or
+    not GetIniBool('Settings', 'SupportTrueColor', true, MMIni)) and CheckTask(UI, checked);
 end;
 
 
-procedure AfterInst;
+procedure BeforeInst;
 var
- ini: string;
+  ini, path, md: string;
+  b: Boolean;
+  wk: integer;
 begin
   ini:= MMIni;
   if GetIniString('Install', 'PatchLods', #13#10, ini) <> #13#10 then 
     DeleteIniEntry('Install', 'PatchLods', ini);
-  if IsTaskSelected('water1 water2') and (GetIniInt('Settings', 'HDWTRCount', 7, 0, 0, ini) <> 14) then
+
+  b:= IsTaskSelected('water1 water2');
+  wk:= GetWaterKind;
+  SavedWaterKind:= wk;
+  if b and (wk < 3) and (GetIniInt('Settings', 'HDWTRCount', 7, 0, 0, ini) <> 14) then
   begin
     SetIniInt('Settings', 'HDWTRCount', 14, ini);
     SetIniInt('Settings', 'HDWTRDelay', 15, ini);
-  end
-  else if FileExists(ExpandConstant('{app}\Data\00 patch.bitmaps.lod')) and (GetIniInt('Settings', 'HDWTRCount', 7, 0, 0, ini) = 14) then
+  end;
+  if not b and (wk > 1) and (GetIniInt('Settings', 'HDWTRCount', 7, 0, 0, ini) <> 7) then
   begin
     DeleteIniEntry('Settings', 'HDWTRCount', ini);
     DeleteIniEntry('Settings', 'HDWTRDelay', ini);
   end;
+
   if IsIniSectionEmpty('MipmapsBase', ini) then
   begin
     SetIniInt('MipmapsBase', 'hwtrdr*', 128, ini);
     SetIniInt('MipmapsBase', 'hdwtr???', 32, ini);
   end;
   if IsTaskSelected('ui1 ui2') then
+  begin
     SetIniString('Settings', 'UILayout', 'UI', ini);
+    if GetIniInt('Settings', 'SupportTrueColor', 1, 0, 0, ini) <> 1 then
+      SetIniInt('Settings', 'SupportTrueColor', 1, ini);
+  end;
+end;
+
+procedure AfterInst;
+begin
+  if IsTaskSelected('water1 water2') then
+    DeleteFile(ExpandConstant('{app}\Data\00 patch.bitmaps.lod'))
+  else if BaseWaterCheck then
+    DeleteFile(ExpandConstant('{app}\Data\01 water.bitmaps.lwd'));
 end;

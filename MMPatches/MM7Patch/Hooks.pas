@@ -1782,16 +1782,6 @@ asm
   xchg ecx, [esp]
 end;
 
-//----- Show accurate errors of D3DInit
-
-procedure BetterD3DInitErrorsHook;
-asm
-  mov eax, [esi + 40088h]
-  lea eax, [eax + 48h]
-  xchg eax, [esp]
-  jmp eax
-end;
-
 //----- Autorun key like in WoW
 
 procedure AutorunProc;
@@ -2197,7 +2187,9 @@ begin
   LoadCustomLods($6A08E0, 'games.lod', 'chapter');
   LoadLodsOld;
   if _IsD3D^ then
-    ApplyHooksD3D;
+    ApplyHooksD3D
+  else
+    ApplyMMHooksSW;
 end;
 
 //----- Custom LODs - Vid
@@ -2383,17 +2375,6 @@ begin
   for i := 1 to 255 do
     MyGetAsyncKeyState(i);
   GetCursorPos(MLastPos);
-end;
-
-//----- Save game bug in Windows Vista and higher (bug of OS or other software)
-
-procedure SaveGameBugHook(old, new: PChar); cdecl;
-begin
-  while not MoveFile(old, new) do
-  begin
-    Sleep(1);
-    DeleteFileA(new);
-  end;
 end;
 
 //----- Strafe in MouseLook
@@ -3392,10 +3373,46 @@ asm
   call eax
 end;
 
+//----- No hints for non-interactive sprites
+
+procedure NoTreeHintsHook;
+asm
+  cmp ShowTreeHints, 0
+  jnz @std
+  mov [esp+4], $F93CEC
+@std:
+end;
+
+//----- Fix Lady's Escort water walking
+
+function LadysEscortFix(_,__, pl, slot, item: int): LongBool;
+const
+  WearsItem: function(_,__, pl, slot, item: int): LongBool = ptr($48D6EF);
+begin
+  Result:= WearsItem(0,0, pl, slot, item) or WearsItem(0,0, pl, 16, 536);
+end;
+
+//----- Fix space in evt.Question
+
+procedure QuestionFixSpace;
+asm
+  cmp eax, $13
+  jnz @skip
+  mov eax, [$507A64]
+  test eax, eax
+  jz @ok
+  cmp [eax + $1C], 26
+  jz @skip
+@ok:
+  ret
+@skip:
+  mov [esp], $43043F
+end;
+
 //----- HooksList
 
 var
-  HooksList: array[1..309] of TRSHookInfo = (
+  HooksList: array[1..312] of TRSHookInfo = (
     (p: $45B0D1; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $4655FE; old: $452C75; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave file name localization
     (p: $45E5A4; old: $45E2D0; backup: @FillSaveSlotsStd; newp: @FillSaveSlotsHook; t: RShtCall), // Fix Save/Load Slots
@@ -3520,6 +3537,8 @@ var
     (p: $41F312; newp: @IDMonHook; t: RShtCall; size: 6), // Show resistances of monster
     (p: $4178C5; newp: @StatColorFixHook; t: RShtCall; size: 7), // negative/0 causes a crash in stats screen
     (p: $45A994; newp: @FixKeyConfigHook; t: RShtCall), // Fix keys configuration loading
+    (p: $48A4C8; old: $4D8868; newp: @Options.PaletteSMul; t: RSht4), // Control palette gamma
+    (p: $48A48F; old: $4D886C; newp: @Options.PaletteVMul; t: RSht4), // Control palette gamma
     (p: $4D8868; newp: @Options.PaletteSMul; newref: true; t: RSht4; Querry: -1), // Control palette gamma
     (p: $4D886C; newp: @Options.PaletteVMul; newref: true; t: RSht4; Querry: -1), // Control palette gamma
     (p: $411C1E; old: $411AB6; backup: @@TPFixStd; newp: @TPFixHook; t: RShtCall), // Pause the game in Town Portal screen
@@ -3533,7 +3552,6 @@ var
     (p: $46532F; t: RShtNop; size: $11), // Switch to 16 bit color when going windowed
     (p: $49DE88; old: $4CB9C0; backup: @AutoColor16Std; newp: @AutoColor16Hook; t: RShtCall), // Switch to 16 bit color when going windowed
     (p: $4A0987; old: $4A11AC; backup: @AutoColor16Std2; newp: @AutoColor16Hook2; t: RShtCall), // Switch to 16 bit color when going windowed
-    (p: $4A0662; newp: @BetterD3DInitErrorsHook; t: RShtCall), // Show accurate errors of D3DInit
     (p: $46334B; old: $4304D6; newp: @AutorunHook; t: RShtCall), // Autorun key like in WoW
     (p: $43367E; newp: @LloydAutosaveFix; t: RShtCall), // Lloyd: take spell points and action after autosave
     (p: $43393B; newp: @TPAutosaveFix; t: RShtCall), // TP: take action after autosave
@@ -3556,7 +3574,6 @@ var
     (p: $4A9783; newp: @OpenSndHook; t: RShtCall; size: 16), // Custom LODs - Snd
     (p: $4A9BA6; newp: @OpenSndHook2; t: RShtCall), // Custom LODs - Snd
     (p: $459E78; newp: @ClearKeyStatesHook; t: RShtJmp; size: 6), // Clear my keys as well
-    (p: $461EFF; newp: @SaveGameBugHook; t: RShtCall), // Save game bug in Windows Vista and higher (bug of OS or other software)
     (p: $470578; newp: @FixStrafe1; t: RShtCall; size: 7; Querry: 23), // Fix movement rounding problems
     (p: $4705A4; newp: @FixStrafe1; t: RShtCall; size: 7; Querry: 23), // Fix movement rounding problems
     (p: $4705CB; newp: @FixStrafe1; t: RShtCall; size: 7; Querry: 23), // Fix movement rounding problems
@@ -3704,6 +3721,9 @@ var
     (p: $48F694; old: $48F0AC; newp: @FixGloryShield; t: RShtCodePtrStore), // 'Of Spirit Magic' effect of Glory Shield wasn't working
     (p: $463007; newp: @PostponeIntroHook; t: RShtBefore; Querry: hqPostponeIntro), // Postpone intro
     (p: $462FEB; newp: @PostponeIntroHook; t: RShtAfter; Querry: hqPostponeIntro2), // Postpone intro
+    (p: $44EB0B; newp: @NoTreeHintsHook; t: RShtAfter; size: 6), // No hints for non-interactive sprites
+    (p: $4942CA; old: $48D6EF; newp: @LadysEscortFix; t: RShtCall), // Fix Lady's Escort water walking
+    (p: $4303E2; newp: @QuestionFixSpace; t: RShtCall), // Fix space in evt.Question
     ()
   );
 

@@ -1,13 +1,15 @@
 Command	X	Y	Width	Height	NewX	NewY	Click	Draw	Condition	Format	NewWidth	NewHeight	Canvas	NewCanvas	Comment
-; todo:
-smooth video sides
 default Options.Scale	1
 var Options.Scale	1								Options.Scale<=0	
 default Options.PartyScale	1.11
 default Options.StatusbarScale	0
 default Options.StatusbarPlace	0
+default Options.HideStatusbar	1
+default Options.ShrinkStatusbar	1
+var Options.ShrinkStatusbar	0								Game.Version<=20301
 default Options.MouseShiftY	30
 default Options.FOVMul	1
+var Game.TreeHints	0								Game.TreeHints = 1 and Options.HideStatusbar
 var w h	960	600
 var mw mh	950	480
 var w h	w/Options.Scale	h/Options.Scale
@@ -23,6 +25,7 @@ var StatusMul	B/480								Options.StatusbarScale<=0 and StatusMul>B/480
 var StatusMul	R/640								Options.StatusbarScale<=0 and StatusMul>R/640
 var StatusH0	15 + 0*(StatusPlace>=0)
 var StatusW StatusH	StatusMul*465	StatusMul*StatusH0
+var StatusHide	1								Options.HideStatusbar and Game.Question=0
 var PartyStatusDist ScreenFW	5	R
 var PartyStatusDist	-StatusH								StatusPlace>0
 var PartyMul	(R-446-20)/(95*4+Options.PortraitsDistance*3)
@@ -228,7 +231,7 @@ pcx IB-B-%s	7	7+14	460	1		15	-	+	SmallDialog=0 and s19=0 and StatusPlace>=0	UA		
 pcx IB-B-%s	R	7+14	1	1	R-2	15	-	+	SmallDialog=0 and s19=0 and StatusPlace>=0	UA	5-2			Statusbar
 pcx IB-R-%s		359+14	2	1	R	15	-	+	SmallDialog=0 and s19=0 and StatusPlace>=0	UA				Statusbar
 if
-	0	0	1	1				+	SmallDialog=0				Game.Status	StatusbarStatus
+	0	0	1	1				+	SmallDialog=0 and StatusPlace>=0 and StatusHide				Game.Status	StatusbarStatus
 
 
 SCREEN					ScreenW	ScreenH			IsAdv and ReadRightSide						READ 3D VIEW
@@ -311,7 +314,7 @@ icon %sFrSmS							+	+		ui				Dialog
 	8	8	w	h	x	y	+	+						Dialog
 			0	0	DlgW	0								Dialog
 					C-1-dw/2+x	DlgH+TB	+	+	NoPartyDlg=0				Party	Dialog
-	6+5	359	455	15					s1					Status1
+	6+5	359	455	15				+	s1					Status1
 pcx IB-B-%s	6+5	7	465	15				erase	s1	UA				Status1
 					x+5	y + 321	+		s1				Status1	Dialog
 var btnW	55													
@@ -384,15 +387,37 @@ STAGE DrawViewUI
 					R	B							Minimap
 							+						SpLeft
 					R		+						SpRight
-var x	C-2 - (PlayerBox*3 + PlayerW)*PartyMul/2
-FOR i	0	3							SmallDialog=0 or NoPartyDlg
+var Game.Players	4								Game.Players<1
+var x	C-2 - (PlayerBox*(Game.Players-1) + PlayerW)*PartyMul/2
+FOR i	0	Game.Players-1							SmallDialog=0 or NoPartyDlg
 	i*115		PlayerW		x+i*PlayerBox*PartyMul	B-(StatusPlace<0)*(StatusH + PartyStatusDist)					PlayerW*PartyMul	PartyH	Party
 LOOP
-if									StatusPlace<0 and (SmallDialog=0 or NoPartyDlg and StatusPlace<0)
+var HasStatus	R												Statusbar
+if									StatusPlace<0 and (SmallDialog=0 or NoPartyDlg)
 					C	B	-	+			StatusW	StatusH	Statusbar
-if	0	0							StatusPlace>=0 and SmallDialog=0 and s0+Game.OpaqueScreen				StatusbarStatus
+if	-(StatusHide=0)	0							StatusPlace>=0 and SmallDialog=0 and s0+Game.OpaqueScreen+Game.Question and Options.ShrinkStatusbar*StatusHide=0				StatusbarStatus
 					C	(StatusPlace=0)*(B-PartyH-PartyStatusDist)	-	+			StatusW	StatusH	Statusbar
+if									StatusPlace>=0 and SmallDialog=0 and s0+Game.OpaqueScreen and Options.ShrinkStatusbar and StatusHide and HasStatus
+var W H	450	15
+	11	359	W	H				+						StatusbarLen
+pcx IB-B-%s	11	7	W	H				erase		UA				StatusbarLen
+FOR y	1	H-1													combine
+		y		1		0							StatusbarLen	StatusbarLen
+LOOP
+FOR x	0	(W-1) div 2													try both sides at once
+var d dr	7	7
+var d	x+4								x+4-d<0
+var dr	465-(4+W-x)								4+W-x+dr>465
+if	x	0											StatusbarLen
+if or	W-x-1	0											StatusbarLen
+	x+1	0	W-x*2-2	1	x+1			not					StatusbarLen	StatusbarLen	no more
+	0		1		x+4-d			+	x+4-d>0				Statusbar	Statusbar
+	R		1		4+W-x+dr-1			+	4+W-x+dr<465				Statusbar	Statusbar
+	x+4-d		W-x*2+d+dr		C	(StatusPlace=0)*(B-PartyH-PartyStatusDist)	-	+			StatusW*(W-x*2+d+dr)/465	StatusH	Statusbar		draw
 if
+LOOP
+if
+
 STAGE Darken
 
 SCREEN					Game.Width	Game.Height			FullDialog or SmallDialog						DARKEN

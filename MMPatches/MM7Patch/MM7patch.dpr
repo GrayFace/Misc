@@ -267,23 +267,35 @@ Version 2.4:
 [+] PlaceChestItemsVertically
 [+] SpriteAngleCompensation
 [+] PostponeIntro
+[+] ClickThroughEffects
 [+] DisableHooks
+[+] Map entrance dialog can now be called from NPC topic anywhere
 [-] FixSFT - SFT.bin was animated incorrectly (first frame was longer, last frame was shorter)
+[-] My bug: keyboard control of dialogs was breaking evt.Question in houses
 (MM7, MM8)
 [+] bitmaps.lwd support
 [+] TrueColorTextures
+[+] TreeHints
+[+] Better D3D init errors reporting
+[-] SpriteInteractIgnoreId
 [-] GM Axe didn't halve armor class
-[-] My bug: Out-of-bounds write when layout definition has long loops.
+[-] Disease2 and Disease3 bonus effects of monsters weren't working, Disease1 was working as Disease3
+[-] Poison2 and Poison3 bonus effects of monsters were swapped
+[-] My/DirectX bug: Game was failing to start in big resolutions, because Direct3D 7 doesn't work with them
+[-] My bug: The game could crash when pressing Esc in UI Layout mode
+[-] My bug: Out-of-bounds write when layout definition has long loops
 [-] My bug caused by Delphi bug: numbers in some layout expressions were read incorrectly
 [-] My bug: Memory leak when UI layout is reloaded
 (MM7)
 [+] SupportMM7ResTool
 [-] 'Of Spirit Magic' effect of Glory Shield wasn't working
-(MM8)
-[*] StartupCopyrightDelay option made hidden and 0 by default
+[-] 'Water walking' effect of Lady's Escort wasn't working
+[-] Pressing space was closing evt.Question dialog
+[-] My bug: Input field of evt.Question command dialog wasn't shown in UI Layout mode with statusbar auto-hide
 
 
-[!!] HD textures
+[!!] MouseLookShooterAim
+[!!] HD sprites
 [!!] Smooth video sides
 [!!] Prioritize geometry near the center
 [!!] Night sky, better day/night cycle, sun?
@@ -291,6 +303,16 @@ Version 2.4:
 [!!] What about adding a right-click option that lets you exit conversations and houses?
 [!!] Configurable (Caps Lock) key for mouse look
 [!!] textures from bitmaps (and option to change their gamma or not to change??)
+
+
+(andrey:) It was in MM7&8 since the beginning of time even with very late patches, but I can't say
+ if it is still there in the latest patch or whether it even exists in MM678 merge.
+- Monsters fight each other 2 vs 1
+- 2 monsters deal the killing blow simultaneously
+- One blow kills the monster and another blow is assigned to you (with all bad effects).
+Does not happen all the time, but seems to happen quite consistently when you are the next
+ target of the monsters.
+
 
 The "-30 Earth Resistance" on the relic, Kelebrim, does not work.
 
