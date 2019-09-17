@@ -1,12 +1,46 @@
-GrayFace MM8 Patch v2.3.1
+GrayFace MM8 Patch v2.4
 By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
 Mok's patch is included.
 Save files are, of course, fully compatible with the unpatched game in both directions.
 The patch has no uninstaller to make things simpler.
+All configuration is done via mm8.ini, which is populated with main options on the first run.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
+
+New in version 2.4:
+  << MM6 - MM8 >>
+[+] Chests are populated with compact non-random stacking if more items fit this way. This can be disabled by adding FixChestsByCompacting=0 line to INI.
+[+] Items are stacked vertically when you place them into chests. This can be disabled by adding PlaceChestItemsVertically=0 line to INI.
+[+] Sprites dimensions are tweaked based on vertical view angle. This makes them behave more realistically, especially when looking up at big monsters. Can be disabled by adding SpriteAngleCompensation=0 line to INI.
+[+] If NoIntro=1 the intro is shown when you click the New Game button in MM6 or start a new game in MM8. In MM7 this was already the case. Add PostponeIntro=0 to INI to disable the intro entirely. In MM7 you can also set PostponeIntro=2 to have the first intro shown when you click the New Game button.
+[+] Now in software rendering mode explosions and missiles are ignored during targeting. Before, party wasn't able to target monsters when whole screen is covered with explosions. You can disable this fix by adding ClickThroughEffects=0 line to the INI.
+[+] Low level stuff you shouldn't need to use: DisableHooks option lets you disable hooks effecting certain addresses. It's a comma-separated list of hex addresses. Avoid the old way of disabling hooks by index, because hooks indexes change from version to version.
+[+] Technical: Map entrance dialog can now be called from NPC topic anywhere.
+[-] Sprite animations were played incorrectly - first frame was longer, last frame was shorter. This fix can be disabled by adding FixSFT=0 to INI.
+[-] My bug: keyboard control of dialogs was breaking evt.Question command in houses (used for Escaton riddles in MM8).
+  << MM7, MM8 >>
+[+] HD textures support in Hardware 3D mode with bitmaps.lwd archives. I wrote a bit about them and custom LODs in general here: https://www.dropbox.com/s/iv9c2jc8abbrj6a/CustomLods.txt?dl=0
+[+] Technical: 32-bit color sprites and bitmaps in Hardware 3D mode. This can be disabled by adding TrueColorTextures=0 line to INI.
+[+] Better quality water in Hardware 3D mode.
+[+] UI.txt: ShrinkStatusbar option makes statusbar size depend on text size (enabled by default).
+[+] UI.txt: HideStatusbar option controls whether or not statusbar should be hidden when there's no text in it (enabled by default).
+[+] TreeHints option controls whether to show hints for non-interactable decorations in Hardware 3D mode (by default enabled in MM7 and disabled in MM8). Setting it to 2 would force it even in UI Layout mode with statusbar auto-hiding.
+[+] Better D3D init errors reporting (now not just for Windowed mode).
+[-] Decorations (trees etc.) with Id set were considered interactive even if they aren't. This fix can be disabled by adding SpriteInteractIgnoreId=0 line to INI.
+[-] GrandMaster of Axe didn't halve armor class. Now the chance to halve armor class is 1.66 per point of skill, so the skill of 60 will make it 100%. This is to compensate for overall weakness of axe wielding. Hidden AxeGMFullProbabilityAt option controls this (60 by default).
+[-] Disease2 and Disease3 bonus effects of monsters weren't working. Disease1 was working as Disease3. Poison2 and Poison3 bonus effects were swapped.
+[-] My/DirectX bug: Game was failing to start in resolutions over 1080p, because Direct3D 7 doesn't support them.
+[-] My bug: The game could crash when pressing Esc in UI Layout mode.
+[-] My bugs: Some bugs with flexible UI layout definitions in particular circumstances.
+  << MM8 >>
+[-] Players hired in turn-based mode were going into Adventurers Inn instead of joining the party. Now turn-based mode is canceled when you hire somebody.
+[-] My bug: PaperDollInChests option was causing a crash in Software rendering mode.
+[*] StartupCopyrightDelay option made hidden and 0 by default.
+  << Fixes in maps >>
+[-] Necromancers' Guild (d19): You could hire Dyson Leland before you get any quest that requires him.
+
 
 New in version 2.3.1:
   << MM6, MM8 >>
@@ -16,7 +50,6 @@ New in version 2.3.1:
   << MM8 >>
 [+] UI.txt: Clicking on the man that symbolizes party buffs now brings up the quest log. Turns out that's what happens if you click the top-left pixel of it in regular UI mode.
 
-
 New in version 2.3:
   << MM6 - MM8 >>
 [+] PaperDollInChests option shows paper doll in chest dialog: value 1 (default) will make it visible when you open inventory of a player, value 2 will make it visible right when you open the chest, value 0 will disable it.
@@ -25,7 +58,7 @@ New in version 2.3:
 [+] Newer MP3DEC.ASI version. In theory this might fix some problems with MP3 playback.
 [-] My bug: If somehow game window managed to become smaller than 640x480, that wasn't handled gracefully in software 32-bit color mode.
   << MM7, MM8 >>
-[+] Widescreen-friendly flexible UI in Hardware 3D mode.
+[+] Widescreen-friendly flexible UI in Hardware 3D mode. Controlled by UILayout option.
 [+] Accurate effects coordinates in Hardware 3D mode.
 [+] Accurate coordinates of top part of the outdoor sky in Hardware 3D mode.
 [+] In Hardware 3D mode the game was prioritizing interacting with sprites on sides of the view too often.
@@ -36,7 +69,7 @@ New in version 2.3:
 [-] Indoors the field of view wasn't increased to account for wider view, so the area of view was even smaller than in MM6 and MM7.
 [-] Quickly pressing R, R, Esc to rest was glitching the game if monsters attacked you in your sleep.
 [-] Enter key pressed in the main menu had an effect in the game (when starting a new game).
-[-] Screenshots of Saves were shrinked horizontally (fixed in Hardware 3D mode only for now).
+[-] Screenshots of Saves were shrinked horizontally (fixed in TrueColor Hardware 3D mode only for now).
 
 New in version 2.2:
   << MM6 - MM8 >>
@@ -78,7 +111,6 @@ New in version 2.2:
 [-] Castle of Fire (d29) - same as above.
 [-] Alvar (out03) - upon entering the Ogre Raiding Fort the party was facing in a wrong direction.
 [-] Dagger Wound Islands (out01) - upon entering the Uplifted Library the party was facing in a wrong direction.
-
 
 New in version 2.1:
   << MM6 - MM8 >>
@@ -150,7 +182,6 @@ Other Changes:
 [+] TurnSpeedNormal and TurnSpeedDouble options control speed of smooth turning. Default is 100% for normal speed and 120% for double speed. Turn Delta is set to Smooth by default.
 [+] MouseWheelFly option lets you fly up and down by scrolling your wheel.
 [+] AlwaysStrafe option inverts the behavior of right/left arrows - strafing becomes the standard behavior and turning is done when Ctrl is pressed. Strafing is always on while in mouse look mode, unless you set NormalStrafe=1.
-[+] AutorunKey (F3 by default) turns on/off autorun, like in MMORPGs.
 [+] InventoryKey option lets you open character's inventory screen by pressing 'I' instead of clicking a character portrait. Set it to 0 to disable.
 [+] ToggleCharacterScreenKey opens or closes character screen. The default key is '~'. Set it to 0 to disable.
 [+] FreeTabInInventory lets you select dead characters by Tab key while in character screen. Default is 1 (enabled).
@@ -251,6 +282,10 @@ Create "DataFiles" folder in the game directory. To modify a file in EnglishT.lo
 "DataFiles" option controls this. Default is 1 (enabled).
 
 --------------------------------------------------------------------------------
+Custom Archives
+Custom archives are the best way to distribute new and modified content of a mod. Here's an explanation of their loading order: https://www.dropbox.com/s/iv9c2jc8abbrj6a/CustomLods.txt?dl=0
+
+--------------------------------------------------------------------------------
 Mouse Look
 
 To enable mouse look set MouseLook option to 1.
@@ -268,10 +303,6 @@ MouseWheelFly option lets you fly up and down by scrolling your wheel. This is p
 Cursor used in mouse look mode is located in Data\MouseLookCursor.bmp
 
 --------------------------------------------------------------------------------
-Wide Screens
-This isn't related to the patch, but note that on wide screens you can set up your video card properties not to stretch the image. At least Nvidia drivers allow setting this in Nvidia control panel.
-
---------------------------------------------------------------------------------
 Video in Hardware Accelerated Mode
 If the videos aren't playing in hardware accelerated mode, try the following:
 Press Win+R, type Regedit, locate the following key in it:
@@ -279,6 +310,23 @@ HKEY_LOCAL_MACHNE/Software/New World Computing/Might and Magic Day of the Destro
 Or on 64-bit versions of Windows:
 HKEY_LOCAL_MACHNE/Wow6432Node/New World Computing/Might and Magic Day of the Destroyer/1.0 
 Set 2dacceloff to 1.
+
+--------------------------------------------------------------------------------
+UI Layout
+If you set UILayout=UI, a flexible UI layout (named "UI") will be used. The layout is defined in corresponding Data\UI.txt file and uses icons.UI.lod graphics. It's possible to extend it with *.UI.txt files or create brand new layouts, but I haven't made any description for its format.
+
+Here are options you'll find under [UILayout=UI] section after first use of it:
+Scale=1  - Increasing/decreasing it would make all UI bigger/smaller
+PartyScale=1.065  - Increasing/decreasing would make portraits bigger/smaller
+NoCompass=1  - Set to 0 to enable compass, set to -1 to place it in the middle of the screen at the top
+FlyEtcOnTop=1  - Setting it to 0 would move Fly, Water Walk and Levitate icons to the bottom of the view
+FOVMul=1  - Field of view multiplier
+StatusbarScale=0  - By default statusbar scale is chosen automatically, but you can set it manually
+StatusbarPlace=0  - Can have 3 values: -1 - on top of the screen, 0 - above portraits, 1 - below portraits
+ShrinkStatusbar=1  - Statusbar size is determined by text in it (ignored if StatusbarPlace=1 or HideStatusbar=0)
+HideStatusbar=1  - Hide statusbar when it's empty (ignored if StatusbarPlace=1)
+MouseShiftY_1=20.5  - Vertical shift of the middle point of the view when there is 1 player in the party
+MouseShiftY_5=27.5  - Vertical shift of the middle point of the view when there are 5 players in the party (for 2-4 players a proportionate average of these values is used)
 
 --------------------------------------------------------------------------------
 Errors Reporting

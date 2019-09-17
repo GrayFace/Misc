@@ -1,12 +1,17 @@
 Command	X	Y	Width	Height	NewX	NewY	Click	Draw	Condition	Format	NewWidth	NewHeight	Canvas	NewCanvas	Comment
 default Options.Scale	1
+var Options.Scale	1								Options.Scale<=0
 default Options.PartyScale	1.065
 default Options.StatusbarScale	0
 default Options.StatusbarPlace	0
+default Options.HideStatusbar	1
+default Options.ShrinkStatusbar	1
+var Options.ShrinkStatusbar	0								Game.Version<=20301
 default Options.NoCompass	1
 default Options.MouseShiftY_5	27.5
 default Options.MouseShiftY_1	20.5
 default Options.FOVMul	1
+var Game.TreeHints	0								Game.TreeHints = 1 and Options.HideStatusbar
 var x	(Game.Players - 1)/4
 var MouseShiftY	Options.MouseShiftY_5*x + Options.MouseShiftY_1*(1-x)
 var Options.Scale	1								Options.Scale<=0
@@ -24,7 +29,7 @@ var StatusMul	B/480								Options.StatusbarScale<=0 and StatusMul>B/480
 var StatusMul	R/640								Options.StatusbarScale<=0 and StatusMul>R/640
 var StatusH0	19 - (StatusPlace>0)*2 - (StatusPlace=0)*1
 var StatusW StatusH	StatusMul*484	StatusMul*StatusH0
-var PartyStatusDist ScreenFW	1.5	R
+var PartyStatusDist ScreenFW	1.5 + (Options.ShrinkStatusbar=0=0)*0.5	R
 var PartyStatusDist	-StatusH								StatusPlace>0
 var PartyStatusDist	-1								StatusPlace<0
 var PartyMul	1+(R-mw)/484
@@ -84,8 +89,8 @@ icon UI-FrGol	R		144-w				+	+						Gold
 icon compcovr			18-w		124	3	-	erase						Gold
 icon topbar	295	3	18-w	18	124	3	-	behind						Gold
 
-icon UI-Comp								+	Options.NoCompass=0					Compass
-	307	10	25	9	4	1		+	Options.NoCompass=0					Compass
+icon UI-Comp								+	Options.NoCompass<=0					Compass
+	307	10	25	9	4	1		+	Options.NoCompass<=0					Compass
 
 	0	0	1	1			+	-			67	67		Man	Click Area
 	0	1	61	63	3	B-1	-	+						Man	Icon
@@ -137,8 +142,9 @@ SCREEN					ScreenW	ScreenH			HasAdv						SCREEN
 	0	368+(StatusPlace>=0)	484	StatusH0 - 1 - (StatusPlace=0)	0	(StatusPlace<=0)	+	+	StatusH					Statusbar
 	1	368+17	482	1	1	BT	+	+	StatusPlace>=0					Statusbar
 	1	367	482	1	1	0	+	-	StatusH and StatusPlace<0					Statusbar
-icon UI-Party		B		1	C	0	-	+	StatusH and StatusPlace					Statusbar	Bottom Line
-	0	0	1	1				+	StatusPlace>=0				Game.Status	StatusbarStatus
+icon UI-Party		B		1	C	0	-	+	StatusH and StatusPlace					Statusbar	Top Line
+	0	370	1	1	0	0	-	+	StatusH and StatusPlace>0					Statusbar
+	0	0	1	1				+	StatusPlace>=0 and Options.HideStatusbar				Game.Status	StatusbarStatus
 var b	92+17
 
 ; Portraits
@@ -273,6 +279,7 @@ if
 
 STAGE DrawViewUI															UI
 					R-0.6	22	-		Options.NoCompass=0				Compass		
+					C	StatusPlace>0 and Options.HideStatusbar=0 and StatusMul/2+StatusH	-		Options.NoCompass<0				Compass
 													Gold
 					R								Food
 
@@ -281,12 +288,31 @@ var y	37.8
 					4	B - y							Man
 					4+4-LR	B - y							Skull
 					R	B							Minimap
+var HasStatus	R												Statusbar
 if									StatusPlace<0				
 					C	B					StatusW	StatusH	Statusbar
-if	0	0							StatusPlace>=0 and s0+Game.OpaqueScreen				StatusbarStatus
-					C	(StatusPlace=0)*(B-PartyH-PartyStatusDist) - (StatusPlace>0)*StatusMul/2	-				StatusW	StatusH	Statusbar
 if
 					C	B - (StatusPlace<0 and StatusH>0)*(StatusH + PartyStatusDist)					-LR*PartyMul	-TB*PartyMul	BaseBar
+if	-(Options.HideStatusbar=0)	0							StatusPlace>=0 and s0+Game.OpaqueScreen and Options.ShrinkStatusbar*Options.HideStatusbar=0				StatusbarStatus
+					C	(StatusPlace=0)*(B-PartyH-PartyStatusDist) - (StatusPlace>0)*StatusMul/2	-				StatusW	StatusH	Statusbar
+if									StatusPlace>=0 and s0+Game.OpaqueScreen and Options.ShrinkStatusbar and Options.HideStatusbar and HasStatus
+var W H	450	17
+	11	369	W	H				+						StatusbarLen
+icon Basebar	11	2	W	H				erase						StatusbarLen
+FOR y	1	H-1													combine
+		y		1		0							StatusbarLen	StatusbarLen
+LOOP
+var d dr	11	10
+FOR x	0	(W-1) div 2													try both sides at once
+if	x	0											StatusbarLen
+if or	W-x-1	0											StatusbarLen
+	x+1	0	W-x*2-2	1	x+1			not					StatusbarLen	StatusbarLen	no more
+	0		1		x+11-d			+	x+11-d>0				Statusbar	Statusbar
+	R		1		11+W-x+dr-1			+	11+W-x+dr<484				Statusbar	Statusbar
+	x+11-d		W-x*2+d+dr		C	(StatusPlace=0)*(B-PartyH-PartyStatusDist) - (StatusPlace>0)*StatusMul/2	-				StatusW*(W-x*2+d+dr)/484	StatusH	Statusbar		draw
+if
+LOOP
+if
 
 STAGE Darken
 
@@ -329,5 +355,3 @@ var y1	B												Gold
 STAGE DrawMouse
 SCREEN					ScreenW	ScreenH			IsAdv						ADV MOUSE
 							-						Game.MouseItem		Mouse item
-
-

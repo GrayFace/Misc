@@ -1879,16 +1879,6 @@ asm
   xchg ecx, [esp]
 end;
 
-//----- Show accurate errors of D3DInit
-
-procedure BetterD3DInitErrorsHook;
-asm
-  mov eax, [esi + 40088h]
-  lea eax, [eax + 48h]
-  xchg eax, [esp]
-  jmp eax
-end;
-
 //----- Autorun key like in WoW
 
 procedure AutorunProc;
@@ -2226,7 +2216,9 @@ begin
   LoadCustomLods($6F330C, PChar(Lang + 'D.lod'), 'language');
   LoadLodsOld;
   if _IsD3D^ then
-    ApplyHooksD3D;
+    ApplyHooksD3D
+  else
+    ApplyMMHooksSW;
 end;
 
 //----- Custom LODs - Vid
@@ -2333,17 +2325,6 @@ begin
   for i := 1 to 255 do
     MyGetAsyncKeyState(i);
   GetCursorPos(MLastPos);
-end;
-
-//----- Save game bug in Windows Vista and higher (bug of OS or other software)
-
-procedure SaveGameBugHook(old, new: PChar); cdecl;
-begin
-  while not MoveFile(old, new) do
-  begin
-    Sleep(1);
-    DeleteFileA(new);
-  end;
 end;
 
 //----- Strafe in MouseLook
@@ -3394,10 +3375,36 @@ asm
   call eax
 end;
 
+//----- Hints for non-interactive sprites
+
+procedure TreeHintsHook;
+asm
+  cmp ShowTreeHints, 0
+  jz @std
+  mov eax, [ebp + $18]
+  mov [esp+4], eax
+@std:
+end;
+
+//----- Fix hiring in turn-based mode
+
+procedure FixTurnBasedHire;
+const
+  EndTurnBased: int = $4063A9;
+asm
+  jnz @ok
+  push 1
+  mov ecx, $509C98
+  call EndTurnBased
+  mov dword ptr [$B21728], 0
+  test esi, esi
+@ok:
+end;
+
 //----- HooksList
 
 var
-  HooksList: array[1..324] of TRSHookInfo = (
+  HooksList: array[1..325] of TRSHookInfo = (
     (p: $458E18; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $463862; old: $450493; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave/quicksave filenames localization
     (p: $4CD509; t: RShtNop; size: 12), // Fix Save/Load Slots: it resets SaveSlot, SaveScroll
@@ -3542,6 +3549,7 @@ var
     (p: $416901; size: 14; Querry: 16), // Stop time by right click
     (p: $416F95; newp: @StatColorFixHook; t: RShtCall; size: 7), // negative/0 causes a crash in stats screen
     (p: $489DC1; newp: @PaletteSMulHook; t: RShtCall), // Control palette gamma
+    (p: $489D8D; old: $4E8878; newp: @Options.PaletteVMul; t: RSht4), // Control palette gamma
     (p: $4E8878; newp: @Options.PaletteVMul; newref: true; t: RSht4; Querry: -1), // Control palette gamma
     (p: $4BD327; old: 5000; newp: @StartupCopyrightDelay; newref: true; t: RSht4), // Startup copyright delay
     (p: $4D1214; newp: @TPHook; t: RShtCall),  // Town Portal dlg reacts spell book click
@@ -3556,7 +3564,6 @@ var
     (p: $4635B6; t: RShtNop; size: $11), // Switch to 16 bit color when going windowed
     (p: $49B350; old: $4DA9F0; backup: @AutoColor16Std; newp: @AutoColor16Hook; t: RShtCall), // Switch to 16 bit color when going windowed
     (p: $49E033; old: $49EC9E; backup: @AutoColor16Std2; newp: @AutoColor16Hook2; t: RShtCall), // Switch to 16 bit color when going windowed
-    (p: $49DD01; newp: @BetterD3DInitErrorsHook; t: RShtCall), // Show accurate errors of D3DInit
     (p: $461320; old: $42EDD8; newp: @AutorunHook; t: RShtCall), // Autorun key like in WoW
     (p: $430F62; newp: @LloydAutosaveFix; t: RShtCall), // Lloyd: take spell points and action after autosave
     (p: $4311EB; newp: @TPAutosaveFix; t: RShtCall), // TP: take action after autosave
@@ -3574,7 +3581,6 @@ var
     //(p: $45E2A0; old: $45F1C2; newp: @CopyMapsToNewLodHook; t: RShtCall),
     (p: $45773F; newp: @ClearKeyStatesHook; t: RShtJmp; size: 6), // Clear my keys as well
     (p: $46504A; newp: @ClearKeyStatesHook; t: RShtBefore), // Clear keys when entering the game
-    (p: $45F91B; newp: @SaveGameBugHook; t: RShtCall), // Save game bug in Windows Vista and higher (bug of OS or other software)
     (p: $46F03E; newp: @FixStrafe1; t: RShtCall; size: 7; Querry: 23), // Fix movement rounding problems
     (p: $46F06A; newp: @FixStrafe1; t: RShtCall; size: 7; Querry: 23), // Fix movement rounding problems
     (p: $46F091; newp: @FixStrafe1; t: RShtCall; size: 7; Querry: 23), // Fix movement rounding problems
@@ -3723,6 +3729,8 @@ var
     (p: $43DA21; newp: @FixIndoorFOVProcSW; t: RShtAfter; Querry: hqFixIndoorFOV), // Indoor FOV wasn't extended like outdoor
     (p: $431A7A; newp: @FixRestEncounter; t: RShtBefore), // Fix quick R+R+Esc press with encounter
     (p: $460FA2; newp: @PostponeIntroHook; t: RShtAfter; size: 7; Querry: hqPostponeIntro), // Postpone intro
+    (p: $44C264; newp: @TreeHintsHook; t: RShtAfter), // Hints for non-interactive sprites
+    (p: $48C0A4; newp: @FixTurnBasedHire; t: RShtAfter; size: 7), // Fix hiring in turn-based mode
     ()
   );
 

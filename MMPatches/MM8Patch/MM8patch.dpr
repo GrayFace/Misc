@@ -249,7 +249,7 @@ Version 2.3:
 [-] Indoors the FOV wasn't increased, so the area of view was smaller than in MM6 and MM7
 [-] Quickly pressing R,R,Esc to rest was glitching the game if monsters attacked you in your sleep  
 [-] Enter key pressed in the main menu had an effect in the game
-[-] Screenshots of Saves were stretched vertically (fixed in D3D only for now)
+[-] Screenshots of Saves were stretched vertically (fixed in true color D3D only for now)
 
 Version 2.3.1:
 (MM6, MM8)
@@ -257,6 +257,36 @@ Version 2.3.1:
 (MM7, MM8)
 [+] A few new UI layout commands
 [-] My bug: ScalingParam1 and ScalingParam2 were ignored in flexible UI mode
+
+Version 2.4:
+(MM6-MM8)
+[+] FixChestsByCompacting
+[+] PlaceChestItemsVertically
+[+] SpriteAngleCompensation
+[+] PostponeIntro
+[+] ClickThroughEffects
+[+] DisableHooks
+[+] Map entrance dialog can now be called from NPC topic anywhere
+[-] FixSFT - SFT.bin was animated incorrectly (first frame was longer, last frame was shorter)
+[-] My bug: keyboard control of dialogs was breaking evt.Question in houses
+(MM7, MM8)
+[+] bitmaps.lwd support
+[+] TrueColorTextures
+[+] TreeHints
+[+] Better D3D init errors reporting
+[-] SpriteInteractIgnoreId
+[-] GM Axe didn't halve armor class
+[-] Disease2 and Disease3 bonus effects of monsters weren't working, Disease1 was working as Disease3
+[-] Poison2 and Poison3 bonus effects of monsters were swapped
+[-] My/DirectX bug: Game was failing to start in big resolutions, because Direct3D 7 doesn't work with them
+[-] My bug: The game could crash when pressing Esc in UI Layout mode
+[-] My bug: Out-of-bounds write when layout definition has long loops
+[-] My bug caused by Delphi bug: numbers in some layout expressions were read incorrectly
+[-] My bug: Memory leak when UI layout is reloaded
+(MM8)
+[-] Players hired in turn-based mode were going into Adventurers Inn instead of joining the party
+[-] My bug: PaperDollInChests option was causing a crash in Software rendering mode
+[*] StartupCopyrightDelay option made hidden and 0 by default
 
 
 
