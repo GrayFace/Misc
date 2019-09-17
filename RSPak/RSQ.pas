@@ -62,6 +62,9 @@ type
   PWordArray = ^TWordArray;
   TWordArray = array[0..$3ffffffe] of Word;
 
+  PDWordArray = ^TDWordArray;
+  TDWordArray = array[0..$1ffffffe] of DWord;
+
 const
   VK_PGUP = VK_PRIOR;
   VK_PGDN = VK_NEXT;

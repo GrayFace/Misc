@@ -124,15 +124,22 @@ var
 begin
   Result:= false;
   i:= k;
-  while s[i] in ['+','.','0'..'9'] do
+  while s[i] in ['+'] do
+    inc(i);
+  while s[i] in ['.','0'..'9'] do
     inc(i);
   if i = k then
     exit
   else if s[i] in ['e','E'] then
+  begin
     repeat
       inc(i);
-    until not (s[i] in ['+','-','0'..'9']);
-  Val(Copy(s, k, i - k), x, j);
+    until not (s[i] in ['+','-']);
+    repeat
+      inc(i);
+    until not (s[i] in ['0'..'9']);
+  end;
+  Val(Copy(s, k, i - k), x, j);  // Val bug: Val('1.5+') = 15
   if (j = 2) and (s[k] in ['+','.']) then
     exit;
   if j > 0 then
@@ -310,7 +317,7 @@ const
 var
   i: int;
 begin
-  i:= RSParseExpr(s, a, true);
+  i:= RSParseExpr(s, a, nil, true);
   if i = 0 then  exit;
   Result:= Format('%s: %s',
      [ParseError[i > length(s)], Copy(s, (i-1) mod length(s) + 1, MaxInt)]);

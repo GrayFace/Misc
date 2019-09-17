@@ -71,13 +71,13 @@ Version 1.2.1:
 [-] After drag-drop of the same archive, files list wasn't updated after operations
 
 Version 1.2.2:
-[+] *.bitmapshd.lod support
+[+] bitmaps.lwd support
 [+] Better transparent color detection
+[+] Palettes preview
 [-] Unpacking errors while dragging files onto other apps were leading to MMArchive hanging
-[-] "Ignore Unpacking Errors" option state wasn't preserved on program restart  
+[-] "Ignore Unpacking Errors" option state wasn't preserved on program restart
+[-] When creating new archive default file type was misleading  
 
-перемещение цвета фона в правильное место при импорте в icons.lod
-drag&drop из MMArchive во вне
 Возможность выбора номера анимации дефа для показа
 other file types
 }
@@ -220,6 +220,8 @@ type
     SaveDialogSaveSelectionAs: TSaveDialog;
     CompareTo1: TMenuItem;
     OpenDialogCompare: TRSOpenSaveDialog;
+    Associate5: TMenuItem;
+    procedure Associate5Click(Sender: TObject);
     procedure CompareTo1Click(Sender: TObject);
     procedure SaveSelectionAsArchive1Click(Sender: TObject);
     procedure CommonExtractionFolder1Click(Sender: TObject);
@@ -510,7 +512,7 @@ var
   SelectingIndex:pint;
   CanSelectListView:boolean=true;
   ClipboardFormat:DWord; ClipboardBackup: string;
-  Association1, Association2, Association3, Association4: TRSFileAssociation;
+  Association1, Association2, Association3, Association4, Association5: TRSFileAssociation;
   ExceptionsSilenced: Boolean;
   DefColumnWidth: int = -1;
   FavsChanged: Boolean;
@@ -978,6 +980,7 @@ begin
   Timer2.Enabled:= false;
   if (VideoPlayer <> nil) and (Timer1.Interval <> 0) then
     VideoPlayer.Pause:= not Timer1.Enabled;
+  FSFTNotFound:= false;
 
   if FirstActivate then
   begin
@@ -1015,7 +1018,7 @@ begin
     if sl.Count = 1 then
     begin
       s:= LowerCase(ExtractFileExt(sl[0])) + '!';
-      if RSParseStringSingleToken(s, 1, ['.lod', '.snd', '.vid', '.pac', '.mm6', '.mm7', '.dod']) = '!' then
+      if RSParseStringSingleToken(s, 1, ['.lod', '.lwd', '.snd', '.vid', '.pac', '.mm6', '.mm7', '.dod']) = '!' then
       begin
         BeginLoad(sl[0], AnyExt);
         EndLoad(false);
@@ -1567,6 +1570,8 @@ begin
 end;
 
 procedure TRSLodEdit.LoadFile(Index: int);
+const
+  DimStr: array[Boolean] of string = ('%dx%d', '%dx%d. %s');
 var
   ft: TMyFileType;
   s: string;
@@ -1644,12 +1649,16 @@ begin
     end;
   end;
   if ft = aBmp then
+  begin
     if (LastPalString = '') and (Archive is TRSLod) and (TRSLod(Archive).LastPalette <> 0) then
-      Label1.Caption:= Format(SPalette, [TRSLod(Archive).LastPalette])
+      s:= Format(SPalette, [TRSLod(Archive).LastPalette])
     else
-      Label1.Caption:= LastPalString
-  else
-    Label1.Caption:= '';
+      s:= LastPalString;
+  end else
+    s:= '';
+  if FileBitmap <> nil then
+    s:= Format(DimStr[s <> ''], [FileBitmap.Width, FileBitmap.Height, s]);
+  Label1.Caption:= s;
 
   Timer1.Interval:=0;
   Timer2.Enabled:=false;
@@ -1682,6 +1691,11 @@ begin
         j:=1;
         SetPreviewBmp(FileBitmap);
         FileBitmap:= nil;
+      end;
+      aPal:
+      begin
+        j:=1;
+        SetPreviewBmp(RSMMPaletteToBitmap(FileBuffer));
       end;
       aTxt:
       begin
@@ -1872,6 +1886,8 @@ var
   a: PPalFix;
   s: string;
 begin
+  // Delphi messes up window height
+  ClientHeight:= RDiv(740*ClientWidth, 985);
   RSHookFlatBevels(self);
   if not ThemeServices.ThemesEnabled then
     ComboExtFilter.BevelKind:= bkFlat;
@@ -1890,6 +1906,8 @@ begin
          'MMArchive Backup', '"' + s + '" "%1"', s + ',0');
   Association4:= TRSFileAssociation.Create('.pac', 'MMArchive.Pac',
          'MMArchive Backup', '"' + s + '" "%1"', s + ',0');
+  Association5:= TRSFileAssociation.Create('.lwd', 'MMArchive.Lwd',
+         'MMArchive Backup', '"' + s + '" "%1"', s + ',0');
 
   PalFixList:= TStringList.Create;
   PalFixList.Sorted:= true;
@@ -1901,16 +1919,6 @@ begin
     inc(a);
   end;
   FDragFilesList:= TMyStringList.Create;
-
-{
-  with RSMemo1 do
-  begin
-    Width:=Panel1.Width-10;
-    Height:=Panel1.Height-10;
-  end;
-}
-//  Panel1.FullRepaint:=false;
-//  Panel2.FullRepaint:=false;
 end;
 
 procedure TRSLodEdit.ListView1Edited(Sender: TObject; Item: TListItem;
@@ -2397,6 +2405,11 @@ begin
   Association4.Associated:= not Associate4.Checked;
 end;
 
+procedure TRSLodEdit.Associate5Click(Sender: TObject);
+begin
+  Association5.Associated:= not Associate5.Checked;
+end;
+
 procedure TRSLodEdit.AddFolder1Click(Sender: TObject);
 begin
   AddTreeNode(SNewFolder, 1, true);
@@ -2871,7 +2884,7 @@ begin
   case SaveDialogNew.FilterIndex of
     3, 4: SaveDialogNew.DefaultExt:= '.snd';
     5, 6: SaveDialogNew.DefaultExt:= '.vid';
-    7: SaveDialogNew.DefaultExt:= '.bitmaps.lod';
+    7: SaveDialogNew.DefaultExt:= '';
     8: SaveDialogNew.DefaultExt:= '.icons.lod';
     9: SaveDialogNew.DefaultExt:= '.sprites.lod';
     10: SaveDialogNew.DefaultExt:= '.T.lod';
@@ -4072,6 +4085,7 @@ begin
   Associate2.Checked:= Association2.Associated;
   Associate3.Checked:= Association3.Associated;
   Associate4.Checked:= Association4.Associated;
+  Associate5.Checked:= Association5.Associated;
 end;
 
 procedure TRSLodEdit.File1Click(Sender: TObject);
@@ -4122,15 +4136,7 @@ const
     p, p1: PChar;
   begin
     n:= pint(FSFT.Memory)^;
-
     size:= (FSFT.Size - pint(PChar(FSFT.Memory) + 4)^*2) div n;
-
-    p:= PChar(FSFT.Memory) + 8 + OffName;
-    for i := 0 to n - 1 do
-    begin
-      StrLower(p);
-      inc(p, size);
-    end;
 
     p:= PChar(FSFT.Memory) + 8 + OffName;
     if size = size7 then
@@ -4306,14 +4312,15 @@ const
   );
 var
   ver: TRSLodVersion;
-  s: string;
+  s, dir: string;
 begin
   SaveDialogNew.InitialDir:= DialogToFolder(OpenDialog1);
   SaveDialogNew.FileName:= '';
   if not SaveDialogNew.Execute then exit;
   FreeArchive;
   OpenDialog1.FileName:= SaveDialogNew.FileName;
-  RSCreateDir(ExtractFilePath(SaveDialogNew.FileName));
+  dir:= ExtractFilePath(SaveDialogNew.FileName);
+  RSCreateDir(dir);
   s:= ExtractFileExt(SaveDialogNew.FileName);
   ver:= vers[SaveDialogNew.FilterIndex - 1];
   if SameText(s, '.snd') then
@@ -4801,7 +4808,7 @@ begin
       Rectangle(0, 0, Image1.Left, Height);
       w:= PreviewBmp.Width;
       h:= PreviewBmp.Height;
-      DoReStretch(RSSpeedButton1.Down, Image1.Width, Image1.Height, w, h);
+      DoReStretch(RSSpeedButton1.Down or (FileType = aPal), Image1.Width, Image1.Height, w, h);
       r:= Bounds(Image1.Left, Image1.Top, w, h);
       StretchDraw(r, PreviewBmp);
       Rectangle(r.Right, 0, Width, r.Bottom);

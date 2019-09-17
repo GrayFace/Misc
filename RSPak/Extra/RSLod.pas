@@ -206,6 +206,7 @@ type
     property OnAfterRenameFile: TRSMMFilesFileEvent read FOnAfterRenameFile write FOnAfterRenameFile;
   end;
 
+  
   TRSArchive = class(TObject)
   protected
     function GetCount: int; virtual; abstract;
@@ -321,6 +322,8 @@ type
 
     function GetIntAt(i: int; o: int): int;
     procedure PackSprite(b: TBitmap; m: TMemoryStream; pal: int);
+    procedure FindBitmapPalette(const name: string; b: TBitmap; var pal, Bits: int); virtual;
+    procedure DoPackBitmap(b: TBitmap; var b1, b2: TBitmap; var hdr; m, buf: TMemoryStream; Keep: Boolean); virtual;
     procedure PackBitmap(b: TBitmap; m: TMemoryStream; pal, ABits: int; Keep: Boolean);
     procedure PackStr(m: TMemoryStream; Data: TStream; Size: int); // STR converted by mm8leveleditor
     function PackPcx(b: TBitmap; m: TMemoryStream; KeepBmp: Boolean): int;
@@ -330,7 +333,7 @@ type
 
     procedure Unzip(input, output: TStream; size, unp: int; noless: Boolean);
     procedure UnpackPcx(data: TMemoryStream; b: TBitmap);
-    procedure UnpackBitmap(data: TStream; b: TBitmap; const FileHeader);
+    procedure UnpackBitmap(data: TStream; b: TBitmap; const FileHeader); virtual;
     procedure UnpackSprite(const name: string; data: TStream; b: TBitmap; size: int);
     procedure UnpackStr(a, Output:TStream; const FileHeader);
 
@@ -363,6 +366,20 @@ type
     property OnNeedPalette: TRSLodNeedPaletteEvent read FOnNeedPalette write FOnNeedPalette;
     property OnConvertToPalette: TRSLodConvertPaletteEvent read FOnConvertToPalette write FOnConvertToPalette;
     property OnSpritePalette: TRSLodSpritePaletteEvent read FOnSpritePalette write FOnSpritePalette;
+  end;
+
+
+  TRSLwd = class(TRSLod)
+  protected
+    constructor CreateInternal(Files: TRSMMFiles); override;
+    procedure FindBitmapPalette(const name: string; b: TBitmap; var pal, Bits: int); override;
+    function FindDimentions(p: PChar): TColor;
+    function PackLwd(p: PChar; w, h: int; m: TMemoryStream): int;
+    procedure DoPackBitmap(b: TBitmap; var b1, b2: TBitmap; var hdr; m, buf: TMemoryStream; Keep: Boolean); override;
+    procedure UnpackLwd(data: TStream; b: TBitmap; const FileHeader);
+    procedure UnpackBitmap(data: TStream; b: TBitmap; const FileHeader); override;
+  public
+    TransparentColor: TColor;
   end;
 
 
@@ -415,6 +432,7 @@ function RSMMArchivesFind(const a: TRSMMArchivesArray; const Name: string;
 function RSMMArchivesFindSamePalette(const a: TRSMMArchivesArray; const PalEntries): int;
 function RSMMArchivesCheckFileChanged(const a: TRSMMArchivesArray; Ignore: TRSMMArchive = nil): Boolean;
 procedure RSMMArchivesFree(var a: TRSMMArchivesArray);
+function RSMMPaletteToBitmap(const a: TRSByteArray): TBitmap;
 
 // _stricmp comparsion. AnsiCompareText returns a different result.
 function RSLodCompareStr(s1, s2: PChar): int; overload;
@@ -456,6 +474,108 @@ const GamesLod7Sig = VidSizeSigOld;
 
 const
   PowerOf2: array[0..15] of int = (1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768);
+
+type
+  TLodType = record
+    Version: string;
+    LodType: string;
+  end;
+
+const
+  LodTypes: array[TRSLodVersion] of TLodType =
+  (
+    (Version: ''; LodType: ''),              // RSLodHeroes
+    (Version: 'MMVI'; LodType: 'bitmaps'),   // RSLodBitmaps
+    (Version: 'MMVI'; LodType: 'icons'),     // RSLodIcons
+    (Version: 'MMVI'; LodType: 'sprites08'), // RSLodSprites
+    (Version: 'GameMMVI'; LodType: 'maps'),  // RSLodGames
+    (Version: 'GameMMVI'; LodType: 'maps'),  // RSLodGames7
+    (Version: 'MMVI'; LodType: 'chapter'),   // RSLodChapter
+    (Version: 'MMVII'; LodType: 'chapter'),  // RSLodChapter7
+    (Version: 'MMVIII'; LodType: 'language') // RSLodMM8
+  );
+
+  LodDescriptions: array[TRSLodVersion] of string =
+  (
+    '',                                      // RSLodHeroes
+    'Bitmaps for MMVI.',                     // RSLodBitmaps
+    'Icons for MMVI.',                       // RSLodIcons
+    'Sprites for MMVI.',                     // RSLodSprites
+    'Maps for MMVI',                         // RSLodGames
+    'Maps for MMVI',                         // RSLodGames7
+    'newmaps for MMVI',                      // RSLodChapter
+    'newmaps for MMVII',                     // RSLodChapter7
+    'Language for MMVIII.'                   // RSLodMM8
+  );
+
+type
+  PMMLodFile = ^TMMLodFile;
+  TMMLodFile = packed record
+    BmpSize: int;
+    DataSize: int;
+    BmpWidth: int2;
+    BmpHeight: int2;
+    BmpWidthLn2: int2;  // textures: log2(BmpWidth)
+    BmpHeightLn2: int2;  // textures: log2(BmpHeight)
+    BmpWidthMinus1: int2;  // textures: BmpWidth - 1
+    BmpHeightMinus1: int2;  // textures: BmpHeight - 1
+    Palette: int2;
+    _unk: int2;  // runtime palette index 
+    UnpSize: int;
+    Bits: int;  // Bits:  2 - multitexture, $10 - something important too, $400 - don't free buffers 
+    // Data...
+    // Palette...
+  end;
+
+  TSpriteLine = packed record
+    a1: int2;
+    a2: int2;
+    pos: int4;
+  end;
+  TSprite = packed record
+    Size: int;
+    w: int2;
+    h: int2;
+    Palette: int2;
+    unk_1: int2;
+    yskip: int2; // number of clear lines at the bottom
+    unk_2: int2; // used in runtime only, for bits
+    UnpSize: int;
+  end;
+  TSpriteEx = packed record
+    Sprite: TSprite;
+    Lines: array[0..(MaxInt div SizeOf(TSpriteLine) div 2)] of TSpriteLine;
+    // Data...
+  end;
+
+  TPCXFileHeader = packed record
+    ImageSize: longint;
+    Width: longint;
+    Height: longint;
+    // Data...
+    // Palette...
+  end;
+  PPCXFileHeader = ^TPCXFileHeader;
+   // Pcx Format: <Header> <Picture> <Palette>
+   // The format is far from real PCX
+   // Palette exists only if biSizeImage/(biWidth*biHeight) = 1
+
+  TMM6GamesFile = packed record
+    DataSize: int;
+    UnpackedSize: int;
+  end;
+
+  TMM7GamesFile = packed record
+    Sig1: int; // $16741
+    Sig2: int; // $6969766D (mvii)
+    DataSize: int;
+    UnpackedSize: int;
+  end;
+
+const
+  cnkNone = 0;
+  cnkExist = 1;
+  cnkGetName = 2;
 
 type
   TMyReadStream = class(TMemoryStream)
@@ -645,6 +765,18 @@ begin
     finally
       Windows.FindClose(h);
     end;
+end;
+
+function GetLn2(v: int): int;
+begin
+  Result:= 0;
+  while (v <> 0) and (v and 1 = 0) do
+  begin
+    v:= v shr 1;
+    inc(Result);
+  end;
+  if v <> 1 then
+    Result:= 0;
 end;
 
 
@@ -1797,39 +1929,6 @@ end;
 
 { TRSLodBase }
 
-type
-  TLodType = record
-    Version: string;
-    LodType: string;
-  end;
-
-const
-  LodTypes: array[TRSLodVersion] of TLodType =
-  (
-    (Version: ''; LodType: ''),              // RSLodHeroes
-    (Version: 'MMVI'; LodType: 'bitmaps'),   // RSLodBitmaps
-    (Version: 'MMVI'; LodType: 'icons'),     // RSLodIcons
-    (Version: 'MMVI'; LodType: 'sprites08'), // RSLodSprites
-    (Version: 'GameMMVI'; LodType: 'maps'),  // RSLodGames
-    (Version: 'GameMMVI'; LodType: 'maps'),  // RSLodGames7
-    (Version: 'MMVI'; LodType: 'chapter'),   // RSLodChapter
-    (Version: 'MMVII'; LodType: 'chapter'),  // RSLodChapter7
-    (Version: 'MMVIII'; LodType: 'language') // RSLodMM8
-  );
-
-  LodDescriptions: array[TRSLodVersion] of string =
-  (
-    '',                                      // RSLodHeroes
-    'Bitmaps for MMVI.',                     // RSLodBitmaps
-    'Icons for MMVI.',                       // RSLodIcons
-    'Sprites for MMVI.',                     // RSLodSprites
-    'Maps for MMVI',                         // RSLodGames
-    'Maps for MMVI',                         // RSLodGames7
-    'newmaps for MMVI',                      // RSLodChapter
-    'newmaps for MMVII',                     // RSLodChapter7
-    'Language for MMVIII.'                   // RSLodMM8
-  );
-
 procedure TRSLodBase.AfterRenameFile(Sender: TRSMMFiles; Index: int);
 var
   a: TStream;
@@ -2105,75 +2204,6 @@ end;
 
 { TRSLod }
 
-type
-  PMMLodFile = ^TMMLodFile;
-  TMMLodFile = packed record
-    BmpSize: int;
-    DataSize: int;
-    BmpWidth: int2;
-    BmpHeight: int2;
-    BmpWidthLn2: int2;  // textures: log2(BmpWidth)
-    BmpHeightLn2: int2;  // textures: log2(BmpHeight)
-    BmpWidthMinus1: int2;  // textures: BmpWidth - 1
-    BmpHeightMinus1: int2;  // textures: BmpHeight - 1
-    Palette: int2;
-    _unk: int2;
-    UnpSize: int;
-    Bits: int;  // Bits:  2 - multitexture, $10 - something important too, $400 - don't free buffers 
-    // Data...
-    // Palette...
-  end;
-
-  TSpriteLine = packed record
-    a1: int2;
-    a2: int2;
-    pos: int4;
-  end;
-  TSprite = packed record
-    Size: int;
-    w: int2;
-    h: int2;
-    Palette: int2;
-    unk_1: int2;
-    yskip: int2; // number of clear lines at the bottom
-    unk_2: int2; // used in runtime only, for bits
-    UnpSize: int;
-  end;
-  TSpriteEx = packed record
-    Sprite: TSprite;
-    Lines: array[0..(MaxInt div SizeOf(TSpriteLine) div 2)] of TSpriteLine;
-    // Data...
-  end;
-
-  TPCXFileHeader = packed record
-    ImageSize: longint;
-    Width: longint;
-    Height: longint;
-    // Data...
-    // Palette...
-  end;
-  PPCXFileHeader = ^TPCXFileHeader;
-   // Pcx Format: <Header> <Picture> <Palette>
-   // The format is far from real PCX
-   // Palette exists only if biSizeImage/(biWidth*biHeight) = 1
-
-  TMM6GamesFile = packed record
-    DataSize: int;
-    UnpackedSize: int;
-  end;
-
-  TMM7GamesFile = packed record
-    Sig1: int; // $16741
-    Sig2: int; // $6969766D (mvii)
-    DataSize: int;
-    UnpackedSize: int;
-  end;
-
-const
-  cnkNone = 0;
-  cnkExist = 1;
-  cnkGetName = 2;
-
 function TRSLod.Add(const Name: string; b: TBitmap; pal: int = 0): int;
 begin
   Result:= AddBitmap(Name, b, pal, true);
@@ -2422,6 +2452,91 @@ begin
   end;
 end;
 
+function MixCl(c1, c2, c3, c4: int): int;
+begin
+  Result:= ((c1 and $FCFCFC + c2 and $FCFCFC + c3 and $FCFCFC + c4 and $FCFCFC) +
+    (c1 and $030303 + c2 and $030303 + c3 and $030303 + c4 and $030303 + $020202) and $C0C0C) shr 2;
+end;
+
+procedure FillBitmapZooms(b2: TBitmap; buf: PChar; pal: HPALETTE);
+const
+  dx = 4;
+var
+  i, x, y, dy, c, w, h: int;
+  p: PChar;
+begin
+  b2.HandleType:= bmDIB;
+  b2.PixelFormat:= pf32bit;
+  w:= b2.Width;
+  h:= b2.Height;
+  inc(buf, w*h);  // skip normal size picture
+  p:= b2.ScanLine[0];
+  dy:= int(b2.ScanLine[1]) - int(p);
+  for i := 1 to 3 do
+  begin
+    w:= w div 2;
+    h:= h div 2;
+    for y := 0 to h - 1 do
+      for x := 0 to w - 1 do
+      begin
+        c:= MixCl(pint(p + y*2*dy + x*2*dx)^,
+                  pint(p + y*2*dy + (x*2 + 1)*dx)^,
+                  pint(p + (y*2 + 1)*dy + x*2*dx)^,
+                  pint(p + (y*2 + 1)*dy + (x*2 + 1)*dx)^);
+        if i = 1 then
+          c:= RSSwapColor(c);
+        pint(p + y*dy + x*dx)^:= c;
+        buf^:= chr(GetNearestPaletteIndex(pal, c));
+        inc(buf);
+      end;
+  end;
+end;
+
+procedure TRSLod.DoPackBitmap(b: TBitmap; var b1, b2: TBitmap; var hdr; m,
+  buf: TMemoryStream; Keep: Boolean);
+var
+  zoom: Boolean;
+  i: int;
+begin
+  with TMMLodFile(hdr) do
+  begin
+    UnpSize:= BmpSize;
+    zoom:= (Bits and 2 <> 0);
+    if zoom then
+      inc(UnpSize, ((BmpSize div 4 + BmpSize) div 4 + BmpSize) div 4);
+    buf.SetSize(UnpSize);
+  end;
+  if b.Width <> 0 then
+  begin
+    if (Keep or zoom or Assigned(OnConvertToPalette)) and (b.PixelFormat <> pf8bit) or
+        Keep and (b.HandleType <> bmDIB) then
+    begin
+      b1:= TBitmap.Create;
+      b1.Assign(b);
+    end;
+    if (b1.PixelFormat <> pf8bit) and Assigned(OnConvertToPalette) then
+      OnConvertToPalette(self, b, b1);
+    b1.PixelFormat:= pf8bit;
+    b1.HandleType:= bmDIB;
+    RSBitmapToBuffer(buf.Memory, b1);
+    if zoom then
+    begin
+      b2:= TBitmap.Create;
+      b2.Assign(b);
+      b1.IgnorePalette:= false;
+      FillBitmapZooms(b2, buf.Memory, b1.Palette);
+    end;
+  end;
+
+  with TMMLodFile(hdr) do
+    Zip(m, buf, UnpSize, @DataSize, @UnpSize);
+
+  i:= m.Seek(0, soEnd);
+  m.SetSize(i + 256*3);
+  b1.IgnorePalette:= false;
+  RSWritePalette(PChar(m.Memory) + i, b1.Palette);
+end;
+
 function TRSLod.Extract(Index: int; const Dir: string; Overwrite: Boolean): string;
 var
   a: TObject;
@@ -2481,6 +2596,26 @@ begin
   if (p + 5)^ = #0 then  exit;
 bad:
   Result:= 0;
+end;
+
+procedure TRSLod.FindBitmapPalette(const name: string; b: TBitmap; var pal, Bits: int);
+var
+  NoPal: Boolean;
+  i: int;
+begin
+  NoPal:= pal <= 0;
+  if (NoPal or (Bits = -1)) and FFiles.FindFile(name, i) then
+  begin
+    if pal <= 0 then
+      pal:= GetIntAt(i, 20);
+    if Bits = -1 then
+      Bits:= GetIntAt(i, 28) or $12;
+  end else
+    if Bits = -1 then
+      Bits:= $12;
+
+  if NoPal and (Bits <> 0) and Assigned(OnNeedPalette) then
+    OnNeedPalette(self, b, pal);
 end;
 
 function TRSLod.FindSamePalette(const PalEntries; var pal: int): Boolean;
@@ -2607,7 +2742,6 @@ function TRSLod.AddBitmap(const Name: string; b: TBitmap; pal: int;
 var
   nam: string;
   m: TMemoryStream;
-  NoPal: Boolean;
   i: int;
 begin
   b.HandleType:= bmDIB;
@@ -2649,24 +2783,10 @@ begin
       end;
       RSLodBitmaps, RSLodIcons, RSLodMM8:
       begin
-        if (FVersion = RSLodBitmaps) then
-        begin
-          NoPal:= pal <= 0;
-          if (NoPal or (Bits = -1)) and FFiles.FindFile(nam, i) then
-          begin
-            if pal <= 0 then
-              pal:= GetIntAt(i, 20);
-            if Bits = -1 then
-              Bits:= GetIntAt(i, 28) or $12;
-          end else
-            if Bits = -1 then
-              Bits:= $12;
-
-          if NoPal and (Bits <> 0) and Assigned(OnNeedPalette) then
-            OnNeedPalette(self, b, pal);
-        end else
-          if Bits = -1 then
-            Bits:= 0;
+        if FVersion = RSLodBitmaps then
+          FindBitmapPalette(nam, b, pal, Bits)
+        else if Bits = -1 then
+          Bits:= 0;
 
         PackBitmap(b, m, pal, Bits, Keep);
       end;
@@ -2775,69 +2895,12 @@ begin
   end;
 end;
 
-function MixCl(c1, c2, c3, c4: int): int;
-begin
-  Result:= ((c1 and $FCFCFC + c2 and $FCFCFC + c3 and $FCFCFC + c4 and $FCFCFC) +
-    (c1 and $030303 + c2 and $030303 + c3 and $030303 + c4 and $030303 + $020202) and $C0C0C) shr 2;
-end;
-
 procedure TRSLod.PackBitmap(b: TBitmap; m: TMemoryStream; pal, ABits: int; Keep: Boolean);
-
-  function GetLn2(v: int): int;
-  begin
-    Result:= 0;
-    while (v <> 0) and (v and 1 = 0) do
-    begin
-      v:= v shr 1;
-      inc(Result);
-    end;
-    if v <> 1 then
-      Result:= 0;
-  end;
-
-  procedure FillBitmapZooms(b2: TBitmap; buf: PChar; pal: HPALETTE);
-  const
-    dx = 4;
-  var
-    i, x, y, dy, c, w, h: int;
-    p: PChar;
-  begin
-    b2.HandleType:= bmDIB;
-    b2.PixelFormat:= pf32bit;
-    w:= b2.Width;
-    h:= b2.Height;
-    inc(buf, w*h);  // skip normal size picture
-    p:= b2.ScanLine[0];
-    dy:= int(b2.ScanLine[1]) - int(p);
-    for i := 1 to 3 do
-    begin
-      w:= w div 2;
-      h:= h div 2;
-      for y := 0 to h - 1 do
-        for x := 0 to w - 1 do
-        begin
-          c:= MixCl(pint(p + y*2*dy + x*2*dx)^,
-                    pint(p + y*2*dy + (x*2 + 1)*dx)^,
-                    pint(p + (y*2 + 1)*dy + x*2*dx)^,
-                    pint(p + (y*2 + 1)*dy + (x*2 + 1)*dx)^);
-          if i = 1 then
-            c:= RSSwapColor(c);
-          pint(p + y*dy + x*dx)^:= c;
-          buf^:= chr(GetNearestPaletteIndex(pal, c));
-          inc(buf);
-        end;
-    end;
-  end;
-
 var
   buf: TMemoryStream;
-  zoom: Boolean;
   b1, b2: TBitmap;
-  p: PChar;
-  i, sz0: int;
+  sz0: int;
 begin
-  //if (FVersion = RSLodBitmaps) and (b.PixelFormat <> pf8bit) then
-  //  raise ERSLodException.Create(SRSLodBitmapsMust256);
   sz0:= m.Size;
   m.SetSize(sz0 + SizeOf(TMMLodFile));
   ZeroMemory(PChar(m.Memory) + sz0, SizeOf(TMMLodFile));
@@ -2846,13 +2909,10 @@ begin
     BmpWidth:= b.Width;
     BmpHeight:= b.Height;
     BmpSize:= BmpWidth*BmpHeight;
-    UnpSize:= BmpSize;
-    zoom:= false;
     if (FVersion = RSLodBitmaps) and (BmpWidth <> 0) then
     begin
       Palette:= pal;
       Bits:= ABits;
-
       if ABits and 2 <> 0 then
       begin
         BmpWidthLn2:= GetLn2(BmpWidth);
@@ -2863,60 +2923,14 @@ begin
           raise ERSLodBitmapException.CreateFmt(SRSLodMustPowerOf2, ['height']);
         BmpWidthMinus1:= BmpWidth - 1;
         BmpHeightMinus1:= BmpHeight - 1;
-        zoom:= true;
-        inc(UnpSize, ((BmpSize div 4 + BmpSize) div 4 + BmpSize) div 4);
       end;
-    end;
-    if UnpSize <= 256 then
-    begin
-      buf:= nil;
-      DataSize:= UnpSize;
-      UnpSize:= 0;
-      i:= m.Size;
-      m.SetSize(i + DataSize);
-      p:= PChar(m.Memory) + i;
-    end else
-    begin
-      buf:= TMemoryStream.Create;
-      buf.SetSize(UnpSize);
-      p:= buf.Memory;
     end;
   end;
-  b1:= nil;
+  b1:= b;
   b2:= nil;
+  buf:= TMemoryStream.Create;
   try
-    if b.Width <> 0 then
-    begin
-      b1:= b;
-      if (Keep or zoom or Assigned(OnConvertToPalette)) and (b.PixelFormat <> pf8bit) or
-          Keep and (b.HandleType <> bmDIB) then
-      begin
-        b1:= TBitmap.Create;
-        b1.Assign(b);
-      end else
-        b1:= b;
-      if (b1.PixelFormat <> pf8bit) and Assigned(OnConvertToPalette) then
-        OnConvertToPalette(self, b, b1);
-      b1.PixelFormat:= pf8bit;
-      b1.HandleType:= bmDIB;
-      RSBitmapToBuffer(p, b1);
-      if zoom then
-      begin
-        b2:= TBitmap.Create;
-        b2.Assign(b);
-        b1.IgnorePalette:= false;
-        FillBitmapZooms(b2, p, b1.Palette);
-      end;
-    end else
-      b1:= b;
-
-    if buf <> nil then
-      with TMMLodFile(ptr(PChar(m.Memory) + sz0)^) do
-        Zip(m, buf, UnpSize, @DataSize, @UnpSize);
-    i:= m.Seek(0, soEnd);
-    m.SetSize(i + 256*3);
-    b1.IgnorePalette:= false;
-    RSWritePalette(PChar(m.Memory) + i, b1.Palette);
+    DoPackBitmap(b, b1, b2, ptr(PChar(m.Memory) + sz0)^, m, buf, Keep);
   finally
     buf.Free;
     if b1 <> b then
@@ -3056,15 +3070,8 @@ begin
       data.Seek(-hdr.DataSize - 768, soCurrent);
       Unzip(data, m, hdr.DataSize, hdr.UnpSize, true);
 
-      if hdr.BmpSize <> hdr.BmpWidth*hdr.BmpHeight then // *.bitmapshd.lod
-      begin
-        Width:= PowerOf2[hdr.BmpWidthLn2];
-        Height:= PowerOf2[hdr.BmpHeightLn2];
-      end else
-      begin
-        Width:= hdr.BmpWidth;
-        Height:= hdr.BmpHeight;
-      end;
+      Width:= hdr.BmpWidth;
+      Height:= hdr.BmpHeight;
       RSBufferToBitmap(m.Memory, b);
       FLastPalette:= hdr.Palette;
     finally
@@ -3299,6 +3306,136 @@ var
 begin
   p:= PChar(output.Memory);
   Zip(output, buf, size, int(PChar(DataSize) - p), int(PChar(UnpackedSize) - p));
+end;
+
+{ TRSLwd }
+
+constructor TRSLwd.CreateInternal(Files: TRSMMFiles);
+begin
+  inherited;
+  TransparentColor:= Graphics.clDefault;
+end;
+
+procedure TRSLwd.DoPackBitmap(b: TBitmap; var b1, b2: TBitmap; var hdr; m,
+  buf: TMemoryStream; Keep: Boolean);
+var
+  trans: int;
+begin
+  with buf, TMMLodFile(hdr) do
+  begin
+    if (FVersion <> RSLodBitmaps) or (BmpSize = 0) then
+    begin
+      inherited;
+      exit;
+    end;
+    if Keep and ((b.PixelFormat <> pf24bit) or (b.HandleType <> bmDIB)) then
+    begin
+      b1:= TBitmap.Create;
+      b1.Assign(b);
+    end;
+    b1.HandleType:= bmDIB;
+    b1.PixelFormat:= pf24bit;
+    SetSize(BmpSize*3 + 1);
+    RSBitmapToBuffer(Memory, b1);
+    trans:= PackLwd(Memory, BmpWidth, BmpHeight, m);
+    Zip(m, buf, BmpSize*3, @DataSize, @UnpSize);
+  end;
+  m.WriteBuffer(trans, 4);
+end;
+
+procedure TRSLwd.FindBitmapPalette(const name: string; b: TBitmap; var pal, Bits: int);
+begin
+  pal:= 0;
+  Bits:= $12;
+end;
+
+function TRSLwd.FindDimentions(p: PChar): TColor;
+var
+  a: TStream;
+  lod: TRSMMArchive;
+  rec: TMMLodFile;
+  c, j: int;
+begin
+  Result:= Graphics.clDefault;
+  if BitmapsLods = nil then
+    StdNeedBitmapsLod(self);
+  if (BitmapsLods = nil) or not RSMMArchivesFind(BitmapsLods, PChar(p), lod, j) then
+    exit;
+  a:= lod.FFiles.GetAsIsFileStream(j, true);
+  try
+    a.Seek(16, soFromCurrent);
+    if a.Read(rec, SizeOf(rec)) = SizeOf(rec) then
+      with PMMLodFile(p + 16)^ do
+      begin
+        BmpWidth:= rec.BmpWidth;
+        BmpHeight:= rec.BmpHeight;
+        a.Seek(rec.DataSize, soFromCurrent);
+        c:= 0;
+        if a.Read(c, 3) = 3 then
+          if (c = $FFFF00) or (c = $FF00FF) or (c = $FC00FC) or (c = $FCFC00) then
+            Result:= c
+          else
+            Result:= Graphics.clNone;
+      end;
+  finally
+    lod.FFiles.FreeAsIsFileStream(j, a);
+  end;
+end;
+
+function TRSLwd.PackLwd(p: PChar; w, h: int; m: TMemoryStream): int;
+var
+  i, c: int;
+begin
+  Result:= FindDimentions(m.Memory);
+  if TransparentColor <> Graphics.clDefault then
+    Result:= TransparentColor;
+  if Result <> Graphics.clDefault then
+  begin
+    if Result <> Graphics.clNone then
+      Result:= RSSwapColor(ColorToRGB(Result));
+    exit;
+  end;
+  for i:= w*h downto 1 do
+  begin
+    c:= pint(p)^ and $FFFFFF;
+    if Result = Graphics.clDefault then
+      if (c = $FFFF) or (c = $FF00FF) or (c = $FC00FC) or (c = $FCFC) then
+      begin
+        Result:= c;  // Margenta/light blue for transparency
+        exit;
+      end;
+    inc(p, 3);
+  end;
+  Result:= Graphics.clNone;
+end;
+
+procedure TRSLwd.UnpackBitmap(data: TStream; b: TBitmap; const FileHeader);
+begin
+  with TMMLodFile(FileHeader) do
+    if (Palette = 0) and ((UnpSize > BmpSize*2) or (UnpSize = 0) and (DataSize > BmpSize*2)) then
+      UnpackLwd(data, b, FileHeader)
+    else
+      inherited;
+end;
+
+procedure TRSLwd.UnpackLwd(data: TStream; b: TBitmap; const FileHeader);
+var
+  hdr: TMMLodFile absolute FileHeader;
+  m: TMemoryStream;
+begin
+  m:= TMemoryStream.Create;
+  with b do
+    try
+      Unzip(data, m, hdr.DataSize, hdr.UnpSize, true);
+
+      PixelFormat:= pf24bit;
+      Width:= PowerOf2[hdr.BmpWidthLn2];
+      Height:= PowerOf2[hdr.BmpHeightLn2];
+      RSBufferToBitmap(m.Memory, b);
+      FLastPalette:= hdr.Palette;
+    finally
+      m.Free;
+    end
 end;
 
 { TRSSnd }
@@ -3705,6 +3842,8 @@ begin
     Result:= TRSSnd.Create(FileName)
   else if ext = '.vid' then
     Result:= TRSVid.Create(FileName)
+  else if ext = '.lwd' then
+    Result:= TRSLwd.Create(FileName)
   else
     Result:= TRSLod.Create(FileName);
 end;
@@ -3753,4 +3892,24 @@ begin
   a:= nil;
 end;
 
+function RSMMPaletteToBitmap(const a: TRSByteArray): TBitmap;
+const
+  Data = #0#1#2#3#4#5#6#7#8#9#10#11#12#13#14#15#16#17#18#19#20#21#22#23#24#25#26#27#28#29#30#31#32#33#34#35#36#37#38#39#40#41#42#43#44#45#46#47#48#49#50#51#52#53#54#55#56#57#58#59#60#61#62#63#64#65#66#67#68#69#70#71#72#73#74#75#76#77#78#79#80#81#82#83#84#85#86#87#88#89#90#91#92#93#94#95#96#97#98#99#100#101#102#103#104#105#106#107#108#109#110#111#112#113#114#115#116#117#118#119#120#121#122#123#124#125#126#127 + #128#129#130#131#132#133#134#135#136#137#138#139#140#141#142#143#144#145#146#147#148#149#150#151#152#153#154#155#156#157#158#159#160#161#162#163#164#165#166#167#168#169#170#171#172#173#174#175#176#177#178#179#180#181#182#183#184#185#186#187#188#189#190#191#192#193#194#195#196#197#198#199#200#201#202#203#204#205#206#207#208#209#210#211#212#213#214#215#216#217#218#219#220#221#222#223#224#225#226#227#228#229#230#231#232#233#234#235#236#237#238#239#240#241#242#243#244#245#246#247#248#249#250#251#252#253#254#255;
+begin
+  Assert(length(a) = 768);
+  Result:= TBitmap.Create;
+  with Result do
+    try
+      PixelFormat:= pf8bit;
+      Palette:= RSMakePalette(ptr(a));
+      Width:= 16;
+      Height:= 16;
+      RSBufferToBitmap(@Data[1], Result);
+    except
+      Free;
+      raise;
+    end
+end;
+
 end.
+
