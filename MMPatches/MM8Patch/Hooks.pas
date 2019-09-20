@@ -2476,52 +2476,6 @@ asm
   mov [esp], $4AB69C
 end;
 
-//----- Fix chests: reorder to preserve important items
-
-procedure FixChestSmartProc(p: PChar);
-const
-  size = _ItemOff_Size;
-var
-  i, j: int;
-begin
-  with TStringList.Create do
-    try
-      CaseSensitive:= true;
-      Sorted:= true;
-      for i:= 0 to 139 do
-        if pint(p + i*size)^ <> 0 then
-          AddObject(IntToStr(min(0, pint(p + i*size)^) and $8) + IntToHex(i, 2), ptr(i));
-
-      if (Count = 0) or (Strings[Count - 1][1] = '0') then  // no random items
-        exit;
-
-      // sorted: fixed items, artifacts, i6, i5, ..., i1
-      for i:= 0 to Count - 1 do
-      begin
-        j:= int(Objects[i]);
-        if j > i then  // source item isn't erased yet
-        begin
-          CopyMemory(p + i*size, p + j*size, size);
-          ZeroMemory(p + j*size, size);
-        end
-        else if j < i then  // random item
-        begin
-          ZeroMemory(p + i*size, size);
-          pint(p + i*size)^:= RSCharToInt(Strings[i][1]) - 8;
-        end;
-      end;
-    finally
-      Free;
-    end;
-end;
-
-procedure FixChestSmartHook;
-asm
-  mov [esp + $28], $8C
-  mov eax, edi
-  call FixChestSmartProc
-end;
-
 //----- Fix items.txt: make special items accept standard "of ..." strings
 
 function FixItemsTxtProc(text: PChar): int;
@@ -3404,7 +3358,7 @@ end;
 //----- HooksList
 
 var
-  HooksList: array[1..325] of TRSHookInfo = (
+  HooksList: array[1..324] of TRSHookInfo = (
     (p: $458E18; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $463862; old: $450493; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave/quicksave filenames localization
     (p: $4CD509; t: RShtNop; size: 12), // Fix Save/Load Slots: it resets SaveSlot, SaveScroll
@@ -3617,7 +3571,6 @@ var
     (p: $424ED0; newp: @FixTelepathy; t: RShtCall; size: 8), // Fix Telepathy
     (p: $4AB02A; newp: @FixSmallScaleSprites; t: RShtCall), // Fix small scale sprites crash
     (p: $434199; old: $1F400000; new: $7FFFFFFF; t: RSht4), // Infinite view distance in dungeons
-    (p: $44D9AC; newp: @FixChestSmartHook; t: RShtCall; size: 8; Querry: 19), // Fix chests: reorder to preserve important items
     (p: $455173; newp: @FixItemsTxtHook; t: RShtJmp), // Fix items.txt: make special items accept standard "of ..." strings
     (p: $44607A; newp: @FixTimerRetriggerHook1; t: RShtJmp; size: 6; Querry: 21), // Fix immediate timer re-trigger
     (p: $44602D; newp: @FixTimerRetriggerHook2; t: RShtBefore; size: 7; Querry: 21), // Fix timers
@@ -3818,8 +3771,6 @@ begin
     RSApplyHooks(HooksList, 12);
   if Options.FixSkyBitmap then
     RSApplyHooks(HooksList, 18);
-  if Options.FixChestsByReorder then
-    RSApplyHooks(HooksList, 19);
   if Options.FixTimers then
     RSApplyHooks(HooksList, 21);
   if Options.FixMovement then

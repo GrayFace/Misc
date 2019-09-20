@@ -1,4 +1,4 @@
-GrayFace MM8 Patch v2.4
+GrayFace MM8 Patch v2.4.1
 By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
@@ -8,6 +8,10 @@ The patch has no uninstaller to make things simpler.
 All configuration is done via mm8.ini, which is populated with main options on the first run.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
+
+New in version 2.4.1:
+  << MM8 >>
+[-] My bug: Random items weren't appearing in chests with quest items.
 
 New in version 2.4:
   << MM6 - MM8 >>

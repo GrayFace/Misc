@@ -129,7 +129,7 @@ begin
     Result:= FillRect(wp, r, GetStockObject(BLACK_BRUSH));
     exit;
   end;
-  if _Windowed^ and (msg >= WM_MOUSEFIRST) and (msg <= WM_MOUSELAST) then
+  if (msg >= WM_MOUSEFIRST) and (msg <= WM_MOUSELAST) then
     xy.y:= TransformMousePos(xy.x, xy.y, lp);
 {$IFNDEF MM6}
   if (msg >= WM_MOUSEFIRST) and (msg <= WM_MOUSELAST) and IsLayoutActive then
@@ -335,8 +335,8 @@ begin
   if not IsLayoutActive(false) then
   begin
     NeedScreenWH;
-    x1:= TransformMouseCoord(x, SW, r.Right, MouseDX);
-    Result:= TransformMouseCoord(y, SH, r.Bottom, MouseDY);
+    x1:= TransformMouseCoord(x, SW, r.Right, Options.MouseDX);
+    Result:= TransformMouseCoord(y, SH, r.Bottom, Options.MouseDY);
   end else
 {$IFNDEF MM6}
     Layout.MapMouse(x1, Result, x, y, r.Right, r.Bottom);
@@ -1238,11 +1238,63 @@ asm
   popad
 end;
 
+//----- Fix chests: reorder to preserve important items
+
+procedure FixChestSmartProc(p: PChar);
+const
+  size = _ItemOff_Size;
+var
+  i, j: int;
+begin
+  with TStringList.Create do
+    try
+      CaseSensitive:= true;
+      Sorted:= true;
+      for i:= 0 to 139 do
+        if pint(p + i*size)^ <> 0 then
+          AddObject(IntToHex(byte(min(1, pint(p + i*size)^)), 2) + IntToHex(i, 2), ptr(i));
+
+      if (Count = 0) or (Strings[Count - 1][1] = '0') then  // no random items
+        exit;
+
+      // sorted: fixed items, artifacts, i6, i5, ..., i1
+      for i:= 0 to Count - 1 do
+      begin
+        j:= int(Objects[i]);
+        if j > i then  // source item isn't erased yet
+        begin
+          CopyMemory(p + i*size, p + j*size, size);
+          ZeroMemory(p + j*size, size);
+        end
+        else if j < i then  // random item
+        begin
+          ZeroMemory(p + i*size, size);
+          pint(p + i*size)^:= StrToInt('$' + copy(Strings[i], 1, 2)) - 256;
+        end;
+      end;
+    finally
+      Free;
+    end;
+end;
+
+procedure FixChestSmartHook;
+asm
+  mov [esp + $28], $8C
+{$IFDEF mm6}
+  add eax, 4
+{$ELSEIF defined(MM7)}
+  mov eax, ebx
+{$ELSE}
+  mov eax, edi
+{$IFEND}
+  call FixChestSmartProc
+end;
+
 //----- HooksList
 
 var
 {$IFDEF MM6}
-  Hooks: array[1..28] of TRSHookInfo = (
+  Hooks: array[1..29] of TRSHookInfo = (
     (p: $457567; newp: @WindowWidth; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $45757D; newp: @WindowHeight; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $454340; newp: @WindowProcHook; t: RShtFunctionStart; size: 8), // Window procedure hook
@@ -1270,10 +1322,11 @@ var
     (p: $435296; newp: @DrawDoneHook; t: RShtAfter; Querry: hqClickThruEffects), // Click through effects SW (outdoor)
     (p: $43E37F; newp: @CloseNPCDialog6; t: RShtBefore; size: 6), // Allow entering maps from NPC dialog
     (p: $43DE74; newp: @CloseNPCDialog2; t: RShtBefore), // Allow entering maps from NPC dialog
+    (p: $456347; newp: @FixChestSmartHook; t: RShtCall; size: 8; Querry: 19), // Fix chests: reorder to preserve important items
     ()
   );
 {$ELSEIF defined(MM7)}
-  Hooks: array[1..51] of TRSHookInfo = (
+  Hooks: array[1..52] of TRSHookInfo = (
     (p: $47B84E; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (monsters)
     (p: $47B296; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (items)
     (p: $47AD40; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (sprites)
@@ -1324,10 +1377,11 @@ var
     (p: $48E12D+10*4; old: $48E0C8; new: $48DF73; t: RSht4), // Disease2 and Disease3 not working
     (p: $4483D8; newp: @CloseNPCDialog; t: RShtBefore; size: 6), // Allow entering maps from NPC dialog
     (p: $448017; newp: @CloseNPCDialog2; t: RShtBefore; size: 7), // Allow entering maps from NPC dialog
+    (p: $450284; newp: @FixChestSmartHook; t: RShtCall; size: 8; Querry: 19), // Fix chests: reorder to preserve important items
     ()
   );
 {$ELSE}
-  Hooks: array[1..47] of TRSHookInfo = (
+  Hooks: array[1..48] of TRSHookInfo = (
     (p: $47AB35; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Monsters not visible on the sides of the screen
     (p: $47A55E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Items not visible on the sides of the screen
     (p: $48B37E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Effects not visible on the sides of the screen
@@ -1374,6 +1428,7 @@ var
     (p: $48D5BC+10*4; old: $48D557; new: $48D40B; t: RSht4), // Disease2 and Disease3 not working
     (p: $4456ED; newp: @CloseNPCDialog; t: RShtBefore; size: 7), // Allow entering maps from NPC dialog
     (p: $44533D; newp: @CloseNPCDialog2; t: RShtBefore; size: 7), // Allow entering maps from NPC dialog
+    (p: $44D9AC; newp: @FixChestSmartHook; t: RShtCall; size: 8; Querry: 19), // Fix chests: reorder to preserve important items
     ()
   );
 {$IFEND}
@@ -1402,6 +1457,8 @@ begin
     RSApplyHooks(Hooks, hqPaperDollInChestsAndOldCloseRings);
   if Options.FixSFT then
     RSApplyHooks(Hooks, hqFixSFT);
+  if Options.FixChestsByReorder then
+    RSApplyHooks(Hooks, 19);
 end;
 
 procedure ApplyMMHooksSW;

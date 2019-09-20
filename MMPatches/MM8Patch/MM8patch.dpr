@@ -288,6 +288,12 @@ Version 2.4:
 [-] My bug: PaperDollInChests option was causing a crash in Software rendering mode
 [*] StartupCopyrightDelay option made hidden and 0 by default
 
+Version 2.4.1:
+(MM6-MM8)
+[+] DouseDX, MouseDY in PatchOptions
+(MM8)
+[-] My bug: Random items weren't appearing in chests with quest items
+
 
 
 

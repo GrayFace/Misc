@@ -120,7 +120,9 @@ type
     TrueColorTextures: LongBool;              // (unused in MM6)
     ResetPalettes: LongBool;                  // (unused in MM6)
     FixSFT: LongBool;                         //
-    AxeGMFullProbabilityAt: int;              //
+    AxeGMFullProbabilityAt: int;              // (unused in MM6)
+    MouseDX: Double;                          //
+    MouseDY: Double;                          //
   end;
 
 var
@@ -151,8 +153,6 @@ var
   MLookRightPressed: pbool = _RightButtonPressed;
 
   TurnSpeedNormal, TurnSpeedDouble: single;
-
-  MouseDX, MouseDY: Double;
 
   FormatSettingsEN: TFormatSettings;
 

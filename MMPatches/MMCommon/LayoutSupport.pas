@@ -476,14 +476,16 @@ begin
     DL.Draw(true);
     Drawn:= true;
   end;
+  Options.MouseDX:= 0;
+  Options.MouseDY:= 0;
   if not DL.HitTest(x1, y1) then
   begin
     x1:= _ScreenMiddle.X;
     y1:= _ScreenMiddle.Y;
     if not IsRectEmpty(RenderRect) then
     begin
-      MouseDX:= TransformMouseCoord(x, x1, ScreenW, fw, DXProxyShiftX);
-      MouseDY:= TransformMouseCoord(y, y1, ScreenH, fh, DXProxyShiftY);
+      Options.MouseDX:= TransformMouseCoord(x, x1, ScreenW, fw, DXProxyShiftX);
+      Options.MouseDY:= TransformMouseCoord(y, y1, ScreenH, fh, DXProxyShiftY);
     end;
   end
   else if x1 < 0 then

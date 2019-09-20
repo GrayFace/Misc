@@ -793,12 +793,12 @@ end;
 
 procedure LoadMouseRemainderX;
 asm
-  fadd MouseDX
+  fadd Options.MouseDX
 end;
 
 procedure LoadMouseRemainderY;
 asm
-  fadd MouseDY
+  fadd Options.MouseDY
 end;
 
 //----- Support any FOV indoors
