@@ -450,12 +450,12 @@ begin
     if not HandleAllocated or (csDestroyingHandle in ControlState) then  exit;}
 
   case Msg.Msg of
-    WM_NCHitTest:
+    WM_NCHITTEST:
       if not htTransp then
         Msg.Result:=HTCLIENT
       else
         DefWinProc(Msg);
-    WM_LButtonDown, WM_RBUTTONDOWN, WM_MBUTTONDOWN:
+    WM_LBUTTONDOWN, WM_RBUTTONDOWN, WM_MBUTTONDOWN:
     begin
       DefWinProc(Msg);
       RSHideHint(false);

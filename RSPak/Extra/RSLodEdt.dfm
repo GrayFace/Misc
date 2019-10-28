@@ -1,7 +1,7 @@
 object RSLodEdit: TRSLodEdit
   Left = 192
   Top = 115
-  ClientHeight = 740
+  ClientHeight = 765
   ClientWidth = 985
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -19,14 +19,14 @@ object RSLodEdit: TRSLodEdit
   OnDestroy = FormDestroy
   DesignSize = (
     985
-    740)
+    765)
   PixelsPerInch = 120
   TextHeight = 17
   object Splitter1: TSplitter
     Left = 348
     Top = 31
     Width = 6
-    Height = 673
+    Height = 698
     MinSize = 50
     ResizeStyle = rsUpdate
     ExplicitHeight = 851
@@ -35,14 +35,14 @@ object RSLodEdit: TRSLodEdit
     Left = 0
     Top = 31
     Width = 348
-    Height = 673
+    Height = 698
     Align = alLeft
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitHeight = 697
+    ExplicitHeight = 673
     object Splitter2: TSplitter
       Left = 0
-      Top = 310
+      Top = 335
       Width = 348
       Height = 6
       Cursor = crVSplit
@@ -52,7 +52,7 @@ object RSLodEdit: TRSLodEdit
     end
     object Panel1: TRSPanel
       Left = 0
-      Top = 316
+      Top = 341
       Width = 348
       Height = 357
       Align = alBottom
@@ -60,7 +60,7 @@ object RSLodEdit: TRSLodEdit
       TabOrder = 0
       OnDblClick = Image1DblClick
       OnPaint = Panel1Paint
-      ExplicitTop = 340
+      ExplicitTop = 316
       DesignSize = (
         348
         357)
@@ -199,7 +199,7 @@ object RSLodEdit: TRSLodEdit
       Left = 0
       Top = 0
       Width = 348
-      Height = 310
+      Height = 335
       Align = alClient
       BevelInner = bvSpace
       BevelKind = bkFlat
@@ -232,7 +232,7 @@ object RSLodEdit: TRSLodEdit
         00094600610076006F0072006900740065007300}
       OnCancelEdit = TreeView1CancelEdit
       OnWndProc = TreeView1WndProc
-      ExplicitHeight = 334
+      ExplicitHeight = 310
     end
   end
   object Panel3: TRSPanel
@@ -262,7 +262,7 @@ object RSLodEdit: TRSLodEdit
     Left = 354
     Top = 31
     Width = 631
-    Height = 673
+    Height = 698
     Align = alClient
     BevelInner = bvSpace
     BevelKind = bkFlat
@@ -285,17 +285,17 @@ object RSLodEdit: TRSLodEdit
     OnMouseDown = ListView1MouseDown
     TotalCmdNovigation = True
     OnWndProc = ListView1WndProc
-    ExplicitHeight = 697
+    ExplicitHeight = 673
   end
   object Panel4: TRSPanel
     Left = 0
-    Top = 704
+    Top = 729
     Width = 985
     Height = 36
     Align = alBottom
     TabOrder = 3
     Visible = False
-    ExplicitTop = 728
+    ExplicitTop = 704
     DesignSize = (
       985
       36)
@@ -329,7 +329,7 @@ object RSLodEdit: TRSLodEdit
   end
   object PanelRebuilding: TRSPanel
     Left = 288
-    Top = 337
+    Top = 350
     Width = 411
     Height = 72
     Anchors = []
@@ -342,7 +342,7 @@ object RSLodEdit: TRSLodEdit
     ParentFont = False
     TabOrder = 4
     Visible = False
-    ExplicitTop = 349
+    ExplicitTop = 337
   end
   object OpenDialog1: TRSOpenSaveDialog
     DefaultExt = '.lod'
@@ -1573,26 +1573,22 @@ object RSLodEdit: TRSLodEdit
       Caption = 'Palette'
       Visible = False
       object Default1: TMenuItem
-        AutoCheck = True
         Caption = 'Default'
         Checked = True
         RadioItem = True
         OnClick = Default1Click
       end
       object FirstKind1: TMenuItem
-        AutoCheck = True
         Caption = 'First Kind'
         RadioItem = True
         OnClick = Default1Click
       end
       object SecondKind1: TMenuItem
-        AutoCheck = True
         Caption = 'Second Kind'
         RadioItem = True
         OnClick = Default1Click
       end
       object ThirdKind1: TMenuItem
-        AutoCheck = True
         Caption = 'Third Kind'
         RadioItem = True
         OnClick = Default1Click

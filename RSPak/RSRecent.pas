@@ -45,13 +45,14 @@ type
     procedure Clicked(Sender:TObject);
     procedure RefreshNames;
     procedure DoDelete(it:TMenuItem); overload;
-    function DoDelete(const FileName: string):boolean; overload;
-    function DoStoreLast:boolean;
+    function DoDelete(const FileName: string): Boolean; overload;
+    procedure DoStore(const AName: string);
+    function DoStoreLast: Boolean;
   public
     constructor Create(AOnClick:TRSRecentEvent; ATarget:TMenuItem;
         SubMenu:boolean; AFullPath:boolean=true);
     destructor Destroy; override;
-    procedure Add(const FileName: string);
+    procedure Add(const FileName: string; Active: Boolean = true);
     procedure StoreLast;
     function Delete(const FileName: string):boolean;
     procedure Clear;
@@ -143,18 +144,15 @@ begin
            ExtractFileName(TRSRecentMenuItem(Items[i+j]).Path);
 end;
 
-function TRSRecent.DoStoreLast:boolean;
+procedure TRSRecent.DoStore(const AName: string);
 var a:TRSRecentMenuItem; i:int;
 begin
-  Result:= FLast<>'';
-  if not Result then exit;
   with FParent do
   begin
     a:= TRSRecentMenuItem.Create(FParent.GetParentMenu);
     CopyProps(a, FTarget);
     a.OnClick:=Clicked;
-    a.Path:= FLast;
-    FLast:='';
+    a.Path:= AName;
     i:=GetAfter;
     if FCount>=FLimit then
       DoDelete(Items[i+FCount]);
@@ -163,19 +161,34 @@ begin
   end;
 end;
 
+function TRSRecent.DoStoreLast: Boolean;
+begin
+  Result:= FLast<>'';
+  if not Result then exit;
+  DoStore(FLast);
+  FLast:='';
+end;
+
 procedure TRSRecent.StoreLast;
 begin
   if DoStoreLast then
     RefreshNames;
 end;
 
-procedure TRSRecent.Add(const FileName:string);
+procedure TRSRecent.Add(const FileName:string; Active: Boolean);
 var b:boolean;
 begin
   if SameText(FileName, FLast) then exit;
-  b:=DoDelete(FileName);
-  b:=DoStoreLast or b;
-  FLast:=FileName;
+  b:= DoDelete(FileName);
+  if Active then
+  begin
+    b:= DoStoreLast or b;
+    FLast:= FileName;
+  end else
+  begin
+    b:= true;
+    DoStore(FileName);
+  end;
   if b then
     RefreshNames;
 end;
@@ -186,7 +199,7 @@ begin
   dec(FCount);
 end;
 
-function TRSRecent.DoDelete(const FileName: string):boolean;
+function TRSRecent.DoDelete(const FileName: string): Boolean;
 var i:int;
 begin
   i:=GetAfter;

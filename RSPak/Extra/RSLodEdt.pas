@@ -74,6 +74,7 @@ Version 1.2.2:
 [+] bitmaps.lwd support
 [+] Better transparent color detection
 [+] Palettes preview
+[+] After you create an archive from a selection of files, it's added to recent files list
 [-] Unpacking errors while dragging files onto other apps were leading to MMArchive hanging
 [-] "Ignore Unpacking Errors" option state wasn't preserved on program restart
 [-] When creating new archive default file type was misleading  
@@ -3067,6 +3068,7 @@ begin
     if a0 <> nil then  output.RawFiles.FreeAsIsFileStream(0, a0);
     output.Free;
   end;
+  Recent.Add(SaveDialogSaveSelectionAs.FileName, false);
 end;
 
 procedure WriteTextNode(sl: TStringList; Node: TMyNode; Indent: string);
@@ -4122,6 +4124,8 @@ begin
 end;
 
 procedure TRSLodEdit.FindSpritePal(name: string; var pal: int2; Kind: int);
+var
+  sl: TStringList;
 const
   size6 = $38;
   size7 = $3C;
@@ -4178,10 +4182,22 @@ const
     Result:= false;
   end;
 
+  procedure FindLods(const mask: string);
+  begin
+    with TRSFindFile.Create(mask) do
+      try
+        while FindEachFile do
+          sl.Add(FileName);
+      finally
+        Free;
+      end;
+  end;
+
 var
   Lod: TRSLod;
   fs: TFileStream;
   s, name1: string;
+  mm8: Boolean;
   size, i, j: int;
   p: PChar;
 begin
@@ -4202,25 +4218,45 @@ begin
           Free;
         end;
       s:= s + 'T.lod';
+      mm8:= false;
 
       if FileExists(name1 + s) then
-        Lod:= TRSLod.Create(name1 + s)
+        mm8:= true
       else if FileExists(name1 + 'EnglishT.lod') then
-        Lod:= TRSLod.Create(name1 + 'EnglishT.lod')
+      begin
+        s:= 'EnglishT.lod';
+        mm8:= true;
+      end
       else if FileExists(name1 + 'events.lod') then
-        Lod:= TRSLod.Create(name1 + 'events.lod')
+        s:= 'events.lod'
       else if FileExists(name1 + 'icons.lod') then
-        Lod:= TRSLod.Create(name1 + 'icons.lod')
+        s:= 'icons.lod'
       else
         exit; // !!! show dialog
 
+      Lod:= nil;
+      sl:= TStringList.Create;
       try
-        if not Lod.RawFiles.FindFile('dsft.bin', j) then  exit;
-        FSFT:= TMemoryStream.Create;
-        Lod.Extract(j, FSFT);
+        FindLods(name1 + s);
+        if mm8 then
+          FindLods(name1 + '*.T.lod');
+        FindLods(name1 + '*.' + s);
+        Lod:= TRSLod.Create;
+        for i:= sl.Count - 1 downto 0 do
+        begin
+          Lod.Load(sl[i]);
+          if Lod.RawFiles.FindFile('dsft.bin', j) then
+          begin
+            FSFT:= TMemoryStream.Create;
+            Lod.Extract(j, FSFT);
+            break;
+          end;
+        end;
       finally
-        FreeAndNil(Lod);
+        sl.Free;
+        Lod.Free;
       end;
+      if FSFT = nil then  exit;
     end else
     begin
       fs:= TFileStream.Create(name1 + '..\DataFiles\dsft.bin', fmOpenRead);
@@ -4954,6 +4990,7 @@ end;
 
 procedure TRSLodEdit.Default1Click(Sender: TObject);
 begin
+  TMenuItem(Sender).Checked:= true;
   if Sender = FirstKind1 then
     FSFTKind:= 1
   else if Sender = SecondKind1 then
