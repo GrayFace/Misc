@@ -17,12 +17,9 @@ uses
 
 {$R *.res}
 
-const
-  BitmapMode = false; // bitmap mode failed
 var
   ScaleMul: int = 1;
   ScaleDiv: int = 1;
-//  Menu: HMENU = 0;
   MenuDelta: int;
   OuterWnd, InnerWnd: HWND;
   StdOuterWndProc, StdWndProc: ptr;
@@ -50,63 +47,37 @@ var
   mul: int absolute ScaleMul;
   d: int absolute ScaleDiv;
   r: TRect;
-  rgn: HRGN;
-  w, h, i: int;
+  w, h: int;
 begin
   if WindowFromDC(DestDC) <> InnerWnd then
   begin
     Result:= BitBlt(DestDC, X, Y, Width, Height, SrcDC, XSrc, YSrc, Rop);
     exit;
   end;
-  rgn:= 0;
   if ScaleDiv <> 1 then
   begin
     GetClipBox(SrcDC, r);
-    if (XSrc + Width < r.Right) {and ((X + Width)*mul*2 div d = 0)} then
+    if XSrc + Width < r.Right then
       inc(Width);
-    if (XSrc > r.Left) and (X*mul*2 div d <> 0) then
+    if XSrc > r.Left then
     begin
       dec(XSrc);
       dec(X);
       inc(Width);
     end;
-    if (YSrc + Height < r.Bottom) {and ((Y + Height)*mul*2 div d = 0)} then
+    if YSrc + Height < r.Bottom then
       inc(Height);
-    if (YSrc > r.Top) and (Y*mul*2 div d <> 0) then
+    if YSrc > r.Top then
     begin
       dec(YSrc);
       dec(Y);
       inc(Height);
     end;
-{
-    dec(XSrc, X);
-    dec(YSrc, Y);
-    X:= 0;
-    Y:= 0;
-    Width:= BaseRect.Right;
-    Height:= BaseRect.Bottom;
-    Scale(X, Y, Width, Height);
-    rgn:= CreateRectRgn(0,0,0,0);
-    if GetClipRgn(DestDC, rgn) <> 1 then
-    begin
-      DeleteObject(rgn);
-      rgn:= 0;
-    end;
-    IntersectClipRect(DestDC, X, Y, X + Width, Y + Height);
-    X:= 0;
-    Y:= 0;
-    Width:= BaseRect.Right;
-    Height:= BaseRect.Bottom;}
   end;
   w:= Width;
   h:= Height;
   Scale(X, Y, Width, Height);
   Result:= StretchBlt(DestDC, X, Y, Width, Height, SrcDC, XSrc, YSrc, w, h, Rop);
-  if rgn <> 0 then
-  begin
-    SelectClipRgn(DestDC, rgn);
-    DeleteObject(rgn);
-  end;
 end;
 
 function MyStretchBlt(DestDC: HDC; X, Y, Width, Height: Integer; SrcDC: HDC;
@@ -141,13 +112,7 @@ var
   r: TRect;
   s: string;
   w: HWND;
-//  i: int;
 begin
-{  i:= uFlags and (SWP_NOSIZE + SWP_NOMOVE);
-  if i = SWP_NOSIZE then
-  begin
-    uFlags:= uFlags and not SWP_NOSIZE;
-  end;}
   if (wnd = InnerWnd) and (uFlags and (SWP_NOSIZE + SWP_NOMOVE) <> (SWP_NOSIZE + SWP_NOMOVE)) then
   begin
     GetClientRect(OuterWnd, r);
@@ -201,7 +166,7 @@ end;
 function RescaleChild(wnd: HWND; const old: TPoint): Bool; stdcall;
 var
   r: TRect;
-  w, h: int;
+  h: int;
 begin
   Result:= true;
   GetWindowRect(wnd, r);
@@ -225,7 +190,6 @@ var
   d: int absolute ScaleDiv;
   r: TRect;
   old: TPoint;
-  w, h: int;
 begin
   if IsIconic(OuterWnd) then
     exit;
@@ -257,10 +221,6 @@ begin
     MySetWindowPos(InnerWnd, 0, 0, 0, 0, 0, SWP_NOZORDER or SWP_NOACTIVATE);
     if ScaleMul <> old.X then
       EnumChildWindows(InnerWnd, @RescaleChild, int(@old));
-    //MySetWindowPos(InnerWnd, 0, (X - Right) div 2, (Y - Bottom) div 2, Right, Bottom, SWP_NOZORDER or SWP_NOACTIVATE);
-    {w:= RDiv(Right*mul, d);
-    h:= RDiv(Bottom*mul, d);
-    SetWindowPos(InnerWnd, 0, (X - w) div 2, (Y - h) div 2, w, h, SWP_NOZORDER or SWP_NOACTIVATE);}
     InvalidateRect(OuterWnd, nil, false);
     InvalidateRect(InnerWnd, nil, false);
   end;
@@ -270,20 +230,11 @@ var
   WndPos: TPoint;
 
 procedure SwitchMenu;
-var
-  r: TRect;
-//  i: HMENU;
 begin
-  if MenuDelta = 0 then  exit;
-//  GetWindowRect(OuterWnd, r);
+  if MenuDelta = 0 then
+    exit;
   if SetWindowPos(OuterWnd, 0, WndPos.X, WndPos.Y + max(0, MenuDelta), 0, 0, SWP_NOSIZE or SWP_NOZORDER or SWP_NOACTIVATE) then
     MenuDelta:= -MenuDelta;
-{  i:= Menu;
-  Menu:= GetMenu(OuterWnd);
-  if Menu <> 0 then
-    i:= 0;
-  if i <> Menu then
-    SetMenu(OuterWnd, i);}
 end;
 
 var
@@ -448,45 +399,6 @@ begin
     end;
 end;
 
-var
-  Bmp: TBitmap;
-  WndDC: HDC;
-
-function MyBeginPaint(hWnd: HWND; var lpPaint: TPaintStruct): HDC; stdcall;
-begin
-  Result:= BeginPaint(hWnd, lpPaint);
-  if hWnd = InnerWnd then
-  begin
-    WndDC:= Result;
-    Result:= Bmp.Canvas.Handle;
-  end;
-end;
-
-function MyGetDC(hWnd: HWND): HDC; stdcall;
-begin
-  if hWnd = InnerWnd then
-    Result:= Bmp.Canvas.Handle
-  else
-    Result:= GetDC(hWnd);
-end;
-
-function MyReleaseDC(hWnd: HWND; hDC: HDC): Integer; stdcall;
-var
-  r: TRect;
-begin
-  if hWnd = InnerWnd then
-  begin
-    if WndDC = 0 then
-      WndDC:= GetDC(hWnd);
-    GetClientRect(hWnd, r);
-    with BaseRect do
-      StretchBlt(WndDC, 0, 0, r.Right, r.Bottom, hDC, 0, 0, Right, Bottom, SRCCOPY);
-    hDC:= WndDC;
-    WndDC:= 0;
-  end;
-  Result:= ReleaseDC(hWnd, hDC);
-end;
-
 type
   TGetKeyState = function(nVirtKey: Integer): SHORT stdcall;
 
@@ -570,24 +482,10 @@ begin
   end;
   if OnlyControls then
     exit;
-  if BitmapMode then
-  begin
-    Bmp:= TBitmap.Create;
-    Bmp.Width:= RectW(BaseRect);
-    Bmp.Height:= RectH(BaseRect);
-    RSLoadProc(proc, user32, 'GetDC', false, true);
-    ReplaceIATEntryInAllMods(proc, @MyGetDC);
-    RSLoadProc(proc, user32, 'BeginPaint', false, true);
-    ReplaceIATEntryInAllMods(proc, @MyBeginPaint);
-    RSLoadProc(proc, user32, 'ReleaseDC', false, true);
-    ReplaceIATEntryInAllMods(proc, @MyReleaseDC);
-  end else
-  begin
-    RSLoadProc(proc, gdi32, 'BitBlt', false, true);
-    ReplaceIATEntryInAllMods(proc, @MyBlt);
-    RSLoadProc(proc, gdi32, 'StretchBlt', false, true);
-    ReplaceIATEntryInAllMods(proc, @MyStretchBlt);
-  end;
+  RSLoadProc(proc, gdi32, 'BitBlt', false, true);
+  ReplaceIATEntryInAllMods(proc, @MyBlt);
+  RSLoadProc(proc, gdi32, 'StretchBlt', false, true);
+  ReplaceIATEntryInAllMods(proc, @MyStretchBlt);
   RSLoadProc(proc, user32, 'InvalidateRect', false, true);
   ReplaceIATEntryInAllMods(proc, @MyInvalidateRect);
   RSLoadProc(proc, user32, 'SetWindowPos', false, true);
