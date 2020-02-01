@@ -70,7 +70,7 @@ Version 1.2.1:
 [-] Crash when loading another archive while in Compare To mode
 [-] After drag-drop of the same archive, files list wasn't updated after operations
 
-Version 1.2.2:
+Version 1.3:
 [+] bitmaps.lwd support
 [+] Better transparent color detection
 [+] Palettes preview
@@ -1375,6 +1375,7 @@ begin
   end;
   //RSSaveTextFile(AppPath + LangDir + 'tmp.txt', RSLanguage.MakeLanguage);
 
+  RSMenu.Font.Charset:= Font.Charset;
   TreeView1.Items[0].Text:= SFavorites;
 
   for i := 0 to length(Toolbar) - 1 do

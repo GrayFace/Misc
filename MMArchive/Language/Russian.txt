@@ -17,9 +17,9 @@ SPleaseWaitRebuilding	Подождите, архив пересобирается...
 SPleaseWait	Подождите...
 RSSpeedButton1.Hint	Растянуть
 RSSpeedButton2.Hint	Проигрывать
-OpenDialog1.Filter	Архивы Might&Magic или Heroes 3 (*.lod; *.snd; *.vid; *.mm6; *.mm7; *.dod; *.pac)|*.lod;*.snd;*.vid;*.mm6;*.mm7;*.dod;*.pac|Все файлы|*.*
-OpenDialogMerge.Filter	Архивы Might&Magic или Heroes 3 (*.lod; *.snd; *.vid; *.mm6; *.mm7; *.dod; *.pac)|*.lod;*.snd;*.vid;*.mm6;*.mm7;*.dod;*.pac|Все файлы|*.*
-SaveDialogSaveSelectionAs.Filter	Архивы Might&Magic или Heroes 3 (*.lod; *.snd; *.vid; *.mm6; *.mm7; *.dod; *.pac)|*.lod;*.snd;*.vid;*.mm6;*.mm7;*.dod;*.pac|Все файлы|*.*
+OpenDialog1.Filter	Архивы Might&Magic или Heroes 3 (*.lod; *.lwd; *.snd; *.vid; *.mm6; *.mm7; *.dod; *.pac)|*.lod;*.lwd;*.snd;*.vid;*.mm6;*.mm7;*.dod;*.pac|Все файлы|*.*
+OpenDialogMerge.Filter	Архивы Might&Magic или Heroes 3 (*.lod; *.lwd; *.snd; *.vid; *.mm6; *.mm7; *.dod; *.pac)|*.lod;*.lwd;*.snd;*.vid;*.mm6;*.mm7;*.dod;*.pac|Все файлы|*.*
+SaveDialogSaveSelectionAs.Filter	Архивы Might&Magic или Heroes 3 (*.lod; *.lwd; *.snd; *.vid; *.mm6; *.mm7; *.dod; *.pac)|*.lod;*.lwd;*.snd;*.vid;*.mm6;*.mm7;*.dod;*.pac|Все файлы|*.*
 SaveDialogSaveSelectionAs.Title	Создать архив из выбранных файлов
 SaveSelectionAsArchive1.Caption	Создать архив из выбранных файлов
 AddFolder1.Caption	Создать папку
@@ -40,7 +40,7 @@ Rename2.Caption	Переименовать
 Rename3.Caption	Переименовать
 Extract1.Caption	Экспортировать
 AddtoFavorites1.Caption	Добавить в Избранное
-OpenDialog2.Filter	Избранное (*.lf)|*.lf|All files|*.*
+OpenDialog2.Filter	Избранное (*.lf)|*.lf|Все файлы|*.*
 File1.Caption	Файл
 New1.Caption	Новый
 Open1.Caption	Открыть
@@ -78,12 +78,13 @@ Associate1.Caption	Ассоциировать с *.lod
 Associate2.Caption	Ассоциировать с *.snd
 Associate3.Caption	Ассоциировать с *.vid
 Associate4.Caption	Ассоциировать с *.pac
+Associate5.Caption	Ассоциировать с *.lwd
 Help1.Caption	Справка
 SaveDialogExport.Filter	Все файлы|*.*
 SaveDialogExport.Title	Экспорт
 OpenDialogImport.Filter	Все файлы|*.*
 OpenDialogImport.Title	Добавить файлы
-SaveDialogNew.Filter	Любой архив (*.lod;*.snd;*.vid;*.pac;*.mm6;*.mm7;*.dod)|*.lod;*.snd;*.vid;*.pac;*.mm6;*.mm7;*.dod|LOD-архив Heroes 3 (*.lod; *.pac)|*.lod;*.pac|Архив звуков Heroes 3 (*.snd)|*.snd|Архив звуков MM (*.snd)|*.snd|Архив видео Heroes 3 или MM 7-8 (*.vid)|*.vid|Архив видео MM 6 (*.vid)|*.vid|Архив Bitmaps для MM (*.lod)|*.lod|Архив Icons для MM (*.lod)|*.lod|Архив Sprites для MM (*.lod)|*.lod|Архив English для MM 8 (*.lod)|*.lod|Архив Games для MM 7-8 (*.lod)|*.lod|Архив Games для MM 6 (*.lod)|*.lod|Сохранённая игра MM 7-8 (*.lod;*.mm7;*.dod)|*.lod;*.mm7;*.dod|Сохранённая игра MM 6 (*.lod;*.mm6)|*.lod;*.mm6|Все файлы|*.*
+SaveDialogNew.Filter	Любой архив Heroes 3 (*.lod; *.snd; *.vid; *.pac)|*.lod;*.snd;*.vid;*.pac|LOD-архив Heroes 3 (*.lod; *.pac)|*.lod;*.pac|Архив звуков Heroes 3 (*.snd)|*.snd|Архив звуков MM (*.snd)|*.snd|Архив видео Heroes 3 или MM 7-8 (*.vid)|*.vid|Архив видео MM 6 (*.vid)|*.vid|Архив Bitmaps для MM (*.lod;*.lwd)|*.bitmaps.lod;*.lod;*.lwd|Архив Icons для MM (*.lod)|*.lod|Архив Sprites для MM (*.lod)|*.lod|Архив English для MM 8 (*.lod)|*.lod|Архив Games для MM 7-8 (*.lod)|*.lod|Архив Games для MM 6 (*.lod)|*.lod|Сохранённая игра MM 7-8 (*.lod;*.mm7;*.dod)|*.lod;*.mm7;*.dod|Сохранённая игра MM 6 (*.lod;*.mm6)|*.lod;*.mm6|Все файлы|*.*
 SaveDialogNew.Title	Новый архив
 OpenDialogBitmapsLod.Title	Выберите архив bitmaps.lod
 MergeWith1.Caption	Соединить с архивом...
@@ -149,7 +150,7 @@ sergroj@mail.ru
 Затем вам надо сделать еще 2 палитры. Для этого возьмите один кадр и измените его с помощью таких эффектов, как Оттенок/Насыщенность/Яркость (Hue/Saturation/Brightness) и Яркость/Контраст (Brightness/Contrast). Эти эффекты меняют только палитру, не влияя на то, каким точкам присвоены какие номера цветов. Сделайте так 2 палитры - и все готово. Добавляйте все это в sprites.lod.
 
 Самый интересный способ:
-1 набор кадров + 3 палитры - это самоограничение NWC, позволяющее уменьшить потребности в памяти, размер sprite.lod и ускорить загрузку. Вам их соблюдать не обязательно. Вы можете создать 3 варианта модели монстра, которые могут различаться не только цветами, но и формой, чем угодно. Это как 3 разных монстра - отрендерите их под разными именами, сконвертируйте каждого к своей палитре (так же, с помощью DefTool v2 или подобным способом). Затем добавьте их в sprites.lod и измените Data\Tables\SFT.txt, который создаёт MMExtension. Свяжитесь со мной или Владимиром Maestro, чтобы получить утилиту, упрощающую процесс. Ваш мод, скорее всего, будет требовать установку моего патча, потому что он убирает ограничения на количество загружаемых спрайтов и размер виртуальной памяти M&M.
+1 набор кадров + 3 палитры - это самоограничение NWC, позволяющее уменьшить потребности в памяти, размер sprite.lod и ускорить загрузку. Основную пользу это приносит в режиме программной отрисовки, а в режиме аппаратного 3D разница мала. Вам не обязательно соблюдать это ограничение. Вы можете создать 3 варианта модели монстра, которые могут различаться не только цветами, но и формой - чем угодно. Считайте, что это 3 разных монстра - отрендерите их под разными именами, сконвертируйте каждого к своей палитре (так же, с помощью DefTool v2 или подобным способом). Затем добавьте их в sprites.lod и измените Data\Tables\SFT.txt, который создаёт MMExtension. Свяжитесь со мной или Владимиром Maestro, чтобы получить утилиту, упрощающую процесс. Ваш мод, скорее всего, будет требовать установку моего патча, потому что он убирает ограничения на количество загружаемых спрайтов и размер виртуальной памяти M&M.
 
 Самый сложный способ:
 Если вы посмотрите на монстров, выбрав "По умолчанию" в меню "Палитра", то поймете, как их рендерили в NWC. Большинство имеют область, которая не меняется, и несколько областей, меняющих цвет. Эти области не имеют между собой общих цветов.

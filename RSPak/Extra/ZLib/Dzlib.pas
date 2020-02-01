@@ -440,7 +440,7 @@ begin
     end;
     if DCheck(inflate(FZRec, 0)) = Z_STREAM_END then // Sergey Rozhenko fix
     begin
-      Result:= Count - FZRec.avail_out;
+      Result:= Count - Longint(FZRec.avail_out);
       exit;
     end;
   end;
