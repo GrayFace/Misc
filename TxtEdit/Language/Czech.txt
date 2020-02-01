@@ -1,0 +1,68 @@
+	[Main Form]
+GlobalCharset	EASTEUROPE_CHARSET
+EditsCharset	EASTEUROPE_CHARSET
+SelectAll2.Caption	Vybrat v¹e
+Delete1.Caption	Smazat
+Paste2.Caption	Vlo¾it
+Copy2.Caption	Kopírovat
+Cut2.Caption	Vyjmout
+Redo2.Caption	Znovu provést zmìnu
+Undo2.Caption	Vrátit zmìnu
+Help1.Caption	N&ápovìda
+Associatewithers1.Caption	Pøiøadit k *.ers souborùm
+Associatewithert1.Caption	Pøiøadit k *.ert souborùm
+Associate1.Caption	Pøidat do kontextového menu pro *.txt soubory
+Language1.Caption	Jazyk
+Options1.Caption	&Nastavení
+SelectColumn1.Caption	Vybrat sloupec
+SelectRow1.Caption	Vybrat øádek
+AddColumn1.Caption	Pøidat sloupec
+DeleteColumn1.Caption	Smazat sloupec
+InsertColumn1.Caption	Vlo¾it sloupec
+AddRow1.Caption	Pøidat øádek
+DeleteRow1.Caption	Smazat øádek
+InsertRow1.Caption	Vlo¾it øádek
+WordWrap1.Caption	Zalamování øádkù
+Replace1.Caption	Nahradit...
+FindNext1.Caption	Najít dal¹í
+Find1.Caption	Najít...
+SelectAll1.Caption	Vybrat &v¹e
+FillPaste1.Caption	Vyplnit buòky
+Paste1.Caption	Vlo¾it
+Copy1.Caption	&Kopírovat
+Cut1.Caption	Vyjmout
+Redo1.Caption	Znovu provést zmìnu
+Undo1.Caption	Vrátit zmìnu
+Edit1.Caption	&Upravit
+Exit1.Caption	Uk&onèit
+Recent1.Caption	Nedávno otevøené soubory
+SaveAs1.Caption	Ulo¾it &jako...
+Save1.Caption	Ulo¾it
+Open1.Caption	Otevøít
+New1.Caption	Nový soubor
+File1.Caption	&Soubor
+OpenDialog1.Filter	Txt tabulky|*.txt|V¹echny soubory|*.*
+SaveDialog1.Filter	Txt tabulky|*.txt|V¹echny soubory|*.*
+EditY.Hint	Poèet zafixovaných sloupcù
+EditX.Hint	Poèet zafixovaných øádkù
+Caption	Editor Txt Tabulek
+STxtAssociationCaption	Otevøít v programu TxtEdit jako textovou tabulku
+SSearchOtherEnd	Pokraèovat v hledání od zaèátku?
+SSearchNotFound	Hledaný øetìzec "%s" nebyl nalezen
+SReopenQuestion	Opravdu chcete znovu naèíst "%s"?
+SSaveQuestionUntitled	Ulo¾it zmìny v nepojmenovaném souboru?
+SSaveQuestion	Ulo¾it zmìny v "%s"?
+
+	[Help]
+GlobalCharset	EASTEUROPE_CHARSET
+EditsCharset	EASTEUROPE_CHARSET
+Memo1.Lines.Strings	Verze %VERSION%
+Autor: Sergey Rozhenko
+http://sites.google.com/site/sergroj/
+sergroj@mail.ru
+
+Autor pøekladu do èe¹tiny: Templayer
+http://www.Templayer.cz/
+Templayer@seznam.cz
+Button1.Caption	Fajn
+Caption	Nápovìda

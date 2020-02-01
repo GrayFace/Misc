@@ -35,6 +35,7 @@ Redo1.Caption	Пов&торить
 Cut1.Caption	&Вырезать
 Copy1.Caption	&Копировать
 Paste1.Caption	Вст&авить
+FillPaste1.Caption	Заполнить ячейки
 SelectAll1.Caption	В&ыделить все
 Find1.Caption	Найти...
 FindNext1.Caption	Найти далее

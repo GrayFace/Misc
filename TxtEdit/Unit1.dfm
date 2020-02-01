@@ -267,6 +267,10 @@ object Form1: TForm1
         ShortCut = 16470
         OnClick = Paste1Click
       end
+      object FillPaste1: TMenuItem
+        Caption = 'Fill Cells'
+        OnClick = FillPaste1Click
+      end
       object N1: TMenuItem
         Caption = '-'
       end

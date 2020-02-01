@@ -28,6 +28,14 @@ v1.3.1:
 [-] Copy-Paste didn't warrant close warning
 [-] Undo bugs
 [-] Ctrl+A was buggy
+
+v1.4:
+[+] Fill Paste
+[+] Better column width calculation
+[+] Font setup in INI
+[+] Czech language by Templayer
+[-] Sometimes hint was shown for all cells
+[-] Pressing right button was resetting multi-cell selection
 }
 
 interface
@@ -110,6 +118,8 @@ type
     RSPopupMenu1: TRSPopupMenu;
     Associatewithert1: TMenuItem;
     Associatewithers1: TMenuItem;
+    FillPaste1: TMenuItem;
+    procedure FillPaste1Click(Sender: TObject);
     procedure StringGrid1ColumnResize(Sender: TStringGrid; Index,
       OldSize: Integer);
     procedure Associatewithers1Click(Sender: TObject);
@@ -200,9 +210,12 @@ type
     FLanguage: string;
     procedure SetLanguage(const v: string);
   protected
+    NeedLoad: Boolean;
     procedure CreateParams(var Params: TCreateParams); override;
     procedure WMHelp(var Msg:TMessage); message WM_Help;
     procedure WMDropFiles(var m: TWMDropFiles); message WM_DropFiles;
+    procedure AutoColumnSize;
+    function UpdateGridHint(x, y: int): Boolean;
   public
     FindHelper: TRSFindReplaceHelper;
     Toolbar: TRSControlArray;
@@ -696,6 +709,21 @@ begin
   end;
 end;
 
+procedure PutTextFill(s: string; sel: TGridRect);
+var ps1,ps2:TRSParsedString; i,j,l:integer;
+begin
+  ps1:=nil; ps2:=nil;
+
+  ps1:= RSParseString(s, [#13#10]);
+  l:= RSGetTokensCount(ps1);
+  for j:= sel.Top to sel.Bottom do
+  begin
+    ps2:=RSParseString(RSGetToken(ps1, (j - sel.Top) mod l), [#9]);
+    for i:= sel.Left to sel.Right do
+      PutString(RSGetToken(ps2, (i - sel.Left) mod RSGetTokensCount(ps2)), i, j);
+  end;
+end;
+
 function GetText(x,y:integer; dx:integer=MaxInt; dy:integer=MaxInt):string;
 var i,j:integer;
 begin
@@ -711,6 +739,33 @@ begin
       for i:= x+1 to min(leng[j]-1, x+dx-1) do
         Result:= Result + #9 + GetCellText(i, j);
     end;
+  end;
+end;
+
+procedure DrawEmptyBmp(i:int; NewWidth:int);
+var Bmp:TBitmap;
+begin
+  Bmp:=EmptyBmp[i];
+  i:=i*2;
+  with Bmp, Canvas do
+  begin
+    if NewWidth>Width then
+      Width:=NewWidth
+    else
+      if (ColorToRGB(EmptyBmpColors[i])=EmptyBmpColorsLast[i]) and
+         (ColorToRGB(EmptyBmpColors[i+1])=EmptyBmpColorsLast[i+1]) then
+        exit;
+
+    EmptyBmpColorsLast[i]:=ColorToRGB(EmptyBmpColors[i]);
+    EmptyBmpColorsLast[i+1]:=ColorToRGB(EmptyBmpColors[i+1]);
+
+    Pen.Color:=EmptyBmpColorsLast[i+1];
+    Brush.Color:=EmptyBmpColorsLast[i+1];
+    Brush.Style:=bsSolid;
+    FillRect(ClipRect);
+    Brush.Color:=EmptyBmpColorsLast[i];
+    Brush.Style:=bsBDiagonal;
+    Rectangle(ClipRect);
   end;
 end;
 
@@ -748,6 +803,8 @@ begin
 end;
 
 procedure TForm1.ReadIni;
+var
+  i: int;
 begin
   with TIniFile.Create(ChangeFileExt(Application.ExeName, '.ini')) do
     try
@@ -756,6 +813,21 @@ begin
       Height:= ReadInteger('Main Form', 'Height', Height);
       if ReadBool('Main Form', 'Maximized', false) then
         WindowState:=wsMaximized;
+      with StringGrid1 do
+      begin
+        Font.Height:= ReadInteger('Main Form', 'Font Height', Font.Height);
+        Font.Name:= ReadString('Main Form', 'Font Name', Font.Name);
+        Canvas.Font:= Font;
+        DefaultRowHeight:= Canvas.TextHeight('W') + 5;
+        for i:=0 to high(EmptyBmp) do
+        begin
+          EmptyBmp[i]:=TBitmap.Create;
+          EmptyBmp[i].Height:=StringGrid1.DefaultRowHeight;
+          DrawEmptyBmp(i, Screen.Width);
+        end;
+        Screen.HintFont:= Font;
+        Memo1.Font:= Font;
+      end;
       Language:= ReadString('General', 'Language', 'English');
     finally
       Free;
@@ -776,44 +848,18 @@ begin
         WriteInteger('Main Form', 'Height', Bottom-Top);
       end;
       WriteBool('Main Form', 'Maximized', IsZoomed(Handle));
+      WriteInteger('Main Form', 'Font Height', StringGrid1.Font.Height);
+      WriteString('Main Form', 'Font Name', StringGrid1.Font.Name);
       WriteString('General', 'Language', Language);
     finally
       Free;
     end;
 end;
 
-procedure DrawEmptyBmp(i:int; NewWidth:int);
-var Bmp:TBitmap;
-begin
-  Bmp:=EmptyBmp[i];
-  i:=i*2;
-  with Bmp, Canvas do
-  begin
-    if NewWidth>Width then
-      Width:=NewWidth
-    else
-      if (ColorToRGB(EmptyBmpColors[i])=EmptyBmpColorsLast[i]) and
-         (ColorToRGB(EmptyBmpColors[i+1])=EmptyBmpColorsLast[i+1]) then
-        exit;
-
-    EmptyBmpColorsLast[i]:=ColorToRGB(EmptyBmpColors[i]);
-    EmptyBmpColorsLast[i+1]:=ColorToRGB(EmptyBmpColors[i+1]);
-
-    Pen.Color:=EmptyBmpColorsLast[i+1];
-    Brush.Color:=EmptyBmpColorsLast[i+1];
-    Brush.Style:=bsSolid;
-    FillRect(ClipRect);
-    Brush.Color:=EmptyBmpColorsLast[i];
-    Brush.Style:=bsBDiagonal;
-    Rectangle(ClipRect);
-  end;
-end;
-
 procedure TForm1.FormCreate(Sender: TObject);
 var
   a: TRSControlArray;
   s, s1: string;
-  i: int;
 begin
   AppTitle:= 'TxtEdit';
   Application.Title:= AppTitle;
@@ -823,7 +869,7 @@ begin
   RSHintWindowClass:= TMyHintWindow;
   if ThemeServices.ThemesEnabled then
     RSRemoveBevels(self);
-  Screen.HintFont:= StringGrid1.Font;
+  ClientHeight:= RDiv(743*ClientWidth, 698);
   HintWindow:= HintWindowClass.Create(self);
   SetLength(NoStr, 1);
   DragAcceptFiles(Handle, true);
@@ -850,14 +896,6 @@ begin
 
   Recent:=TRSRecent.Create(RecentClick, Recent1, true);
 
-  StringGrid1.DefaultRowHeight:= HintWindow.CalcHintRect(MaxInt, 'A', nil).Bottom + 3;
-  for i:=0 to high(EmptyBmp) do
-  begin
-    EmptyBmp[i]:=TBitmap.Create;
-    EmptyBmp[i].Height:=StringGrid1.DefaultRowHeight;
-    DrawEmptyBmp(i, Screen.Width);
-  end;
-
   DeleteColumn1.GroupIndex:=0;
   RSMenu.Add(MainMenu1);
   StringGrid1.Options:=StringGrid1.Options+[goEditing]+[goRangeSelect];
@@ -881,7 +919,7 @@ begin
   StringGrid1Enter(nil);
   SetCaption;
   New1Click(nil);
-  Load(ParamStr(1));
+  NeedLoad:= true;
 end;
 
 procedure TForm1.FormKeyDown(Sender: TObject; var Key: Word;
@@ -927,6 +965,48 @@ begin
   UndoList[CurUndo].StoreState(false);
   Redo1.Enabled:=false;
   Undo1.Enabled:= CurUndo > 0;
+end;
+
+function TForm1.UpdateGridHint(x, y: int): Boolean;
+var
+  s:string; p,p1:TPoint; r:TRect;
+begin
+  Result:= false;
+  with StringGrid1 do
+  begin
+    RSHideHint(false);
+    if (x<0) or (y<0) or (x>=Width) or (y>=Height) or
+       (GetForegroundWindow<>self.Handle) then
+      exit;
+    MouseToCell(x, y, x, y);
+    if (x<0) or (y<0) or (GetKeyState(VK_LBUTTON) and 128<>0) or
+       (GetKeyState(VK_MBUTTON) and 128<>0) or (x=currX) and (y=currY) then
+      exit;
+    LastMouseCellRect:=CellRect(x, y);
+    inc(LastMouseCellRect.Right);
+    inc(LastMouseCellRect.Bottom);
+    s:=RSStringReplace(Cells[x,y], #10, #13#10);
+    if s='' then exit;
+
+    p:=ClientToScreen(LastMouseCellRect.TopLeft);
+    dec(p.X);
+    dec(p.Y);
+    r:=HintWindow.CalcHintRect(Screen.Width, '', nil);
+    with LastMouseCellRect do
+    begin
+      p1.X:=Right-Left+3;
+      p1.Y:= max(Bottom-Top-3, r.Bottom);
+    end;
+
+    r:=HintWindow.CalcHintRect(Screen.Width, s, nil);
+    if (r.Right<=p1.X) and (r.Bottom<=p1.Y) then
+      exit;
+    r.Bottom:=max(r.Bottom, p1.Y);
+    r.Right:=max(r.Right, p1.X - 2);
+    OffsetRect(r, p.X, p.Y);
+    RSShowHint(s, r, MaxInt, true);
+  end;
+  Result:= true;
 end;
 
 procedure TForm1.UpdateUndo(composite: Boolean);
@@ -1678,9 +1758,12 @@ begin
     RSLanguage.LoadLanguage(RSLoadTextFile(s), true);
   except
   end;
-  //RSSaveTextFile(AppPath + LangDir + 'tmp.txt', RSLanguage.CompareLanguage(RSLoadTextFile(s), RSLanguage.MakeLanguage));
+//  RSSaveTextFile(AppPath + LangDir + 'tmp.txt', RSLanguage.CompareLanguage(RSLoadTextFile(s), RSLanguage.MakeLanguage));
+//  RSSaveTextFile(AppPath + LangDir + 'eng.txt', RSLanguage.LanguageBackup);
+  Screen.HintFont:= StringGrid1.Font;
+  RSMenu.Font.Charset:= Font.Charset;
 
-  Undo2.Caption:=Undo1.Caption;
+  Undo2.Caption:= Undo1.Caption;
   Redo2.Caption:= Redo1.Caption;
   Cut2.Caption:= Cut1.Caption;
   Copy2.Caption:= Copy1.Caption;
@@ -1698,6 +1781,8 @@ begin
       with TRSSpeedButton(Toolbar[i]) do
         if Tag <> 0 then
           Hint:= StripHotkey(TMenuItem(Tag).Caption);
+          
+  RedrawWindow(Handle, nil, 0, RDW_FRAME or RDW_INVALIDATE);
 end;
 
 procedure TForm1.InsertRow1Click(Sender: TObject);
@@ -1771,7 +1856,7 @@ end;
 
 procedure TForm1.DoLoad(s: string);
 var
-  s1: string; i,j,k:integer; b:boolean;
+  s1: string; i,j:integer; b:boolean;
 begin
   with StringGrid1 do
     try
@@ -1811,6 +1896,8 @@ begin
            (s1 = 'Singular') and (j = 1) and (Cells[0,0] = 'Name') then
           i:= j + 1;
       end;
+      if (i = 0) and (Cells[1,0] <> '') and (Cells[1,1] = '') then
+        i:= 1;
 
       EditX.MaxValue:=StringGrid1.ColCount-1;
       if (ColCount>2) and IsNumber(Cells[0,i]) then
@@ -1841,23 +1928,7 @@ begin
       CurrY:=EditY.Value;
       StringGrid1SelectCell(nil, CurrX, CurrY, b);
       //MemoLoad(StringGrid1.Cells[CurrX,CurrY]);
-
-      with Canvas do
-      begin
-        Font:= StringGrid1.Font;
-        for i:=0 to StringGrid1.ColCount-1 do
-        begin
-          if s = '' then
-            k:= DefaultColWidth
-          else
-            k:=10;
-          for j:=length(leng)-1 downto 0 do
-          begin
-            k:=max(k, TextWidth(StringGrid1.Cells[i,j])+5);
-          end;
-          StringGrid1.ColWidths[i]:=min(k,StringGrid1.Width*2 div 3);
-        end;
-      end;
+      AutoColumnSize;
     finally
       Rows[0].EndUpdate;
     end;
@@ -1884,6 +1955,55 @@ end;
 procedure TForm1.Associatewithert1Click(Sender: TObject);
 begin
   AssociationERT.Associated:= not Associatewithert1.Checked;
+end;
+
+procedure TForm1.AutoColumnSize;
+const
+  bw = 1;
+var
+  empty: Boolean;
+  i, j, k, w, w0, smW, cW: int;
+begin
+  with StringGrid1, Canvas do
+  begin
+    empty:= true;
+    for i:= 0 to high(Leng) do
+      if Leng[i] > 1 then
+        empty:= false;
+    w:= 0;
+    smW:= 0;
+    cW:= Width - GetSystemMetrics(SM_CXVSCROLL) - 2 - bw;
+    w0:= max(cW div ColCount, DefaultColWidth);
+    Font:= StringGrid1.Font;
+    for i:=0 to ColCount-1 do
+    begin
+      if empty then
+        k:= DefaultColWidth
+      else
+        k:=10;
+      for j:=length(leng)-1 downto 0 do
+      begin
+        k:=max(k, TextWidth(Cells[i,j])+5);
+      end;
+      k:= min(k, cW);
+      ColWidths[i]:= k;
+      inc(w, k + bw);
+      inc(smW, min(k, w0) + bw);
+    end;
+    if (w <= cW) then  exit;
+    dec(w, smW);
+    dec(cW, smW);
+    for i:= 0 to ColCount - 1 do
+      if ColWidths[i] > w0 then
+      begin
+        k:= 0;
+        if w > 0 then
+          k:= max(0, (ColWidths[i] - w0)*cW div w);
+        dec(w, ColWidths[i] - w0);
+        dec(cW, k);
+        ColWidths[i]:= k + w0;
+      end;
+  end;
 end;
 
 procedure TForm1.Associatewithers1Click(Sender: TObject);
@@ -2033,6 +2153,9 @@ end;
 procedure TForm1.FormResize(Sender: TObject);
 begin
   Splitter1.Top:=0;
+  if NeedLoad then
+    Load(ParamStr(1));
+  NeedLoad:= false;
 end;
 
 procedure TForm1.Help1Click(Sender: TObject);
@@ -2058,47 +2181,9 @@ end;
 
 procedure TForm1.StringGrid1MouseMove(Sender: TObject; Shift: TShiftState;
   X, Y: Integer);
-label NoCell;
-var s:string; p,p1:TPoint; r:TRect;
 begin
-  if PtInRect(LastMouseCellRect, Point(x,y)) then exit;
-  with StringGrid1 do
-  begin
-    RSHideHint(false);
-    if (x<0) or (y<0) or (x>=Width) or (y>=Height) or
-       (GetForegroundWindow<>self.Handle) then
-      goto NoCell;
-    MouseToCell(x, y, x, y);
-    if (x<0) or (y<0) or (GetKeyState(VK_LBUTTON) and 128<>0) or
-       (GetKeyState(VK_MBUTTON) and 128<>0) or (x=currX) and (y=currY) then
-      goto NoCell;
-    LastMouseCellRect:=CellRect(x, y);
-    inc(LastMouseCellRect.Right);
-    inc(LastMouseCellRect.Bottom);
-    s:=RSStringReplace(Cells[x,y], #10, #13#10);
-    if s='' then goto NoCell;
-
-    p:=ClientToScreen(LastMouseCellRect.TopLeft);
-    dec(p.X);
-    dec(p.Y);
-    with LastMouseCellRect do
-    begin
-      p1.X:=Right-Left+3;
-      p1.Y:=Bottom-Top-3;
-    end;
-
-    r:=HintWindow.CalcHintRect(Screen.Width, s, nil);
-    if (r.Right<p1.X) and (r.Bottom<p1.Y) then
-      exit;
-    r.Bottom:=max(r.Bottom, p1.Y);
-    r.Right:=max(r.Right, p1.X - 2);
-    OffsetRect(r, p.X, p.Y);
-    RSShowHint(s, r, MaxInt, true);
-    exit;
-  end;
-
-NoCell:
-  LastMouseCellRect.Left:=MaxInt;
+  if not PtInRect(LastMouseCellRect, Point(x,y)) and not UpdateGridHint(X, Y) then
+    LastMouseCellRect.Left:= MaxInt;
 end;
 
 procedure TForm1.CancelHint;
@@ -2142,7 +2227,9 @@ begin
           p.X:= FixedCols;
         if p.Y < FixedRows then
           p.Y:= FixedRows;
-        TMyStringGrid(StringGrid1).FocusCell(p.X, p.Y, true);
+        with StringGrid1.Selection do
+          if not InRange(p.X, Left, Right) or not InRange(p.Y, Top, Bottom) then
+            TMyStringGrid(StringGrid1).FocusCell(p.X, p.Y, true);
       end;
     end;
   CancelHint;
@@ -2157,6 +2244,13 @@ end;
 procedure TForm1.File1Click(Sender: TObject);
 begin
   Recent1.Visible:=Recent1.Count>0;
+end;
+
+procedure TForm1.FillPaste1Click(Sender: TObject);
+begin
+  UpdateUndo;
+  PutTextFill(Clipboard.AsText, StringGrid1.Selection);
+  AddUndo;
 end;
 
 procedure TForm1.Find(Replace: Boolean);
