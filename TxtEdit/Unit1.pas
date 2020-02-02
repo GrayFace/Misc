@@ -36,6 +36,9 @@ v1.4:
 [+] Czech language by Templayer
 [-] Sometimes hint was shown for all cells
 [-] Pressing right button was resetting multi-cell selection
+
+v1.4.1:
+[-] Copy was sometimes broken
 }
 
 interface
@@ -730,7 +733,7 @@ begin
   with Form1 do
   begin
     Result:= GetCellText(x, y);
-    for i:= x+1 to min(leng[0]-1, x+dx-1) do
+    for i:= x+1 to min(leng[y]-1, x+dx-1) do
       Result:= Result + #9 + GetCellText(i, y);
     for j:= y+1 to min(StringGrid1.RowCount-1, y+dy-1) do
     begin
