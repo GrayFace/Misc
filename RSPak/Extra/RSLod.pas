@@ -344,6 +344,7 @@ type
     procedure DoBackupFile(Index: int; Overwrite: Boolean); override;
     function IsSamePalette(const PalEntries; i: int): Boolean;
     procedure StdNeedBitmapsLod(Sender: TObject);
+    function LoadPalette(pal: int; const name: string): HPALETTE;
   public
     BitmapsLods: TRSMMArchivesArray;
 
@@ -430,6 +431,7 @@ function RSLoadMMArchive(const FileName: string): TRSMMArchive;
 function RSMMArchivesFind(const a: TRSMMArchivesArray; const Name: string;
    var Archive: TRSMMArchive; var Index: int): Boolean;
 function RSMMArchivesFindSamePalette(const a: TRSMMArchivesArray; const PalEntries): int;
+function RSMMArchivesIsSamePalette(const a: TRSMMArchivesArray; const PalEntries; pal: int): Boolean;
 function RSMMArchivesCheckFileChanged(const a: TRSMMArchivesArray; Ignore: TRSMMArchive = nil): Boolean;
 procedure RSMMArchivesFree(var a: TRSMMArchivesArray);
 function RSMMPaletteToBitmap(const a: TRSByteArray): TBitmap;
@@ -449,7 +451,7 @@ resourcestring
   SRSLodSpriteMustBmp = 'Cannot add files other than bitmaps into sprites.lod';
   SRSLodActPalMust768 = 'ACT palette size must be 768 bytes';
   SRSLodSpriteExtractNeedLods = 'BitmapsLod and TextsLod must be specified to extract images from sprites.lod';
-  SRSLodPalNotFound = 'File "PAL%.3d" referred to by sprite "%s" not found in BitmapsLod';
+  SRSLodPalNotFound = 'File "PAL%.3d" referenced by "%s" not found in BitmapsLods';
   SRSLodMustPowerOf2 = 'Bitmap %s must be a power of 2 and can''t be less than 4';
 
 implementation
@@ -2458,17 +2460,49 @@ begin
     (c1 and $030303 + c2 and $030303 + c3 and $030303 + c4 and $030303 + $020202) and $C0C0C) shr 2;
 end;
 
-procedure FillBitmapZooms(b2: TBitmap; buf: PChar; pal: HPALETTE);
+procedure MixClTr_Add(var a, b: uint; c: int; need: Boolean); inline;
+begin
+  if not need then  exit;
+  inc(a, uint(c) and $ff00ff);
+  inc(b, uint(c) and $ff00 + $1000000);
+end;
+
+{$Q-} // no overflow checking
+function MixClTr(c1, c2, c3, c4: int; tr1, tr2: word; var inv: Boolean): int;
+const
+  mul: array[0..4] of int = (0, $100, $80, 1, $40);
+var
+  a, b, i: uint;
+begin
+  a:= 0;
+  b:= 0;
+  MixClTr_Add(a, b, c1, tr1 and $ff <> 0);
+  MixClTr_Add(a, b, c2, tr1 and $ff00 <> 0);
+  MixClTr_Add(a, b, c3, tr2 and $ff <> 0);
+  MixClTr_Add(a, b, c4, tr2 and $ff00 <> 0);
+  inv:= b < $3000000;
+  i:= mul[b shr 24];
+  if i = 1 then
+  begin
+    a:= a*$55 + (a shr 2) and $1ff01ff;
+    b:= b*$55 + (b shr 2) and $1ff00;
+  end;
+  Result:= int(((a*i + $800080) and $ff00ff00 + (b*i + $8000) and $ff0000) shr 8);
+end;
+
+procedure DoFillBitmapZooms(b2: TBitmap; buf: PChar; pal: HPALETTE; tr: Boolean); inline;
 const
   dx = 4;
 var
   i, x, y, dy, c, w, h: int;
-  p: PChar;
+  inv: Boolean;
+  p, p0: PChar;
 begin
   b2.HandleType:= bmDIB;
   b2.PixelFormat:= pf32bit;
   w:= b2.Width;
   h:= b2.Height;
+  p0:= buf;
   inc(buf, w*h);  // skip normal size picture
   p:= b2.ScanLine[0];
   dy:= int(b2.ScanLine[1]) - int(p);
@@ -2477,19 +2511,48 @@ begin
     w:= w div 2;
     h:= h div 2;
     for y := 0 to h - 1 do
+    begin
       for x := 0 to w - 1 do
       begin
-        c:= MixCl(pint(p + y*2*dy + x*2*dx)^,
-                  pint(p + y*2*dy + (x*2 + 1)*dx)^,
-                  pint(p + (y*2 + 1)*dy + x*2*dx)^,
-                  pint(p + (y*2 + 1)*dy + (x*2 + 1)*dx)^);
+        if tr then
+        begin
+          c:= MixClTr(pint(p + y*2*dy + x*2*dx)^,
+                      pint(p + y*2*dy + (x*2 + 1)*dx)^,
+                      pint(p + (y*2 + 1)*dy + x*2*dx)^,
+                      pint(p + (y*2 + 1)*dy + (x*2 + 1)*dx)^,
+                      pword(p0)^, pword(p0 + w*2)^, inv);
+        end else
+          c:= MixCl(pint(p + y*2*dy + x*2*dx)^,
+                    pint(p + y*2*dy + (x*2 + 1)*dx)^,
+                    pint(p + (y*2 + 1)*dy + x*2*dx)^,
+                    pint(p + (y*2 + 1)*dy + (x*2 + 1)*dx)^);
         if i = 1 then
           c:= RSSwapColor(c);
         pint(p + y*dy + x*dx)^:= c;
-        buf^:= chr(GetNearestPaletteIndex(pal, c));
+        if tr and inv then
+          buf^:= #0
+        else
+          buf^:= chr(GetNearestPaletteIndex(pal, c));
         inc(buf);
+        if tr then
+          inc(p0, 2);
       end;
+      if tr then
+        inc(p0, w*2);
+    end;
   end;
+end;
+
+procedure FillBitmapZooms(b2: TBitmap; buf: PChar; pal: HPALETTE);
+var
+  c: int;
+begin
+  GetPaletteEntries(pal, 0, 1, c);
+  c:= c and $ffffff;
+  if (c = $FFFF00) or (c = $FF00FF) or (c = $FC00FC) or (c = $FCFC00) then
+    DoFillBitmapZooms(b2, buf, pal, true)
+  else
+    DoFillBitmapZooms(b2, buf, pal, false);
 end;
 
 procedure TRSLod.DoPackBitmap(b: TBitmap; var b1, b2: TBitmap; var hdr; m,
@@ -2514,18 +2577,25 @@ begin
       b1:= TBitmap.Create;
       b1.Assign(b);
     end;
-    if (b1.PixelFormat <> pf8bit) and Assigned(OnConvertToPalette) then
+    if not zoom and (b1.PixelFormat <> pf8bit) and Assigned(OnConvertToPalette) then
       OnConvertToPalette(self, b, b1);
     b1.PixelFormat:= pf8bit;
     b1.HandleType:= bmDIB;
-    RSBitmapToBuffer(buf.Memory, b1);
     if zoom then
     begin
       b2:= TBitmap.Create;
       b2.Assign(b);
       b1.IgnorePalette:= false;
-      FillBitmapZooms(b2, buf.Memory, b1.Palette);
+      if b.PixelFormat <> pf8bit then
+      begin
+        with TMMLodFile(hdr) do
+          b1.Palette:= LoadPalette(Palette, PChar(m.Memory));
+        b1.Canvas.Draw(0, 0, b2);
+      end;
     end;
+    RSBitmapToBuffer(buf.Memory, b1);
+    if zoom then
+      FillBitmapZooms(b2, buf.Memory, b1.Palette);
   end;
 
   with TMMLodFile(hdr) do
@@ -2737,6 +2807,24 @@ begin
     end;
 end;
 
+function TRSLod.LoadPalette(pal: int; const name: string): HPALETTE;
+var
+  a: TMemoryStream;
+  lod: TRSMMArchive;
+  i: int;
+begin
+  if not RSMMArchivesFind(BitmapsLods, Format('pal%.3d', [pal]), lod, i) then
+    raise ERSLodException.CreateFmt(SRSLodPalNotFound, [pal, name]);
+  a:= TMemoryStream.Create;
+  try
+    lod.Extract(i, a);
+    Assert(a.Size>= 256*3);
+    Result:= RSMakePalette(a.Memory);
+  finally
+    a.Free;
+  end;
+end;
+
 function TRSLod.AddBitmap(const Name: string; b: TBitmap; pal: int;
   Keep: Boolean; Bits: int = -1): int;
 var
@@ -2942,17 +3030,28 @@ end;
 procedure TRSLod.PackSprite(b: TBitmap; m: TMemoryStream; pal: int);
 var
   buf: TMemoryStream;
+  b1: TBitmap;
   i, j, k, bp: int;
   scan0, p: PChar; dscan, sz0: int;
   oldht: TBitmapHandleType;
 begin
-  if b.PixelFormat <> pf8bit then
-    raise ERSLodBitmapException.Create(SRSLodSpriteMust256);
-  if pal = 0 then
+  b1:= nil;
+  if pal <= 0 then
     raise ERSLodBitmapException.Create(SRSLodSpriteMustPal);
   oldht:= b.HandleType;
   buf:= TMemoryStream.Create;
   try
+    if b.PixelFormat <> pf8bit then
+    begin
+      //raise ERSLodBitmapException.Create(SRSLodSpriteMust256);
+      b1:= TBitmap.Create;
+      b1.PixelFormat:= pf8bit;
+      b1.Palette:= LoadPalette(pal, PChar(m.Memory));
+      b1.Width:= b.Width;
+      b1.Height:= b.Height;
+      b1.Canvas.Draw(0, 0, b);
+      b:= b1;
+    end;
     sz0:= m.Size - 4;
     m.SetSize(sz0 + SizeOf(TSprite) + b.Height*SizeOf(TSpriteLine));
     with TSpriteEx(ptr(PChar(m.Memory) + sz0)^), Sprite do
@@ -3001,6 +3100,7 @@ begin
   finally
     b.HandleType:= oldht;
     buf.Free;
+    b1.Free;
   end;
 end;
 
@@ -3164,9 +3264,8 @@ procedure TRSLod.UnpackSprite(const name: string; data: TStream; b: TBitmap; siz
 var
   hdr: TSprite;
   Lines: array of TSpriteLine;
-  lod: TRSMMArchive;
   a: TMemoryStream;
-  i, j, w, dy: int;
+  i, w, dy: int;
   p, pbuf: PChar;
 begin
   if (BitmapsLods = nil) and Assigned(OnNeedBitmapsLod) then
@@ -3184,28 +3283,21 @@ begin
   }
   if Assigned(OnSpritePalette) then
     OnSpritePalette(self, name, hdr.Palette, hdr);
-  if not RSMMArchivesFind(BitmapsLods, Format('pal%.3d', [int(hdr.Palette)]), lod, j){ and
-     (not FindSpritePal(name, pal) or
-      not BitmapsLod.RawFiles.FindFile(Format('pal%.3d', [int(pal)]), j))} then
-    raise ERSLodException.CreateFmt(SRSLodPalNotFound, [int(hdr.Palette), name]);
+  b.HandleType:= bmDIB;
+  b.PixelFormat:= pf8bit;
+  b.Palette:= LoadPalette(hdr.Palette, name);
 
   FLastPalette:= hdr.Palette;
   SetLength(Lines, hdr.h);
   data.ReadBuffer(Lines[0], hdr.h*SizeOf(TSpriteLine));
+  b.Width:= hdr.w;
+  b.Height:= hdr.h;
+
+  if hdr.h = 0 then
+    exit;
 
   a:= TMemoryStream.Create;
   try
-    lod.Extract(j, a);
-    b.HandleType:= bmDIB;
-    b.PixelFormat:= pf8bit;
-    b.Palette:= RSMakePalette(a.Memory);
-    b.Width:= hdr.w;
-    b.Height:= hdr.h;
-
-    if hdr.h = 0 then
-      exit;
-      
-    a.Clear;
     Unzip(data, a, size - SizeOf(hdr) - hdr.h*SizeOf(TSpriteLine), hdr.UnpSize, true);
     pbuf:= a.Memory;
 
@@ -3871,6 +3963,15 @@ begin
     if (a[i] is TRSLod) and TRSLod(a[i]).FindSamePalette(PalEntries, Result) then
       exit;
   Result:= 0;
+end;
+
+function RSMMArchivesIsSamePalette(const a: TRSMMArchivesArray; const PalEntries; pal: int): Boolean;
+var
+  lod: TRSMMArchive;
+  i: int;
+begin
+  Result:= RSMMArchivesFind(a, Format('pal%.3d', [pal]), lod, i)
+     and (lod is TRSLod) and TRSLod(lod).IsSamePalette(PalEntries, i);
 end;
 
 function RSMMArchivesCheckFileChanged(const a: TRSMMArchivesArray; Ignore: TRSMMArchive = nil): Boolean;

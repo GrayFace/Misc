@@ -45,7 +45,7 @@ type
 
 function RSExcludeClipRect(DC:HDC; Rect:TRect):Integer; stdcall; external gdi32 name 'ExcludeClipRect';
 
-function RSLoadPic(const Path:string; APixelFormat:TPixelFormat=pf24bit;
+function RSLoadPic(const Path:string; APixelFormat:TPixelFormat=pfCustom;
                    Pic:TBitmap=nil):TBitmap;
 
  // Fixes Delphi bugs with bitmaps
@@ -326,7 +326,7 @@ begin
   Result.eM22:=eM21*v.eM12+eM22*v.eM22;
 end;
 
-function RSLoadPic(const Path:string; APixelFormat:TPixelFormat=pf24bit; Pic:TBitmap=nil):TBitmap;
+function RSLoadPic(const Path:string; APixelFormat:TPixelFormat=pfCustom; Pic:TBitmap=nil):TBitmap;
 var p:TPicture;
 begin
   p:= nil;
@@ -344,14 +344,16 @@ begin
 
     with Result do
       try
-        HandleType:= bmDIB;
-        PixelFormat:= APixelFormat;
         if p<>nil then
         begin
-          Width:= p.Width;
+          Assign(p.Graphic);
+          {Width:= p.Width;
           Height:= p.Height;
-          Canvas.Draw(0, 0, p.Graphic);
+          Canvas.Draw(0, 0, p.Graphic);}
         end;
+        HandleType:= bmDIB;
+        if APixelFormat <> pfCustom then
+          PixelFormat:= APixelFormat;
       except
         if Pic = nil then
           Free;

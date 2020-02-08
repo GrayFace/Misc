@@ -79,6 +79,11 @@ Version 1.3:
 [-] "Ignore Unpacking Errors" option state wasn't preserved on program restart
 [-] When creating new archive default file type was misleading  
 
+Version 1.3.1:
+[+] When importing a texture or a sprite that isn't 8 bit, previous palette is used if the file exists in the archive.
+[-] Mipmaps for transp textures
+
+Генерация палитры для всех дропнутых кадров?
 Возможность выбора номера анимации дефа для показа
 other file types
 }
@@ -4316,16 +4321,23 @@ var
   PalData: array[0..767] of Byte;
   pal: int;
 begin
-  if Bitmap.PixelFormat <> pf8bit then
+  if (Palette < 0) and (Bitmap.PixelFormat <> pf8bit) then
     raise Exception.Create(SEPaletteMustExist);
-  RSWritePalette(@PalData, Bitmap.Palette);
   if Sender.BitmapsLods = nil then
   begin
     NeedBitmapsLod(Sender);
     if Sender.BitmapsLods = nil then
-      exit;
+      if Bitmap.PixelFormat <> pf8bit then
+        raise Exception.Create(SEPaletteMustExist)
+      else
+        exit;
   end;
+  if Bitmap.PixelFormat <> pf8bit then
+    exit;  // convert to the same palette
+  RSWritePalette(@PalData, Bitmap.Palette);
 
+  if (Palette >= 0) and RSMMArchivesIsSamePalette(Sender.BitmapsLods, PalData, Palette) then
+    exit;
   pal:= RSMMArchivesFindSamePalette(Sender.BitmapsLods, PalData);
   if pal <> 0 then
     Palette:= pal
