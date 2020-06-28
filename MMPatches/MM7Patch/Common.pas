@@ -135,17 +135,13 @@ const
 
   _Character_GetWeaponDelay: function(n1, n2: int; this:ptr; ranged: LongBool):int = ptr($48E19B);
   _Character_IsAlive: function(a1,a2, member:ptr):Bool = ptr($492C03);
-  _Character_WearsItem: function(n1,n2:int; this:ptr; id:int):BOOL = ptr($48D6EF);
+  _Character_WearsItem: function(_,__, pl, slot, item: int): LongBool = ptr($48D6EF);
   _Character_WearsItemWithEnchantSpec: function(n1,n2:int; this:ptr; slot, id:int):BOOL = ptr($48D6B6);
   _Character_GetSkillWithBonuses: function(n1,n2:int; this: ptr; skill: int):int = ptr($48F87A);
   _Character_SetDelay: procedure(n1, n2: int; this: ptr; delay: int) = ptr($48E962);
   _TurnBased_CharacterActed: procedure(n1: int = 0; n2: int = 0; this: int = $4F86D8) = ptr($40471C);
 
-  _CharOff_ItemMainHand = $194C;
-  _CharOff_Items = $1F0;
-  _CharOff_Recover = $1934;
-  _CharOff_SpellPoints = $1940;
-  _CharOff_Size = $1B3C;
+  _Mon_IsAgainstMon: function(_, defender, attacker: ptr): int = ptr($40104C);
 
   _ItemOff_Size = $24;
 

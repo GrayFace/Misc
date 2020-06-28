@@ -128,7 +128,7 @@ const
 
   _Character_GetWeaponDelay: function(n1, n2: int; this:ptr; ranged: LongBool):int = ptr($48D62A);
   _Character_IsAlive: function(a1,a2, member:ptr):Bool = ptr($491514);
-  _Character_WearsItem: function(n1,n2:int; this:ptr; id:int):BOOL = ptr($48CFC3);
+  _Character_WearsItem: function(_,__, pl, slot, item: int): LongBool = ptr($48CFC3);
   _Character_WearsItemWithEnchantSpec: function(n1,n2:int; this:ptr; slot, id:int):BOOL = ptr($48CF8A);
   _Character_GetSkillWithBonuses: function(n1,n2:int; this: ptr; skill: int):int = ptr($48EF4F);
   _Character_SetDelay: procedure(n1, n2: int; this: ptr; delay: int) = ptr($48DFF8);
@@ -136,13 +136,8 @@ const
 
   _ReadRegStr: procedure(_: int; out Buf; Name, Default: PChar; BufSize: int) = ptr($462F28);
 
-  _CharOff_Items = $484;
-  _CharOff_ItemMainHand = $1C08;
-  _CharOff_ItemBoots = $1C24;
-  _CharOff_Recover = $1BF2;
-  _CharOff_SpellPoints = $1BFC;
-  _CharOff_Size = $1D28;
-
+  _Mon_IsAgainstMon: function(_, defender, attacker: ptr): int = ptr($401051);
+  
   _ItemOff_Size = $24;
 
   _MonOff_vx = $9C;

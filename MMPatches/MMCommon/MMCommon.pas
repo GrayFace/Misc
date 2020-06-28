@@ -41,6 +41,9 @@ const
   hqTreeHints = 54;
   hqSpriteInteractIgnoreId = 55;
   hqClickThruEffects = 56;
+  hqSprite32Bit = 57;
+  hqFixStayingHints = 58;
+  hqFixMonsterBlockShots = 59;
 
 {$IFDEF mm6}
   m6 = 1;
@@ -123,6 +126,8 @@ type
     AxeGMFullProbabilityAt: int;              // (unused in MM6)
     MouseDX: Double;                          //
     MouseDY: Double;                          //
+    TrueColorSprites: LongBool;               // (unused in MM6)
+    FixMonstersStoppingProjectiles: LongBool; // (unused in MM6)
   end;
 
 var
@@ -146,7 +151,8 @@ var
 
 var
   QuickSavesCount, QuickSaveKey, TurnBasedSpeed, TurnBasedPartySpeed,
-  WindowWidth, WindowHeight, RenderMaxWidth, RenderMaxHeight, MipmapsCount: int;
+  WindowWidth, WindowHeight, RenderMaxWidth, RenderMaxHeight, MipmapsCount,
+  WinScreenDelay, HintStayTime: int;
 
   MLookSpeed, MLookSpeed2: TPoint;
   MouseLookRememberTime: uint;
@@ -157,17 +163,19 @@ var
   FormatSettingsEN: TFormatSettings;
 
   StretchWidth, StretchWidthFull, StretchHeight, StretchHeightFull,
-  ScalingParam1, ScalingParam2: ext;
+  ScalingParam1, ScalingParam2, MLookRawMul: ext;
 
   RecoveryTimeInfo, PlayerNotActive, SDoubleSpeed, SNormalSpeed,
   QuickSaveName, QuickSaveDigitSpace, SArmorHalved, SArmorHalvedMessage: string;
 
   CapsLockToggleRun, NoDeathMovie, FreeTabInInventory, ReputationNumber,
-  AlwaysStrafe, StandardStrafe, MouseLookChanged, FixInfiniteScrolls,
+  AlwaysStrafe, StandardStrafe, MouseLookChanged, MLookRaw, FixInfiniteScrolls,
   FixInactivePlayersActing, BorderlessFullscreen, BorderlessProportional,
   MouseLookCursorHD, SmoothScaleViewSW, WasIndoor, SpriteAngleCompensation,
-  PlaceChestItemsVertically, FixChestsByCompacting,
-  SpriteInteractIgnoreId, ClickThroughEffects: Boolean;
+  PlaceChestItemsVertically, FixChestsByCompacting, FixConditionPriorities,
+  SpriteInteractIgnoreId, ClickThroughEffects, Autorun,
+  OptFixMonsterBlockShots: Boolean;
+  DoubleSpeed: BOOL;
   {$IFNDEF mm6}
   NoVideoDelays, DisableAsyncMouse, ShowTreeHints: Boolean;
   TurnBasedWalkDelay, TreeHintsVal: int;
@@ -326,6 +334,28 @@ type
     Hint: array[1..103] of Char;
   end;
 
+  PDlg = ^TDlg;
+  TDlg = packed record
+    Left, Top, Width, Height, Right_, Bottom_: int;
+    ID, DlgParam: int;  // DlgParam of house dialog is the index in 2DEvents
+    ItemsCount: int;
+    u1: int;
+    KeyboardItemsCount: int;
+    KeyboardItem: int;
+    KeyboardNavigationTrackMouse: Bool;
+    KeyboardLeftRightStep: int;
+    KeyboardItemsStart: int;
+    Index: int;
+    u2: int;
+    UseKeyboadNavigation: Bool;
+    u3: int;
+    TopItem: ptr;
+    BottomItem: ptr;
+  end;
+
+  TDlgArray = array[1..20] of TDlg;
+  TVisibleDlgArray = array[0..19] of int;
+
   PSpriteToDraw = ^TSpriteToDraw;
   TSpriteToDraw = packed record
     ScaleX: int;
@@ -367,7 +397,7 @@ type
 
   PStatusTexts = ^TStatusTexts;
   TStatusTexts = record
-    Text: array[Boolean] of array[0..199] of Char;
+    Text: array[Boolean] of array[0..199] of Char; // BelowMouse, TimedHint
     TmpTime: int;
   end;
 
@@ -405,14 +435,15 @@ const
   _InventoryPaperDollButton = PPDlgButton(m6*$4D46E0 + m7*$507510);
 {$ENDIF}
   _StatusText = PStatusTexts(m6*$55BC04 + m7*$5C32A8 + m8*$5DB758);
+  _NeedUpdateStatus = pbool(m6*$4CB6B4 + m7*$5C343C + m8*$517B48);
   _NoMusicDialog = pbool(m6*$9DE394 + m7*$F8BA90 + m8*$FFDE88); // intro, win screen, High Council
   _PartyPos = PPoint3D(m6*$908C98 + m7*$ACD4EC + m8*$B21554);
   _CameraPos = PPoint3D(m6*$4D5150 + m7*$507B60 + m8*$519438);
   _ScreenMiddle = PPoint(m6*$9DE3C0 + m7*$F8BABC + m8*$FFDEB4);
-  _DialogsHigh = pint(m6*$4D46BC + m7*$5074B0 + m8*$518CE8);
   _MoveToMap = PMoveToMap(m6*$551D20 + m7*$5B6428 + m8*$5CCCB8);
   _PartyBuffs = PPartyBuffs(m6*$908E34 + m7*$ACD6C4 + m8*$B21738);
   _ShowHits = pbool(m6*$6107EC + m7*$6BE1F8 + m8*$6F39B8);
+  _SetHint: procedure(_,__: int; s: PChar) = ptr(m6*$418F40 + m7*$41C061 + m8*$041B711);
   _NoIntro = pbool(m6*$6A5F64 + m7*$71FE8C + m8*$75CDF8);
   _ChestOff_Items = 4;
   _ChestOff_Inventory = 4 + _ItemOff_Size*140;
@@ -422,9 +453,22 @@ const
   _SpritesD3D = PPSpriteD3DArray(_SpritesLod + $ECB0);
 {$ENDIF}
   _SoundVolume = pint(m6*$6107E3 + m7*$6BE1EF + m8*$6F39AF);
+  _DialogsHigh = pint(m6*$4D46BC + m7*$5074B0 + m8*$518CE8);
+  _Dialogs: ^TVisibleDlgArray = ptr(m6*$4CB5F8 + m7*$507460 + m8*$5185B4);
+  _DlgArray: ^TDlgArray = ptr(m6*$4D48F8 + m7*$506DE8 + m8*$518608);
+  _HouseScreen = pint(m6*$9DDD8C + m7*$F8B01C + m8*$FFD408);
+
+  _CharOff_ItemMainHand = m6*$142C + m7*$194C + m8*$1C08;
+  _CharOff_Items = m6*$128 + m7*$1F0 + m8*$484;
+  _CharOff_Recover = m6*$137C + m7*$1934 + m8*$1BF2;
+  _CharOff_SpellPoints = m6*$1418 + m7*$1940 + m8*$1BFC;
+  _CharOff_QuickSpell = m6*$152F + m7*$1A4F + m8*$1C45;
+  _CharOff_QuickSpell2 = m6*$13 + m7*$BB + m8*$1C8E; // my addition
+  _CharOff_Size = m6*$161C + m7*$1B3C + m8*$1D28;
 
 const
-  _ProcessActions:TProcedure = ptr(m6*$42ADA0 + m7*$4304D6 + m8*$42EDD8);
+  _ProcessActions: TProcedure = ptr(m6*$42ADA0 + m7*$4304D6 + m8*$42EDD8);
+  _LoadBitmap: function(_, __, this, pal: int; name: PChar): int = ptr(m6*$40B430 + m7*$40FB2C + m8*$410D70);
 
 {$IFNDEF mm6}
 var
@@ -450,12 +494,15 @@ procedure ClipCursorRel(r: TRect);
 function DynamicFovFactor(const x, y: int): ext;
 function GetViewMul: ext; inline;
 procedure AddAction(action, info1, info2:int); stdcall;
+procedure ShowStatusText(text: string; time: int = 2);
 
 var
   SW, SH: int;
 
 procedure NeedScreenWH;
-procedure __SetSpellBuff;
+procedure Draw8(ps: PByte; pd: PWord; ds, dd, w, h: int; pal: PWordArray);
+procedure Draw8t(ps: PByte; pd: PWord; ds, dd, w, h: int; pal: PWordArray);
+function FindDlg(id: int): PDlg;
 
 var
   SetSpellBuff: procedure(this: ptr; time: int64; skill, power, overlay, caster: int); stdcall;
@@ -518,14 +565,16 @@ var
     Result := ReadInteger(key, Ord(Default)) <> 0;
   end;
 
-  function ReadFloat(const key: string; default: Double): Double;
+  function ReadFloat(const key: string; default: Double; write: Boolean = true): Double;
   var
     s: string;
   begin
     Assert(iniOverride = nil);
     s:= ini.ReadString(sect, key, '');
-    if RSVal(s, Result) then  exit;
-    ini.WriteString(sect, key, FloatToStr(default, FormatSettingsEN));
+    if RSVal(s, Result) then
+      exit;
+    if write then
+      ini.WriteString(sect, key, FloatToStr(default, FormatSettingsEN));
     Result:= default;
   end;
 
@@ -619,6 +668,8 @@ begin
       MLookSpeed.Y:= ini.ReadInteger(sect, 'MouseSensitivityY', MLookSpeed.X);
       MLookSpeed2.X:= ReadInteger('MouseSensitivityAltModeX', 75);
       MLookSpeed2.Y:= ini.ReadInteger(sect, 'MouseSensitivityAltModeY', MLookSpeed2.X);
+      MLookRawMul:= ReadFloat('MouseSensitivityDirectMul', 0, false);
+      MLookRaw:= (MLookRawMul > 0);
       MouseLookChangeKey:= ReadInteger('MouseLookChangeKey', VK_MBUTTON);
       MouseLookTempKey:= ReadInteger('MouseLookTempKey', 0);
       CapsLockToggleMouseLook:= ReadBool('CapsLockToggleMouseLook', true);
@@ -635,7 +686,7 @@ begin
 {$IFNDEF mm6}
       PaletteSMul:= ReadFloat('PaletteSMul', m7*0.65 + m8*1);
       PaletteVMul:= ReadFloat('PaletteVMul', 1.1);
-      NoBitmapsHwl:= ini.ReadBool(sect, 'NoD3DBitmapHwl', true);
+      NoBitmapsHwl:= not FileExists('data\d3dbitmap.hwl') or ini.ReadBool(sect, 'NoD3DBitmapHwl', true);
       if NoBitmapsHwl then
       begin
         HDWTRCount:= max(1, min(15, ini.ReadInteger(sect, 'HDWTRCount', 7 + m8)));
@@ -693,13 +744,18 @@ begin
       {$IFDEF mm7}SupportMM7ResTool:= ini.ReadBool(sect, 'SupportMM7ResTool', false);{$ENDIF}
       FixChestsByCompacting:= ini.ReadBool(sect, 'FixChestsByCompacting', true);
       SpriteAngleCompensation:= ini.ReadBool(sect, 'SpriteAngleCompensation', true);
-      TrueColorTextures:= ini.ReadBool(sect, 'TrueColorTextures', true);
+      TrueColorTextures:= SupportTrueColor and ini.ReadBool(sect, 'TrueColorTextures', BorderlessFullscreen);
+      TrueColorSprites:= SupportTrueColor and ini.ReadBool(sect, 'TrueColorSprites', false);
       FixSFT:= ini.ReadBool(sect, 'FixSFT', true);
       {$IFNDEF mm6}TreeHintsVal:= ReadInteger('TreeHints', m7);{$ENDIF}
       {$IFNDEF mm6}ShowTreeHints:= (TreeHintsVal <> 0);{$ENDIF}
       {$IFNDEF mm6}SpriteInteractIgnoreId:= ini.ReadBool(sect, 'SpriteInteractIgnoreId', true);{$ENDIF}
       {$IFNDEF mm6}AxeGMFullProbabilityAt:= ini.ReadInteger(sect, 'AxeGMFullProbabilityAt', 60);{$ENDIF}
       ClickThroughEffects:= ini.ReadBool(sect, 'ClickThroughEffects', true);
+      WinScreenDelay:= ini.ReadInteger(sect, 'WinScreenDelay', 500);
+      FixConditionPriorities:= ini.ReadBool(sect, 'FixConditionPriorities', true);
+      HintStayTime:= ini.ReadInteger(sect, 'HintStayTime', 2);
+      OptFixMonsterBlockShots:= ReadBool('FixMonstersBlockingShots', false);
 
 {$IFDEF mm6}
       if FileExists(AppPath + 'mm6text.dll') then
@@ -726,7 +782,10 @@ begin
         MipmapsBasePat.CaseSensitive:= true;
         MipmapsBasePat.Duplicates:= dupIgnore;
         MipmapsBasePat.Sorted:= true;
-        ini.ReadSection('MipmapsBase', MipmapsBase);
+        if SupportTrueColor then
+          ini.ReadSection('MipmapsBase', MipmapsBase)
+        else
+          MipmapsCount:= 0;
 
         Sorted:= false;
         for i:= 0 to Count - 1 do
@@ -1012,9 +1071,11 @@ end;
 procedure ClipCursorRel(r: TRect);
 begin
   MapWindowPoints(_MainWindow^, 0, r, 2);
-  BringWindowToTop(_MainWindow^);
-  if (GetForegroundWindow = _MainWindow^) and ((GetFocus = _MainWindow^) or (GetFocus = 0)) then
+  if (GetForegroundWindow = _MainWindow^) and IsWindowEnabled(_MainWindow^) and ((GetFocus = _MainWindow^) or (GetFocus = 0)) then
+  begin
+    BringWindowToTop(_MainWindow^);
     ClipCursor(@r);
+  end;
 end;
 
 function DynamicFovCalc(const x, y: int): ext;
@@ -1052,12 +1113,61 @@ begin
     end;
 end;
 
+procedure ShowStatusText(text: string; time: int = 2);
+begin
+  _ShowStatusText(0, time, ptr(text));
+  _NeedRedraw^:= 1;
+end;
+
 procedure NeedScreenWH;
 begin
   SW:= _ScreenW^;
   SH:= _ScreenH^;
   if SW = 0 then  SW:= 640;
   if SH = 0 then  SH:= 480;
+end;
+
+procedure DoDraw8(ps: PByte; pd: PWord; ds, dd, w, h: int; pal: PWordArray; solid: Boolean); inline;
+var
+  x: int;
+begin
+  dec(ds, w);
+  dec(dd, w*2);
+  for h:= h downto 1 do
+  begin
+    for x:= w downto 1 do
+    begin
+      if solid or (ps^ <> 0) then
+        pd^:= pal[ps^];
+      inc(ps);
+      inc(pd);
+    end;
+    inc(PChar(ps), ds);
+    inc(PChar(pd), dd);
+  end;
+end;
+
+procedure Draw8(ps: PByte; pd: PWord; ds, dd, w, h: int; pal: PWordArray);
+begin
+  DoDraw8(ps, pd, ds, dd, w, h, pal, true);
+end;
+
+procedure Draw8t(ps: PByte; pd: PWord; ds, dd, w, h: int; pal: PWordArray);
+begin
+  DoDraw8(ps, pd, ds, dd, w, h, pal, false);
+end;
+
+function FindDlg(id: int): PDlg;
+var
+  i: int;
+begin
+  for i := _DialogsHigh^ downto 0 do
+  begin
+    Result:= @_DlgArray[_Dialogs[i]];
+    if Result.ID = id then
+      exit;
+  end;
+  Result:= nil;
 end;
 
 procedure __SetSpellBuff;

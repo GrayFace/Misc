@@ -293,8 +293,48 @@ Version 2.4:
 [-] Pressing space was closing evt.Question dialog
 [-] My bug: Input field of evt.Question command dialog wasn't shown in UI Layout mode with statusbar auto-hide
 
+Version 2.4.1:
+(MM6-MM8)
+[+] MouseDX, MouseDY in PatchOptions
+
+Version 2.5:
+(MM6-MM8)
+[+] WinScreenDelay hidden option controls Win screen delay during which all input is ignored. Default is 500 (half a second instead of game's original 5 seconds). 
+[+] Direct unaccelerated mouse input supported through hidden MouseSensitivityDirectMul option, but not enabled by default due to low accuracy. Set it to something like 1.5 to try.
+[+] FixConditionPriorities
+[+] HintStayTime
+[-] Casting stronger buffs did nothing if a weaker, but longer one is in place
+[-] Item spells were causing bugs when cast onto the very 1st item in the inventory 
+(MM6, MM7)
+[-] Snow X speed was effected by strafing too much
+(MM7, MM8)
+[+] TrueColorSprites hidden option, off by default to prevent 'out of memory' with HD sprites
+[+] The game doesn't crash on exit if d3dsprite.hwl and d3dbitmap.hwl are missing
+[-] Another crash caused by vertexless facets
+[-] Restore AnimatedTFT bit from Blv rather than Dlv to avoid crash
+[-] OptFixMonsterBlockShots
+[-] My bug: Crash in full screen if BorderlessFullscreen=0
+[-] My bug: Mipmaps were always on in full screen if BorderlessFullscreen=0 and MipmapsCount>1
+[-] My bug: Empty icons were causing division by zero in UI Layout code
+[-] My bug: Empty sprites causing a crash in D3D mode
+(MM6)
+[-] End game movies were unskippable
+[-] Game wasn't paused in Enchant Item screen
+[-] My bug: Keyboard control in spell book was causing spells to be cast accidentally with arrow keys
+(MM7)
+[+] Minor tweaks to UI Layout mode
+[-] If current fines are due, arcomage win/lose count wasn't added to awards
+[-] Master Healer NPC was messing up one of player buffs when activated 
+[-] Artifacts weren't generated properly as objects on the ground 
+
+[!!] (tested in MM7) unconscious players don't wrok in Display Inventory screen
 
 [!!] MouseLookShooterAim
+[!!] dgVoodoo support
+[!!] Attack quick spell
+[!!] Acid burst - fire damage
+
+[!!] View distance
 [!!] HD sprites
 [!!] Smooth video sides
 [!!] Prioritize geometry near the center
@@ -304,6 +344,12 @@ Version 2.4:
 [!!] Configurable (Caps Lock) key for mouse look
 [!!] textures from bitmaps (and option to change their gamma or not to change??)
 
+(Figo:) Is there still the limit of how many we can acquire with one party (~13)?
+I've read that in the Merge there is none, so how about a vanilla game?
+
+(Mirondor:) Is there any way to change the attack button be turbo immediately?
+Now it takes time after first click to begin hit constantly, which makes one mad
+ if he has a high attack speed.
 
 (andrey:) It was in MM7&8 since the beginning of time even with very late patches, but I can't say
  if it is still there in the latest patch or whether it even exists in MM678 merge.

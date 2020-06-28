@@ -290,7 +290,7 @@ Version 2.4:
 
 Version 2.4.1:
 (MM6-MM8)
-[+] DouseDX, MouseDY in PatchOptions
+[+] MouseDX, MouseDY in PatchOptions
 (MM8)
 [-] My bug: Random items weren't appearing in chests with quest items
 

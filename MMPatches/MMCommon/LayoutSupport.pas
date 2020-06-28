@@ -50,6 +50,7 @@ type
     Ini: TIniFile;
     IniSect: string;
     WasActive, Activated: Boolean;
+    LastScreen: int;
     class var OnLoad: array of TProcedure;
     function GetMousePos: TPoint;
     function GetContextMenuPos(w, h, scale: int): TRect;
@@ -76,6 +77,7 @@ type
     procedure Draw(src, dest: ptr; stride: int);
     procedure MapMouse(var x1, y1: int; x, y, fw, fh: int);
     procedure MouseMessage(msg, wp: int);
+    procedure GetMLookCenter(var MCenter, p: TPoint; const r: TRect);
     function CheckClipCursorArea(var r: TRect; NoUpdate: Boolean = false): Boolean;
     function SwapCanvas(item: TLayoutContextSwap): Boolean;
     procedure Sizing(wnd: HWND; side: int; var r: TRect);
@@ -86,8 +88,6 @@ type
 
 var
   Layout: TLayoutSupport;
-
-procedure GetMLookCenter(var MCenter, p: TPoint);
 
 implementation
 
@@ -199,6 +199,9 @@ begin
     L.Updated:= false;
   Update;
   self:= Layout;
+  LastScreen:= _CurrentScreen^;
+  if (_MainMenuCode^ >= 0) or _IsLoadingBig^ or _NoMusicDialog^ then
+    LastScreen:= -1;
   UpdateCountdown:= max(0, UpdateCountdown - 1);
   UpdateGameStatus;
   DrawIndex:= 0;
@@ -375,6 +378,23 @@ begin
     p.Y:= (fh - h) div 2;
   Result:= Bounds(max(0, p.X + Result.Left), max(0, p.Y + Result.Top), w, h);
   LastContextMenu:= Result;
+end;
+
+procedure TLayoutSupport.GetMLookCenter(var MCenter, p: TPoint; const r: TRect);
+begin
+  Update;
+  self:= Layout;
+  MCenter:= _ScreenMiddle^;
+  if IsRectEmpty(RenderRect) then
+  begin
+    p.X:= r.Right div 2;
+    p.Y:= r.Bottom div 2;
+  end else
+  begin
+    p.X:= Floor(r.Right*RenderCenterX/DXProxyRenderW);
+    p.Y:= Floor(r.Bottom*RenderCenterY/DXProxyRenderH);
+  end;
+  MLookPos:= p;
 end;
 
 function TLayoutSupport.GetMousePos: TPoint;
@@ -595,7 +615,7 @@ begin
   if not WasActive then
     exit;
 
-  // prepare  
+  // prepare
   if (ScreenW <> DXProxyRenderW) or (ScreenH <> DXProxyRenderH) then
     Scale:= nil;
   ScreenW:= DXProxyRenderW;
@@ -605,6 +625,8 @@ begin
   L.Vars[lvWidth]:= ScreenW;
   L.Vars[lvHeight]:= ScreenH;
   L.Vars[lvScreen]:= _CurrentScreen^;
+  L.Vars[lvCharScreen]:= _CurrentCharScreen^;
+  L.Vars[lvHouseScreen]:= _HouseScreen^;
   L.Vars[lvMainMenuCode]:= _MainMenuCode^;
   L.Vars[lvOpaqueScreen]:= BoolToInt[(_MainMenuCode^ >= 0) or _IsLoadingBig^ or _IsMoviePlaying or _IsScreenOpaque];
   L.Vars[lvMoviePlaying]:= BoolToInt[_IsMoviePlaying];
@@ -620,7 +642,9 @@ begin
     L.Vars[lvRenderedScreen]:= -1
   else if Rendering then
     L.Vars[lvRenderedScreen]:= _CurrentScreen^;
-    
+  b:= (m7 = 0) or (LastScreen <> 0) or not (_CurrentScreen^ in [1, 3, 5, 8, 104]);
+  L.Vars[lvDrawButton]:= BoolToInt[not b];
+
   for i:= low(KeysNeeded) to high(KeysNeeded) do
     if KeysNeeded[i] then
     begin
@@ -700,7 +724,7 @@ begin
   GetClientRect(_MainWindow^, r);
   if CheckClipCursorArea(r, true) then
     ClipCursor(nil)
-  else if GetForegroundWindow = _MainWindow^ then
+  else
     ClipCursorRel(r);
 end;
 
@@ -758,34 +782,6 @@ begin
   ViewMulFactor:= 1/L.Locals[lvFOVMul];
   with r do
     _ViewMulOutdoor^:= Round(300*ViewMulFactor*DynamicFovFactor(Right - Left, Bottom - Top)/DXProxyMul);
-end;
-
-procedure GetMLookCenter(var MCenter, p: TPoint);
-var
-  r: TRect;
-begin
-  GetClientRect(_MainWindow^, r);
-  if Layout.Active then
-  begin
-    Layout.Update;
-    MCenter:= _ScreenMiddle^;
-    with Layout, RenderRect do
-      if IsRectEmpty(Layout.RenderRect) then
-      begin
-        p.X:= r.Right div 2;
-        p.Y:= r.Bottom div 2;
-      end else
-      begin
-        p.X:= Floor(r.Right*RenderCenterX/DXProxyRenderW);
-        p.Y:= Floor(r.Bottom*RenderCenterY/DXProxyRenderH);
-      end;
-    Layout.MLookPos:= p;
-  end else
-  begin
-    // compatibility with high resolution
-    p.X:= (MCenter.X*r.Right + SW - 1) div SW;
-    p.Y:= (MCenter.Y*r.Bottom + SH - 1) div SH;
-  end;
 end;
 
 procedure UILayoutSetVar(Name: PChar; var v: Double); stdcall;

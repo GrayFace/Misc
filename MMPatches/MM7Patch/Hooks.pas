@@ -14,11 +14,8 @@ procedure ApplyDeferredHooks;
 implementation
 
 var
-  QuickSaveUndone, Autorun, SkipMouseLook: Boolean;
-  DoubleSpeed: BOOL;
+  QuickSaveUndone: Boolean;
   _sprintfex: ptr; // Buka localization
-
-procedure ProcessMouseLook; forward;
 
 //----- Functions
 
@@ -35,12 +32,6 @@ end;
 
 var
   PlaySound: procedure(id: int; a3: int = 0; a4: int = 0; a5: int = -1; a6: int = 0; a7: int = 0; a8: int = 0; a9: int = 0); stdcall;
-
-procedure ShowStatusText(text: string; time: int = 2);
-begin
-  _ShowStatusText(0, time, ptr(text));
-  _NeedRedraw^:= 1;
-end;
 
 procedure QuickLoad;
 begin
@@ -93,16 +84,6 @@ begin
     end;
 end;
 
-//----- Now time isn't resumed when mouse exits, need to check if it's still pressed
-
-procedure CheckRightPressed;
-const
-  Btn: array[Boolean] of int = (VK_RBUTTON, VK_LBUTTON);
-begin
-  if GetAsyncKeyState(Btn[GetSystemMetrics(SM_SWAPBUTTON) <> 0]) >= 0 then
-    _ReleaseMouse;
-end;
-
 //----- Called every tick. Quick Save, keys related things
 
 var
@@ -118,7 +99,7 @@ begin
     DoKeyConfig;
   KeyConfigDone:= true;
 
-  // Fix TurnBasedPhase staying at 3 whle TurnBased is off
+  // Fix TurnBasedPhase staying at 3 while TurnBased is off
   if not _TurnBased^ then
     _TurnBasedPhase^:= 0;
 
@@ -177,37 +158,8 @@ begin
         AddAction(113, BoolToInt[_EscKeyUnkCheck^ <> 0], 0);
     end;
 
-  // DoubleSpeedKey
-  if CheckKey(Options.DoubleSpeedKey) then
-  begin
-    DoubleSpeed:= not DoubleSpeed;
-    if DoubleSpeed then
-      ShowStatusText(SDoubleSpeed)
-    else
-      ShowStatusText(SNormalSpeed);
-  end;
-
-  // Autorun like in WoW
-  if CheckKey(Options.AutorunKey) then
-    Autorun:= not Autorun;
-
-  // MouseLookChangeKey
-  if _CurrentScreen^ <> 0 then
-    MouseLookChanged:= false
-  else if CheckKey(Options.MouseLookChangeKey) then
-    MouseLookChanged:= not MouseLookChanged;
-
-  // MouseLook
-  if Options.MouseLook then
-    ProcessMouseLook;
-
-  // Now time isn't resumed when mouse exits, need to check if it's still pressed
-  if _Windowed^ and _RightButtonPressed^ then
-    CheckRightPressed;
-
-  // Select 1st player in shops if all are inactive
-  if FixInactivePlayersActing and (_CurrentMember^ = 0) and (_CurrentScreen^ = 13) then
-    _CurrentMember^:= 1;
+  // Shared keys proc
+  CommonKeysProc;
 end;
 
 procedure KeysHook;
@@ -1230,7 +1182,7 @@ asm
   push $426835
 end;
 
-//----- Fix general.txt parsing out-of-bounds
+//----- Fix global.txt parsing out-of-bounds
 
 procedure GlobalTxtHook;
 asm
@@ -1363,202 +1315,6 @@ asm
 @exit:
 end;
 
-//----- Mouse look
-
-const
-  MLSideX = 640 - (8*2 + 460);
-  MLSideY = 480 - (8*2 + 344);
-var
-  MLookPartX, MLookPartY: int;
-  MCenter, MWndPos, MLastPos, MLookTempPos: TPoint;
-  MLookStartTime: DWORD;
-  EmptyCur: HCURSOR;
-  MouseLookOn, MLookIsTemp: Boolean;
-
-function GetMLookPoint(var p: TPoint): BOOL;
-begin
-  if MouseLookOn then
-  begin
-    GameCursorPos^:= MCenter;
-    p:= MWndPos;
-    ClientToScreen(_MainWindow^, p);
-    Result:= true;
-  end else
-    Result:= GetCursorPos(p);
-end;
-
-procedure CheckMouseLook;
-const
-  myAnd: int = -1;
-  myXor: int = 0;
-var
-  cur: HCURSOR;
-  r: TRect;
-begin
-  if SkipMouseLook then  // a hack for right-then-left click combo
-  begin
-    SkipMouseLook:= false;
-    exit;
-  end;
-  GetClientRect(_MainWindow^, r);
-  NeedScreenWH;
-  // compatibility with resolution patches like mmtool's one
-  MCenter.X:= (SW - MLSideX) div 2;
-  MCenter.Y:= (SH - MLSideY) div 2;
-  GetMLookCenter(MCenter, MWndPos);
-
-  if EmptyCur = 0 then
-    EmptyCur:= CreateCursor(GetModuleHandle(nil), 0, 0, 1, 1, @myAnd, @myXor);
-  cur:= GetClassLong(_MainWindow^, -12);
-  with Options do
-    MouseLookOn:= MouseLook and (_CurrentScreen^ = 0) and (_MainMenuCode^ < 0) and
-       ((cur = EmptyCur) or (cur = ArrowCur)) and not MLookRightPressed^ and
-       ( (GetAsyncKeyState(MouseLookTempKey) and $8000 = 0) xor
-          MouseLookChanged xor MouseLookUseAltMode xor
-          (CapsLockToggleMouseLook and (GetKeyState(VK_CAPSLOCK) and 1 <> 0)));
-
-  if MouseLookOn <> (cur = EmptyCur) then
-  begin
-    if not MouseLookOn then
-    begin
-      SetClassLong(_MainWindow^, -12, ArrowCur);
-      _NeedRedraw^:= 1;
-    end else
-      SetClassLong(_MainWindow^, -12, EmptyCur);
-
-    if MLookIsTemp or not MouseLookOn and not MLookRightPressed^ and
-       (GetTickCount - MLookStartTime < MouseLookRememberTime) then
-    begin
-      MLastPos:= MLookTempPos;
-      MLookIsTemp:= false;
-    end else
-    begin
-      GetMLookPoint(MLastPos);
-      if MouseLookOn then
-      begin
-        MLookIsTemp:= GetAsyncKeyState(Options.MouseLookTempKey) and $8000 <> 0;
-        GetCursorPos(MLookTempPos);
-        MLookStartTime:= GetTickCount;
-      end;
-    end;
-
-    SetCursorPos(MLastPos.X, MLastPos.Y);
-  end;
-end;
-
-procedure ProcessMouseLook;
-
-  function Partial(move: int; var part: int; factor: int): int;
-  var
-    x: int;
-  begin
-    x:= part + move*factor;
-    Result:= (x + 32) and not 63;
-    part:= x - Result;
-    Result:= Result div 64;
-  end;
-
-const
-  dir = _Party_Direction;
-  angle = _Party_Angle;
-var
-  p: TPoint;
-  speed: PPoint;
-begin
-  CheckMouseLook;
-  GetCursorPos(p);
-  if MouseLookOn and (GetForegroundWindow = _MainWindow^) then
-  begin
-    if MLookIsTemp then
-      speed:= @MLookSpeed2
-    else
-      speed:= @MLookSpeed;
-    dir^:= (dir^ - Partial(p.X - MLastPos.X, MLookPartX, speed.X)) and 2047;
-    angle^:= IntoRange(angle^ - Partial(p.Y - MLastPos.Y, MLookPartY, speed.Y),
-      -Options.MaxMLookAngle, Options.MaxMLookAngle);
-    if (p.X <> MLastPos.X) or (p.Y <> MLastPos.Y) then
-    begin
-      p:= MWndPos;
-      ClientToScreen(_MainWindow^, p);
-      SetCursorPos(p.X, p.Y);
-    end;
-  end;
-  MLastPos:= p;
-end;
-
-procedure MouseLookHook(p: TPoint); stdcall;
-begin
-  CheckMouseLook;
-  if MouseLookOn then
-    GameCursorPos^:= MCenter
-  else
-    GameCursorPos^:= p;
-end;
-
-function MouseLookHook2(var p: TPoint): BOOL; stdcall;
-begin
-  CheckMouseLook;
-  Result:= GetMLookPoint(p);
-end;
-
-var
-  MouseLookHook3Std: procedure(a1, a2, this: ptr);
-  MLookBmp: TBitmap;
-
-procedure MLookLoad;
-var
-  fmt: TPixelFormat;
-begin
-  if _GreenColorBits^ = 5 then
-    fmt:= pf15bit
-  else
-    fmt:= pf16bit;
-  MLookBmp:= LoadMLookBmp('Data\MouseLookCursor.bmp', fmt);
-end;
-
-procedure MLookDraw;
-var
-  p1, p2: PChar;
-  x, y, w, h, d1, d2: int;
-  k, trans: Word;
-begin
-  if MLookBmp = nil then
-    MLookLoad;
-  w:= MLookBmp.Width;
-  h:= MLookBmp.Height;
-  p1:= MLookBmp.ScanLine[0];
-  d1:= PChar(MLookBmp.ScanLine[1]) - p1 - 2*w;
-  p2:= PPChar($E31B54)^ + 2*(_ScreenW^*(MCenter.Y - h div 2) + MCenter.X - w div 2);
-  d2:= 2*(_ScreenW^ - w);
-  trans:= pword(p1)^;
-  for y := 1 to h do
-  begin
-    for x := 1 to w do
-    begin
-      k:= pword(p1)^;
-      if k <> trans then
-        pword(p2)^:= k;
-      inc(p1, 2);
-      inc(p2, 2);
-    end;
-    inc(p1, d1);
-    inc(p2, d2);
-  end;
-end;
-
-procedure MouseLookHook3(a1, a2, this: ptr);
-begin
-  CheckMouseLook;
-  if MouseLookOn and not MLookIsTemp then
-    if MouseLookCursorHD and DXProxyActive and
-       ((DXProxyRenderW > SW) or (DXProxyRenderH > SH) or IsLayoutActive) then
-      MLookDrawHD(MWndPos)
-    else
-      MLookDraw;
-
-  MouseLookHook3Std(nil, nil, this);
-end;
-
 //----- A beam of Prismatic Light in the center of screen that doesn't disappear
 
 var
@@ -1574,7 +1330,7 @@ end;
 
 procedure MouseLookFlyProc(var v: TPoint; ebp: PChar);
 const
-  MaxH = 4000;
+  MaxH = pint($473C64);
   PartyH = pint($ACCE3C);
   PartyZ = pint($ACD4F4);
   DriftZ = pint($ACD528);
@@ -1598,7 +1354,7 @@ begin
   a:= x*v.X + y*v.Y;
   b:= _Party_Angle^*pi/1024;
   dz:= Round(a*sin(b)*_TimeDelta^/128);
-  if (dz > 0) and (pint(ebp + z)^ + dz > MaxH) then
+  if (dz > 0) and (pint(ebp + z)^ + dz > MaxH^) then
     dz:= 0;
   a:= a*(cos(b) - 1);
   v.X:= v.X + Round(x*a);
@@ -2366,17 +2122,6 @@ asm
   call SelectSndFile
 end;
 
-//----- Called whenever time is resumed
-
-procedure ClearKeyStatesHook;
-var
-  i: int;
-begin
-  for i := 1 to 255 do
-    MyGetAsyncKeyState(i);
-  GetCursorPos(MLastPos);
-end;
-
 //----- Strafe in MouseLook
 
 function StrafeOrWalkHook(key: int): bool; stdcall;
@@ -2529,52 +2274,6 @@ procedure FixTelepathy;
 asm
   and byte ptr [ebx+$26], $7F
   cmp word ptr [ebx+$B4], 0
-end;
-
-//----- Fix chests: reorder to preserve important items
-
-procedure FixChestSmartProc(p: PChar);
-const
-  size = _ItemOff_Size;
-var
-  i, j: int;
-begin
-  with TStringList.Create do
-    try
-      CaseSensitive:= true;
-      Sorted:= true;
-      for i:= 0 to 139 do
-        if pint(p + i*size)^ <> 0 then
-          AddObject(IntToHex(byte(min(1, pint(p + i*size)^)), 2) + IntToHex(i, 2), ptr(i));
-
-      if (Count = 0) or (Strings[Count - 1][1] = '0') then  // no random items
-        exit;
-
-      // sorted: fixed items, artifacts, i6, i5, ..., i1
-      for i:= 0 to Count - 1 do
-      begin
-        j:= int(Objects[i]);
-        if j > i then  // source item isn't erased yet
-        begin
-          CopyMemory(p + i*size, p + j*size, size);
-          ZeroMemory(p + j*size, size);
-        end
-        else if j < i then  // random item
-        begin
-          ZeroMemory(p + i*size, size);
-          pint(p + i*size)^:= StrToInt('$' + copy(Strings[i], 1, 2)) - 256;
-        end;
-      end;
-    finally
-      Free;
-    end;
-end;
-
-procedure FixChestSmartHook;
-asm
-  mov [esp + $28], $8C
-  mov eax, ebx
-  call FixChestSmartProc
 end;
 
 //----- Fix GM Staff ignoring Armsmaster bonus to Damage
@@ -3285,16 +2984,6 @@ begin
     pint64(p + 36)^:= pint64(@Options.IndoorMinimapZoomMul)^;
 end;
 
-//----- Calculate mipmaps count depending on the texture in question
-
-procedure GetMipmapsCountHook;
-asm
-  mov eax, esi
-  mov edx, ebx
-  call GetMipmapsCountProc
-  mov DXProxyMipmapCount, eax
-end;
-
 //----- IsWater and AnimateTFT bits didn't work together in D3D
 
 procedure TFTWaterHook;
@@ -3302,6 +2991,17 @@ asm
   test ah, $40
   jz @std
   and al, $EF
+@std:
+end;
+
+//----- IsWater bit was causing water texture to be used outdoors in D3D
+
+procedure WaterBitHook;
+asm
+  mov edx, [ebp - $30]
+  cmp edx, [$EF5114]
+  jz @std
+  mov [esp], $478988
 @std:
 end;
 
@@ -3386,10 +3086,8 @@ end;
 //----- Fix Lady's Escort water walking
 
 function LadysEscortFix(_,__, pl, slot, item: int): LongBool;
-const
-  WearsItem: function(_,__, pl, slot, item: int): LongBool = ptr($48D6EF);
 begin
-  Result:= WearsItem(0,0, pl, slot, item) or WearsItem(0,0, pl, 16, 536);
+  Result:= _Character_WearsItem(0,0, pl, slot, item) or _Character_WearsItem(0,0, pl, 16, 536);
 end;
 
 //----- Fix space in evt.Question
@@ -3409,10 +3107,18 @@ asm
   mov [esp], $43043F
 end;
 
+//----- Fix Master Healer
+
+procedure FixMasterHealer;
+asm
+  mov [esi-7Ch], eax
+  mov [esi-80h], ebx
+end;
+
 //----- HooksList
 
 var
-  HooksList: array[1..312] of TRSHookInfo = (
+  HooksList: array[1..313] of TRSHookInfo = (
     (p: $45B0D1; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $4655FE; old: $452C75; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave file name localization
     (p: $45E5A4; old: $45E2D0; backup: @FillSaveSlotsStd; newp: @FillSaveSlotsHook; t: RShtCall), // Fix Save/Load Slots
@@ -3526,9 +3232,6 @@ var
     (p: $44EC22; newp: ptr($44EC4A); t: RShtJmp), // Ignore 'Sprite outline currently Unsupported'
     (p: $46A1A9; old: $46A338; backup: @@PressSpaceStd; newp: @PressSpaceHook; t: RShtCall), // D3D better space reaction
     (p: $449AC3; newp: @DoorStateSwitchHook; t: RShtCall), // Correct door state switching: param = 3
-    (p: $46A08E; newp: @MouseLookHook; t: RShtJmp; size: 10), // Mouse look
-    (p: $4D825C; newp: @MouseLookHook2; t: RSht4), // Mouse look
-    (p: $4160C5; backup: @@MouseLookHook3Std; newp: @MouseLookHook3; t: RShtCall), // Mouse look
     (p: $42FE25; newp: @StrafeOrWalkHook; t: RShtCall; size: 6; Querry: 15), // Strafe in MouseLook
     (p: $42FEA5; newp: @StrafeOrWalkHook; t: RShtCall; size: 6; Querry: 15), // Strafe in MouseLook
     (p: $4CB071; backup: @@FixPrismaticBugStd; newp: @FixPrismaticBug; t: RShtCall), // A beam of Prismatic Light in the center of screen that doesn't disappear
@@ -3573,7 +3276,6 @@ var
     (p: $4AB80B; newp: @OpenSndsHook; t: RShtCall; size: 7), // Custom LODs - Snd
     (p: $4A9783; newp: @OpenSndHook; t: RShtCall; size: 16), // Custom LODs - Snd
     (p: $4A9BA6; newp: @OpenSndHook2; t: RShtCall), // Custom LODs - Snd
-    (p: $459E78; newp: @ClearKeyStatesHook; t: RShtJmp; size: 6), // Clear my keys as well
     (p: $470578; newp: @FixStrafe1; t: RShtCall; size: 7; Querry: 23), // Fix movement rounding problems
     (p: $4705A4; newp: @FixStrafe1; t: RShtCall; size: 7; Querry: 23), // Fix movement rounding problems
     (p: $4705CB; newp: @FixStrafe1; t: RShtCall; size: 7; Querry: 23), // Fix movement rounding problems
@@ -3608,7 +3310,6 @@ var
     (p: $426A96; newp: @FixTelepathy; t: RShtCall; size: 8), // Fix Telepathy
     (p: $4ACBBB; newp: @FixSmallScaleSprites; t: RShtCall), // Fix small scale sprites crash
     (p: $43681F; old: $1F400000; new: $7FFFFFFF; t: RSht4), // Infinite view distance in dungeons
-    (p: $450284; newp: @FixChestSmartHook; t: RShtCall; size: 8; Querry: 19), // Fix chests: reorder to preserve important items
     (p: $48FE51; newp: @FixGMStaffHook; t: RShtJmp; Querry: 20), // Fix GM Staff ignoring Armsmaster bonus to Damage
     (p: $4578E7; newp: @FixItemsTxtHook; t: RShtJmp), // Fix items.txt: make special items accept standard "of ..." strings
     (p: $448CC9; newp: @FixTimerRetriggerHook1; t: RShtJmp; size: 6; Querry: 21), // Fix timers
@@ -3681,7 +3382,6 @@ var
     (p: $463AA8; size: 6; Querry: hqTrueColor), // 32 bit color support
     (p: $465333; size: 2; Querry: hqTrueColor), // 32 bit color support
     (p: $4D801C; newp: @MyDirectDrawCreate; t: RSht4; Querry: hqTrueColor), // 32 bit color support + HD
-    (p: $4A4DA4; newp: @GetMipmapsCountHook; t: RShtCall; size: $4A4DC2 - $4A4DA4; Querry: hqMipmaps), // Calculate mipmaps count depending on the texture in question
     (p: $4A4ED7; newp: @FixMipmapsMemLeak; t: RShtAfter), // Mipmaps generation code not calling surface->Release
     (p: $41E84B; newp: @FixSpritesInMonInfo; t: RShtBefore; size: 6), // Fix sprites with non-zero transparent colors in monster info dialog
     (p: $41E948; newp: @FixSpritesInMonInfo; t: RShtBefore; size: 5), // Fix sprites with non-zero transparent colors in monster info dialog
@@ -3704,6 +3404,7 @@ var
     (p: $443388; newp: @MinimapZoomHook; t: RShtFunctionStart; size: 6), // Remember minimap zoom indoors
     (p: $44E203; old: $7F; new: $7D; t: RSht1), // TFT.bin was animated incorrectly (first frame was longer, last frame was shorter)
     (p: $4B0C7E; newp: @TFTWaterHook; t: RShtBefore), // IsWater and AnimateTFT bits didn't work together in D3D
+    (p: $478965; newp: @WaterBitHook; t: RShtBefore; size: 6), // IsWater bit was causing water texture to be used outdoors in D3D
     (p: $4D821C; newp: @MyLoadCursor; t: RSht4), // Load cursors from Data
     (p: $4417FB; old: $4A5E42; newp: @DrawIconAuto; t: RShtCall), // Transparent spell icons (Bless etc.)
     (p: $441839; old: $4A5E42; newp: @DrawIconAuto; t: RShtCall), // Transparent spell icons (Bless etc.)
@@ -3724,6 +3425,12 @@ var
     (p: $44EB0B; newp: @NoTreeHintsHook; t: RShtAfter; size: 6), // No hints for non-interactive sprites
     (p: $4942CA; old: $48D6EF; newp: @LadysEscortFix; t: RShtCall), // Fix Lady's Escort water walking
     (p: $4303E2; newp: @QuestionFixSpace; t: RShtCall), // Fix space in evt.Question
+    (p: $40D677; size: 2), // If current fines are due, arcomage win/lose count wasn't added to awards
+    (p: $40D6BF; size: 2), // If current fines are due, arcomage win/lose count wasn't added to awards
+    (p: $42FE94; old: 10; new: 2; t: RSht1), // Snow X speed was effected by strafing too much
+    (p: $42FF15; old: -10; new: -2; t: RSht1), // Snow X speed was effected by strafing too much
+    (p: $4BB762; newp: @FixMasterHealer; t: RShtCall), // Fix Master Healer messing up some buff
+    (p: $4501E8; size: 5), // Fix artifacts not being generated as objects on the ground 
     ()
   );
 
@@ -3817,8 +3524,6 @@ begin
     RSApplyHooks(HooksList, 11);
   if Options.DataFiles then
     RSApplyHooks(HooksList, 12);
-  if Options.FixChestsByReorder then
-    RSApplyHooks(HooksList, 19);
   if Options.FixGMStaff then
     RSApplyHooks(HooksList, 20);
   if Options.FixTimers then
@@ -3852,8 +3557,6 @@ initialization
     ArrowCur:= LoadCursor(GetModuleHandle(nil), 'Arrow');
   CursorTarget:= LoadCursorFromFile('Data\MouseCursorTarget.cur');
 finalization
-  if EmptyCur <> 0 then
-    DestroyCursor(EmptyCur);
   // avoid hanging in case of exception on shutdown
   SetUnhandledExceptionFilter(@LastUnhandledExceptionFilter);
 end.

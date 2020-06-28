@@ -75,9 +75,9 @@ begin
     PropagateLoop(p, w, h, -w-1, -w+1, bt, mask);   // corders of top line
 end;
 
-procedure PropagateIntoTransparent(p: ptr; w, h: int);
+procedure PropagateIntoTransparent(p: ptr; w, h: int; TrueColor: Boolean);
 begin
-  if Options.TrueColorTextures then
+  if TrueColor then
     DoPropagateIntoTransparent(p, w, h, 4, $FFFFFF)
   else
     DoPropagateIntoTransparent(p, w, h, 2, $7FFF);
@@ -103,39 +103,42 @@ end;
 // V = max component
 // S = (max - min)/V
 // H = relative position of the middle component within [min, max] and info on which components are max and min
+type
+  TCConvTable = array[0..255] of array[0..255] of byte;
 var
-  CConvS, CConvV: Single;
+  CConvS, CConvV: array[Boolean] of Single;
   CConvDesat: Boolean;
-  CConvTable: array[0..255] of array[0..255] of byte;
+  CConvTable: array[Boolean] of TCConvTable;
   DivTable: array[0..255] of uint;  // = 2^16 / i
 
-function PrepareCConvTable: Boolean;
+function PrepareCConvTable(TrueColor: Boolean): Boolean;
 var
   v, sat: ext;
   i, j: uint;
 begin
-  Result:= (CConvS <> Options.PaletteSMul) or (CConvV <> Options.PaletteVMul);
+  Result:= (CConvS[TrueColor] <> Options.PaletteSMul) or (CConvV[TrueColor] <> Options.PaletteVMul);
   if not Result then
     exit;
-  CConvS:= Options.PaletteSMul;
-  CConvV:= Options.PaletteVMul;
+  Options.ResetPalettes:= true;
+  CConvS[TrueColor]:= Options.PaletteSMul;
+  CConvV[TrueColor]:= Options.PaletteVMul;
   CConvDesat:= (Options.PaletteSMul <= 1);
   // 15-bit mipmaps are a bit more saturated
-  sat:= IfThen(Options.TrueColorTextures, 1.027, 1)*Options.PaletteSMul;
+  sat:= IfThen(TrueColor, 1.027, 1)*Options.PaletteSMul;
   for i:= 1 to 255 do
   begin
     v:= EnsureRange(i*246/255*Options.PaletteVMul, 0, 256); // trying to mimic original
     for j:= 0 to 255 do
-      CConvTable[i][j]:= min(255, Trunc(v*EnsureRange(1 - (1 - j/i)*sat, 0, 1)));
+      CConvTable[TrueColor][i][j]:= min(255, Trunc(v*EnsureRange(1 - (1 - j/i)*sat, 0, 1)));
     DivTable[i]:= $10101 div i; // $10101*$FF = $FFFFFF
   end;
 end;
 
-procedure ConvertColorOversat(var a, b, c: byte); inline;
+procedure ConvertColorOversat(var conv: TCConvTable; var a, b, c: byte); inline;
 var
   i: uint;
 begin
-  i:= CConvTable[a][255];
+  i:= conv[a][255];
   b:= uint(b - c)*i*DivTable[a - c] shr 16;
   a:= i;
   c:= 0;
@@ -143,47 +146,50 @@ end;
 
 // ordered: a > b > c
 // not ordered: a = max(a, b, c)
-procedure DoConvertColor(var a, b, c: byte; desat, ordered: Boolean); inline;
+procedure DoConvertColor(var conv: TCConvTable; var a, b, c: byte; desat, ordered: Boolean); inline;
 var
   i, j: uint;
 begin
   if desat then  // normal case (SMul <= 1)
   begin
-    b:= CConvTable[a][b];
-    c:= CConvTable[a][c];
-    a:= CConvTable[a][255];
+    b:= conv[a][b];
+    c:= conv[a][c];
+    a:= conv[a][255];
     exit;
   end;
-  i:= CConvTable[a][b];
-  j:= CConvTable[a][c];
+  i:= conv[a][b];
+  j:= conv[a][c];
   if (j = 0) and (ordered or (c < b)) then
-    ConvertColorOversat(a, b, c)
+    ConvertColorOversat(conv, a, b, c)
   else if not ordered and (i = 0) and (b < c) then
-    ConvertColorOversat(a, c, b)
+    ConvertColorOversat(conv, a, c, b)
   else begin
     b:= i;
     c:= j;
-    a:= CConvTable[a][255];
+    a:= conv[a][255];
   end;
 end;
 
-procedure ConvertColorSV(var r, g, b: byte; desat: Boolean); inline; overload;
+procedure ConvertColorSV(var conv: TCConvTable; var r, g, b: byte; desat: Boolean); inline; overload;
 begin
   if r > g then
     if r > b then
-      DoConvertColor(r, g, b, desat, false)
+      DoConvertColor(conv, r, g, b, desat, false)
     else
-      DoConvertColor(b, r, g, desat, true)
+      DoConvertColor(conv, b, r, g, desat, true)
   else
     if g > b then
-      DoConvertColor(g, r, b, desat, false)
+      DoConvertColor(conv, g, r, b, desat, false)
     else
-      DoConvertColor(b, g, r, desat, true);
+      DoConvertColor(conv, b, g, r, desat, true);
 end;
 
-procedure ConvertColorSV(var r, g, b: byte); inline; overload;
+procedure ConvertColorSV(var r, g, b: byte; TrueColor: Boolean); inline; overload;
 begin
-  ConvertColorSV(r, g, b, CConvDesat);
+  if TrueColor then
+    ConvertColorSV(CConvTable[true], r, g, b, CConvDesat)
+  else
+    ConvertColorSV(CConvTable[false], r, g, b, CConvDesat);
 end;
 
 //----- Palettes
@@ -196,15 +202,15 @@ begin
     _fread(bmp, 1, $30, f); // read bitmap header
 end;
 
-function ConvertPalColor(c: int): uint;
+function ConvertPalColor(c: int; TrueColor: Boolean): uint;
 var
   r, g, b: byte;
 begin
   r:= byte(c);
   g:= HiByte(c);
   b:= c shr 16;
-  ConvertColorSV(r, b, g);
-  if Options.TrueColorTextures then
+  ConvertColorSV(r, b, g, TrueColor);
+  if TrueColor then
     Result:= (r shl 16 + g shl 8 + b) or $FF000000
   else
     Result:= (r shr 3 shl 10 + g shr 3 shl 5 + b shr 3) or $8000;
@@ -214,18 +220,25 @@ var
   LoadedPalettes: array of array[-1..255] of uint;
   LoadedPalN: int;
 
-function LoadPaletteD3D(Id: uint; Trans: Boolean): PDWordArray;
+function LoadPaletteD3D(Id: uint; Trans: Boolean; TrueColor: Boolean): PDWordArray;
 var
   pal: array[0..256*3] of byte;
   bmp: TLodBitmap;
   f: ptr;
   i: int;
 begin
-  if PrepareCConvTable or Options.ResetPalettes then
+  PrepareCConvTable(TrueColor);
+  if Options.ResetPalettes then
+  begin
     LoadedPalN:= 0;
+    if Options.TrueColorTextures <> Options.TrueColorSprites then
+      PrepareCConvTable(not TrueColor);
+  end;
   Options.ResetPalettes:= false;
   if Trans then
     inc(id, $10000);
+  if TrueColor then
+    inc(id, $20000);
   for i:= LoadedPalN - 1 downto 0 do
     if LoadedPalettes[i][-1] = Id then
     begin
@@ -244,7 +257,7 @@ begin
     _fseek(f, bmp.DataSize, soFromCurrent);
   _fread(pal, 1, 256*3, f); // read bitmap header
   for i:= 0 to 255 do
-    Result[i]:= ConvertPalColor(pint(@pal[i*3])^);
+    Result[i]:= ConvertPalColor(pint(@pal[i*3])^, TrueColor);
   if Trans then
     Result[0]:= 0;
 end;
@@ -258,7 +271,7 @@ begin
   b:= byte(c);
   g:= HiByte(c);
   r:= c shr 16;
-  ConvertColorSV(r, b, g, desat);
+  ConvertColorSV(CConvTable[bt = 4], r, b, g, desat);
   if bt = 4 then
     puint(p)^:= (r shl 16 + g shl 8 + b) or $FF000000
   else
@@ -286,12 +299,12 @@ begin
       ConvertColorHD(p, bt, c, desat);
   end;
   if HasTrans then
-    PropagateIntoTransparent(p, w, h);
+    PropagateIntoTransparent(p, w, h, bt = 4);
 end;
 
 procedure LoadBitmapHD(p, p1: PChar; w, h, trans, bt: int); inline;
 begin
-  PrepareCConvTable;
+  PrepareCConvTable(bt = 4);
   if (trans and not $FFFFFF) = 0 then
     if CConvDesat then
       DoLoadBitmapHD(p, p1, w, h, trans, bt, true, true)
@@ -384,15 +397,15 @@ begin
     c:= 0;
     _fread(c, 1, 3, f);  // check first color for transparency (margenta/light blue)
     trans:= (c = $FFFF00) or (c = $FF00FF) or (c = $FC00FC) or (c = $FCFC00);
-    pal:= LoadPaletteD3D(Palette, trans);
+    pal:= LoadPaletteD3D(Palette, trans, bt = 4);
 
     // Render
-    if Options.TrueColorTextures then
+    if bt = 4 then
       ReadPalettedColor(p, p1, BmpSize, pal, 4)
     else
       ReadPalettedColor(p, p1, BmpSize, pal, 2);
     if trans then
-      PropagateIntoTransparent(p, w, h);
+      PropagateIntoTransparent(p, w, h, bt = 4);
   end;
 end;
 
@@ -456,10 +469,14 @@ begin
         end;
     with Result^ do
     begin
-      DXProxyTrueColorTexture:= Options.TrueColorTextures;
+      DXProxyTrueColorTexture:= Options.TrueColorSprites;
       FullW:= w;
       FullH:= h;
-      if y1 < 0 then  exit;
+      if y1 < 0 then
+      begin
+        x1:= 0;
+        y1:= 0;
+      end;
       // Area dimensions must be powers of 2
       inc(x2);
       inc(y2);
@@ -476,15 +493,15 @@ begin
       AreaY:= y1;
 
       // Get Palette
-      pal:= LoadPaletteD3D(PalIndex, true);
+      pal:= LoadPaletteD3D(PalIndex, true, Options.TrueColorSprites);
       // Render
-      if Options.TrueColorTextures then
+      if Options.TrueColorSprites then
         Buffer:= ReadSprite(sprite, pal, BufW, BufH, x1, y1, y2, 4)
       else
         Buffer:= ReadSprite(sprite, pal, BufW, BufH, x1, y1, y2, 2);
       // Sparks spell ignores transparency bit, this check is to avoid interfering with it
       if _MainMenuCode^ < 0 then
-        PropagateIntoTransparent(Buffer, BufW, BufH);
+        PropagateIntoTransparent(Buffer, BufW, BufH, Options.TrueColorSprites);
     end;
   end;
 end;
@@ -1157,11 +1174,33 @@ begin
   surf.Unlock(nil);
 end;
 
+//----- Calculate mipmaps count depending on the texture in question
+
+procedure GetMipmapsCountHook;
+asm
+  jz @std
+  cmp DXProxyActive, true
+  jnz @std
+  mov eax, esi
+  mov edx, ebx
+  call GetMipmapsCountProc
+  mov DXProxyMipmapCount, eax
+  mov [esp], m7*$4A4DC2 + m8*$4A2C75
+@std:
+end;
+
+//----- Fix water in maps without a building with WtrTyl texture and textures with water bit turning into water
+
+procedure WatrTylFix;
+begin
+  _LoadBitmap(0, 0, _BitmapsLod, 0, 'WtrTyl');
+end;
+
 //----- HooksList
 
 var
 {$IFDEF MM7}
-  Hooks: array[1..73] of TRSHookInfo = (
+  Hooks: array[1..75] of TRSHookInfo = (
     (p: $4A4D93; old: $452504; newp: @LoadBitmapD3DHook; t: RShtCall; Querry: 13), // No HWL for bitmaps
     (p: $49EAE3; old: $4523AB; new: $45246B; t: RShtCall; Querry: 13), // No HWL for bitmaps
     (p: $49EB3B; size: 5; Querry: 13), // No HWL for bitmaps
@@ -1228,16 +1267,18 @@ var
     (p: $4795EA; newp: @PreciseSkyFtol; t: RShtCallStore), // Fix for 'jumping' of the top part of the sky
     (p: $47978F; newp: @PreciseSkyHook1; t: RShtBefore; size: 6), // Fix for 'jumping' of the top part of the sky
     (p: $4C1508; old: $4C1579; backup: @@SpriteD3DHitStd; newp: @SpriteD3DHitHook; t: RShtCall), // Take sprite contour into account when clicking it
-    (p: $4A50B1; size: 2; Querry: hqTex32Bit), // 32 bit sprites
-    (p: $4A50C1; size: 2; Querry: hqTex32Bit), // 32 bit sprites
-    (p: $4A50D3; size: 2; Querry: hqTex32Bit), // 32 bit sprites
-    (p: $41E944; newp: @DrawInfoSprite32Hook; t: RShtCall; size: $41E957 - $41E944; Querry: hqTex32Bit), // 32 bit sprites (monster info)
+    (p: $4A50B1; size: 2; Querry: hqSprite32Bit), // 32 bit sprites
+    (p: $4A50C1; size: 2; Querry: hqSprite32Bit), // 32 bit sprites
+    (p: $4A50D3; size: 2; Querry: hqSprite32Bit), // 32 bit sprites
+    (p: $41E944; newp: @DrawInfoSprite32Hook; t: RShtCall; size: $41E957 - $41E944; Querry: hqSprite32Bit), // 32 bit sprites (monster info)
     (p: $4A4E6E; old: $4A0ED0; newp: @CopyTexture32Bit; t: RShtCall; Querry: hqTex32Bit2), // 32 bit textures
     (p: $4A4F3C; old: $4A0ED0; newp: @CopyTexture32Bit; t: RShtCall; Querry: hqTex32Bit2), // 32 bit textures
+    (p: $4A4D98; newp: @GetMipmapsCountHook; t: RShtAfter; size: 6; Querry: hqMipmaps), // Calculate mipmaps count depending on the texture in question
+    (p: $4649B7; newp: @WatrTylFix; t: RShtBefore), // Fix water in maps without a building with WtrTyl texture and textures with water bit turning into water
     ()
   );
 {$ELSE}
-  Hooks: array[1..68] of TRSHookInfo = (
+  Hooks: array[1..69] of TRSHookInfo = (
     (p: $4A2C46; old: $44FD37; newp: @LoadBitmapD3DHook; t: RShtCall; Querry: 13), // No HWL for bitmaps
     (p: $49C175; old: $44FBD0; new: $44FC90; t: RShtCall; Querry: 13), // No HWL for bitmaps
     (p: $49C1CD; size: 5; Querry: 13), // No HWL for bitmaps
@@ -1299,12 +1340,13 @@ var
     (p: $47867B; newp: @PreciseSkyHook1; t: RShtBefore; size: 6), // Fix for 'jumping' of the top part of the sky
     (p: $478962; newp: @PreciseSkyHook1; t: RShtBefore; size: 6), // Fix for 'jumping' of the top part of the sky
     (p: $4BF072; old: $4BF0E3; backup: @@SpriteD3DHitStd; newp: @SpriteD3DHitHook; t: RShtCall), // Take sprite contour into account when clicking it
-    (p: $4A2F64; size: 2; Querry: hqTex32Bit), // 32 bit sprites
-    (p: $4A2F74; size: 2; Querry: hqTex32Bit), // 32 bit sprites
-    (p: $4A2F86; size: 2; Querry: hqTex32Bit), // 32 bit sprites
-    (p: $41DF2B; newp: @DrawInfoSprite32Hook; t: RShtCall; size: $41DF3E - $41DF2B; Querry: hqTex32Bit), // 32 bit sprites (monster info)
+    (p: $4A2F64; size: 2; Querry: hqSprite32Bit), // 32 bit sprites
+    (p: $4A2F74; size: 2; Querry: hqSprite32Bit), // 32 bit sprites
+    (p: $4A2F86; size: 2; Querry: hqSprite32Bit), // 32 bit sprites
+    (p: $41DF2B; newp: @DrawInfoSprite32Hook; t: RShtCall; size: $41DF3E - $41DF2B; Querry: hqSprite32Bit), // 32 bit sprites (monster info)
     (p: $4A2D21; old: $49E9C0; newp: @CopyTexture32Bit; t: RShtCall; Querry: hqTex32Bit2), // 32 bit textures
     (p: $4A2DEF; old: $49E9C0; newp: @CopyTexture32Bit; t: RShtCall; Querry: hqTex32Bit2), // 32 bit textures
+    (p: $4A2C4B; newp: @GetMipmapsCountHook; t: RShtAfter; size: 6; Querry: hqMipmaps), // Calculate mipmaps count depending on the texture in question
     ()
   );
 {$ENDIF}
@@ -1325,6 +1367,10 @@ begin
     RSApplyHooks(Hooks, hqTex32Bit);
   if Options.TrueColorTextures and Options.NoBitmapsHwl then
     RSApplyHooks(Hooks, hqTex32Bit2);
+  if Options.TrueColorSprites then
+    RSApplyHooks(Hooks, hqSprite32Bit);
+  if MipmapsCount <> 0 then
+    RSApplyHooks(Hooks, hqMipmaps);
   if Options.UILayout <> nil then
   begin
     pint(_IconsLod + $11B8C)^:= 5;

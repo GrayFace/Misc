@@ -161,6 +161,8 @@ const
   lvMinScale = 'Game.MinScale';
   lvScreen = 'Game.Screen';
   lvRenderedScreen = 'Game.RenderedScreen';
+  lvCharScreen = 'Game.CharScreen';
+  lvHouseScreen = 'Game.HouseScreen';
   lvMainMenuCode = 'Game.MainMenuCode';
   lvLoading = 'Game.Loading';
   lvPlayers = 'Game.Players';
@@ -186,6 +188,7 @@ const
   lvKeyPressed = 'KeyPressed.';
   lvQuestion = 'Game.Question';
   lvTreeHints = 'Game.TreeHints';
+  lvDrawButton = 'Game.DrawButton';
   CanvasScreen = -1;
   CanvasTimer = -2;
   CanvasBase = 0;       lvcBase = 'Game.BaseUI';
@@ -1503,7 +1506,10 @@ begin
   begin
     OnLoadIcon(Name, Icons[n], IconSize[n].X);
     with IconSize[n] do
-      Y:= length(Icons[n]) div X;
+      if X <> 0 then
+        Y:= length(Icons[n]) div X
+      else
+        Y:= 0;
   end;
   wf:= IconSize[n].X;
   hf:= IconSize[n].Y;

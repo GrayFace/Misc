@@ -120,12 +120,6 @@ const
   _Character_SetDelay: procedure(n1, n2: int; this: ptr; delay: int) = ptr($482C80);
   _TurnBased_CharacterActed: procedure(n1: int = 0; n2: int = 0; this: int = $4C7DF0) = ptr($404EB0);
 
-  _CharOff_ItemMainHand = $142C;
-  _CharOff_Items = $128;
-  _CharOff_Recover = $137C;
-  _CharOff_SpellPoints = $1418;
-  _CharOff_Size = $161C;
-
   _ItemOff_Size = $1C;
 
   _MonOff_X = $7E;

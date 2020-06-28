@@ -19,9 +19,10 @@ procedure NeedWindowSize;
 function TransformMousePos(x, y: int; out x1: int): int;
 function MyGetAsyncKeyState(vKey: Integer): SHORT; {$IFNDEF MM6}stdcall;{$ENDIF}
 function CheckKey(key: int):Boolean;
+procedure CommonKeysProc;
 procedure MyClipCursor;
-function LoadMLookBmp(const fname: string; fmt: TPixelFormat): TBitmap;
-procedure MLookDrawHD(const p: TPoint);
+procedure ProcessMouseLook;
+procedure ProcessRawMouseLook(h: THandle);
 procedure NeedScreenDraw(var scale: TRSResampleInfo; sw, sh, w, h: int);
 procedure DrawScaled(var scale: TRSResampleInfo; sw, sh: int; scan: ptr; pitch: int);
 {$IFNDEF MM6}
@@ -32,6 +33,7 @@ function FindSprite(var sp3d: TSpriteD3D): PSprite; overload;
 var
   AllowMovieQuickLoad: Boolean;
   ArrowCur: HCURSOR;
+  MouseLookOn, MLookIsTemp, SkipMouseLook: Boolean;
 
 implementation
 
@@ -40,6 +42,50 @@ const
   CurrentScreen = int(_CurrentScreen);
   CurrentMember = int(_CurrentMember);
   NeedRedraw = int(_NeedRedraw);
+
+// Raw mouse input
+const
+  WM_INPUT = $00FF;
+  HID_USAGE_GENERIC_MOUSE = 2;
+  RIDEV_INPUTSINK = $100;
+  RID_INPUT  = $10000003;
+  RIM_TYPEMOUSE      = 0;
+
+type
+  RAWINPUTDEVICE = record
+    usUsagePage: WORD; // Toplevel collection UsagePage
+    usUsage: WORD;     // Toplevel collection Usage
+    dwFlags: DWORD;
+    hwndTarget: HWND;    // Target hwnd. NULL = follows keyboard focus
+  end;
+  RAWINPUTHEADER = record
+    dwType: DWORD;
+    dwSize: DWORD;
+    hDevice: THANDLE;
+    wParam: WPARAM;
+  end;
+  TRawInputMouse = record
+    header: RAWINPUTHEADER;
+    usFlags: WORD;
+    union: record
+    case Integer of
+      0: (
+        ulButtons: ULONG);
+      1: (
+        usButtonFlags: WORD;
+        usButtonData: WORD);
+    end;
+    ulRawButtons: ULONG;
+    lLastX: LongInt;
+    lLastY: LongInt;
+    ulExtraInformation: ULONG;
+  end;
+
+var
+  RegisterRawInputDevices: function(var pRawInputDevices: RAWINPUTDEVICE;
+    uiNumDevices: UINT; cbSize: UINT): BOOL stdcall;
+  GetRawInputData: function(hRawInput: THandle; uiCommand: UINT; var Data;
+    var pcbSize: UINT; cbSizeHeader: UINT): UINT stdcall;
 
 //----- Support any FOV outdoors
 
@@ -100,6 +146,53 @@ begin
   Result:= (MyGetAsyncKeyState(key) and 1) <> 0;
 end;
 
+//----- Now time isn't resumed when mouse exits, need to check if it's still pressed
+
+procedure CheckRightPressed;
+const
+  Btn: array[Boolean] of int = (VK_RBUTTON, VK_LBUTTON);
+begin
+  if GetAsyncKeyState(Btn[GetSystemMetrics(SM_SWAPBUTTON) <> 0]) >= 0 then
+    _ReleaseMouse;
+end;
+
+//----- Keys Handler
+
+procedure CommonKeysProc;
+begin
+  // DoubleSpeedKey
+  if CheckKey(Options.DoubleSpeedKey) then
+  begin
+    DoubleSpeed:= not DoubleSpeed;
+    if DoubleSpeed then
+      ShowStatusText(SDoubleSpeed)
+    else
+      ShowStatusText(SNormalSpeed);
+  end;
+
+  // Autorun like in WoW
+  if CheckKey(Options.AutorunKey) then
+    Autorun:= not Autorun;
+  
+  // MouseLookChangeKey
+  if _CurrentScreen^ <> 0 then
+    MouseLookChanged:= false
+  else if CheckKey(Options.MouseLookChangeKey) then
+    MouseLookChanged:= not MouseLookChanged;
+
+  // MouseLook
+  if Options.MouseLook then
+    ProcessMouseLook;
+
+  // Now time isn't resumed when mouse exits, need to check if it's still pressed
+  if _Windowed^ and _RightButtonPressed^ then
+    CheckRightPressed;
+
+  // Select 1st player in shops if all are inactive
+  if FixInactivePlayersActing and (_CurrentMember^ = 0) and (_CurrentScreen^ = 13) then
+    _CurrentMember^:= 1;
+end;
+
 //----- Window procedure hook
 
 procedure MyClipCursor;
@@ -150,6 +243,9 @@ begin
       if wp and not $ff = 0 then
         KeysChecked[wp]:= false;
 {$ENDIF}
+    WM_INPUT:
+      if MLookRaw then
+        ProcessRawMouseLook(lp);
   end;
 
   if IsLayoutActive or not Options.BorderlessWindowed and IsZoomed(w) then
@@ -202,7 +298,204 @@ begin
   end;
 end;
 
-//----- Mouse Look
+//----- Mouse look
+
+const
+  MLSideX = (1-m8)*(640 - (m6*8*2 + m7*4*2 + 460));
+  MLSideY = 480 - m6*(8*2 + 345) - m7*(8*2 + 344) - m8*(29*2 + 338);
+    // +32 to MLSideY would make mouse fly exact in SW
+var
+  MLookPartX, MLookPartY, MLookDX, MLookDY: int;
+  MWndPos, MCenter, MLastPos, MLookTempPos: TPoint;
+  MLookStartTime: DWORD;
+  EmptyCur: HCURSOR;
+
+function GetMLookPoint(var p: TPoint): BOOL;
+begin
+  if MouseLookOn then
+  begin
+    GameCursorPos^:= MCenter;
+    p:= MWndPos;
+    ClientToScreen(_MainWindow^, p);
+    Result:= true;
+  end else
+    Result:= GetCursorPos(p);
+end;
+
+procedure GetMLookCenter(var MCenter, p: TPoint);
+var
+  r: TRect;
+begin
+  GetClientRect(_MainWindow^, r);
+  if IsLayoutActive then
+  begin
+    {$IFNDEF MM6}Layout.GetMLookCenter(MCenter, p, r);{$ENDIF}
+  end else
+  begin
+    // compatibility with high resolution
+    p.X:= (MCenter.X*r.Right + SW - 1) div SW;
+    p.Y:= (MCenter.Y*r.Bottom + SH - 1) div SH;
+  end;
+end;
+
+procedure StartRawMouseLook;
+var
+  a: RAWINPUTDEVICE;
+begin
+  MLookRaw:= false;
+  if RSLoadProc(@RegisterRawInputDevices, user32, 'RegisterRawInputDevices', false) = 0 then  exit;
+  if RSLoadProc(@GetRawInputData, user32, 'GetRawInputData', false) = 0 then  exit;
+  a.usUsagePage:= 1;
+  a.usUsage:= HID_USAGE_GENERIC_MOUSE;
+  a.dwFlags:= RIDEV_INPUTSINK;
+  a.hwndTarget:= _MainWindow^;
+  MLookRaw:= RSWin32Check(RegisterRawInputDevices(a, 1, SizeOf(a)));
+  MLookSpeed.X:= Round(MLookSpeed.X*MLookRawMul);
+  MLookSpeed.Y:= Round(MLookSpeed.Y*MLookRawMul);
+  MLookSpeed2.X:= Round(MLookSpeed2.X*MLookRawMul);
+  MLookSpeed2.Y:= Round(MLookSpeed2.Y*MLookRawMul);
+end;
+
+procedure CheckMouseLook;
+const
+  myAnd: int = -1;
+  myXor: int = 0;
+var
+  cur: HCURSOR;
+begin
+  if SkipMouseLook then  // a hack for right-then-left click combo
+  begin
+    SkipMouseLook:= false;
+    exit;
+  end;
+  NeedScreenWH;
+  // compatibility with resolution patches like mmtool's one
+  MCenter.X:= (SW - MLSideX) div 2;
+  MCenter.Y:= (SH - MLSideY) div 2;
+  GetMLookCenter(MCenter, MWndPos);
+
+  if EmptyCur = 0 then
+    EmptyCur:= CreateCursor(GetModuleHandle(nil), 0, 0, 1, 1, @myAnd, @myXor);
+  if MLookRaw and (@GetRawInputData = nil) then
+    StartRawMouseLook;
+  cur:= GetClassLong(_MainWindow^, -12);
+  with Options do
+    MouseLookOn:= MouseLook and (_CurrentScreen^ = 0) and (_MainMenuCode^ < 0) and
+       ((cur = EmptyCur) or (cur = ArrowCur)) and not MLookRightPressed^ and
+       ( (GetAsyncKeyState(MouseLookTempKey) and $8000 = 0) xor
+          MouseLookChanged xor MouseLookUseAltMode xor
+          (CapsLockToggleMouseLook and (GetKeyState(VK_CAPSLOCK) and 1 <> 0)));
+
+  if MouseLookOn <> (cur = EmptyCur) then
+  begin
+    if not MouseLookOn then
+    begin
+      SetClassLong(_MainWindow^, -12, ArrowCur);
+      if m6 = 0 then
+        _NeedRedraw^:= 1;
+    end else
+      SetClassLong(_MainWindow^, -12, EmptyCur);
+
+    if MLookIsTemp or not MouseLookOn and not MLookRightPressed^ and
+       (GetTickCount - MLookStartTime < MouseLookRememberTime) then
+    begin
+      MLastPos:= MLookTempPos;
+      MLookIsTemp:= false;
+    end else
+    begin
+      GetMLookPoint(MLastPos);
+      if MouseLookOn then
+      begin
+        MLookIsTemp:= GetAsyncKeyState(Options.MouseLookTempKey) and $8000 <> 0;
+        GetCursorPos(MLookTempPos);
+        MLookStartTime:= GetTickCount;
+      end;
+    end;
+
+    SetCursorPos(MLastPos.X, MLastPos.Y);
+  end;
+end;
+
+procedure ProcessMouseLook;
+
+  function Partial(move: int; var part: int; factor: int): int;
+  var
+    x: int;
+  begin
+    x:= part + move*factor;
+    Result:= (x + 32) and not 63;
+    part:= x - Result;
+    Result:= Result div 64;
+  end;
+
+const
+  dir = _Party_Direction;
+  angle = _Party_Angle;
+var
+  p: TPoint;
+  speed: PPoint;
+begin
+  CheckMouseLook;
+  GetCursorPos(p);
+  if MouseLookOn and (GetForegroundWindow = _MainWindow^) then
+  begin
+    if MLookIsTemp then
+      speed:= @MLookSpeed2
+    else
+      speed:= @MLookSpeed;
+    if not MLookRaw then
+    begin
+      MLookDX:= p.X - MLastPos.X;
+      MLookDY:= p.Y - MLastPos.Y;
+    end;
+    dir^:= (dir^ - Partial(MLookDX, MLookPartX, speed.X)) and 2047;
+    angle^:= IntoRange(angle^ - Partial(MLookDY, MLookPartY, speed.Y),
+      -Options.MaxMLookAngle, Options.MaxMLookAngle);
+    if (MLookDX <> 0) or (MLookDY <> 0) then  //(p.X <> MLastPos.X) or (p.Y <> MLastPos.Y) then
+    begin
+      p:= MWndPos;
+      ClientToScreen(_MainWindow^, p);
+      SetCursorPos(p.X, p.Y);
+    end;
+    MLookDX:= 0;
+    MLookDY:= 0;
+  end;
+  MLastPos:= p;
+end;
+
+procedure ProcessRawMouseLook(h: THandle);
+var
+  a: TRawInputMouse;
+  sz: uint;
+begin
+  sz:= SizeOf(a);
+  GetRawInputData(h, RID_INPUT, a, sz, SizeOf(RAWINPUTHEADER));
+  if a.header.dwType <> RIM_TYPEMOUSE then  exit;
+  if a.usFlags and 1 = 0 then
+  begin
+    inc(MLookDX, a.lLastX);
+    inc(MLookDY, a.lLastY);
+  end; // else absolute position is given
+end;
+
+procedure MouseLookHook(p: TPoint); stdcall;
+begin
+  CheckMouseLook;
+  if MouseLookOn then
+    GameCursorPos^:= MCenter
+  else
+    GameCursorPos^:= p;
+end;
+
+function MouseLookHook2(var p: TPoint): BOOL; stdcall;
+begin
+  CheckMouseLook;
+  Result:= GetMLookPoint(p);
+end;
+
+var
+  MouseLookHook3Std: procedure(a1, a2, this: ptr);
+  MLookBmp: TBitmap;
 
 function LoadMLookBmp(const fname: string; fmt: TPixelFormat): TBitmap;
 var
@@ -238,6 +531,47 @@ begin
   end;
 end;
 
+procedure MLookLoadBmp;
+var
+  fmt: TPixelFormat;
+begin
+  if _GreenColorBits^ = 5 then
+    fmt:= pf15bit
+  else
+    fmt:= pf16bit;
+  MLookBmp:= LoadMLookBmp('Data\MouseLookCursor.bmp', fmt);
+end;
+
+procedure MLookDraw;
+var
+  p1, p2: PChar;
+  x, y, w, h, d1, d2: int;
+  k, trans: Word;
+begin
+  if MLookBmp = nil then
+    MLookLoadBmp;
+  w:= MLookBmp.Width;
+  h:= MLookBmp.Height;
+  p1:= MLookBmp.ScanLine[0];
+  d1:= PChar(MLookBmp.ScanLine[1]) - p1 - 2*w;
+  p2:= PChar(_ScreenBuffer^) + 2*(_ScreenW^*(MCenter.Y - h div 2) + MCenter.X - w div 2);
+  d2:= 2*(_ScreenW^ - w);
+  trans:= pword(p1)^;
+  for y := 1 to h do
+  begin
+    for x := 1 to w do
+    begin
+      k:= pword(p1)^;
+      if k <> trans then
+        pword(p2)^:= k;
+      inc(p1, 2);
+      inc(p2, 2);
+    end;
+    inc(p1, d1);
+    inc(p2, d2);
+  end;
+end;
+
 procedure MLookDrawHD(const p: TPoint);
 var
   r: TRect;
@@ -247,6 +581,30 @@ begin
   GetClientRect(_MainWindow^, r);
   DXProxyCursorX:= (p.X*DXProxyRenderW*2 div r.Right + 1) div 2 - DXProxyCursorBmp.Width div 2;
   DXProxyCursorY:= (p.Y*DXProxyRenderH*2 div r.Bottom + 1) div 2 - DXProxyCursorBmp.Height div 2;
+end;
+
+procedure MouseLookHook3(a1, a2, this: ptr);
+begin
+  CheckMouseLook;
+  if MouseLookOn and not MLookIsTemp then
+    if MouseLookCursorHD and DXProxyActive and
+       ((DXProxyRenderW > SW) or (DXProxyRenderH > SH) or IsLayoutActive) then
+      MLookDrawHD(MWndPos)
+    else
+      MLookDraw;
+
+  MouseLookHook3Std(nil, nil, this);
+end;
+
+//----- Called whenever time is resumed
+
+procedure ClearKeyStatesHook;
+var
+  i: int;
+begin
+  for i := 1 to 255 do
+    MyGetAsyncKeyState(i);
+  GetCursorPos(MLastPos);
 end;
 
 //----- Compatible movie render
@@ -514,25 +872,6 @@ begin
     TDrawProc(pptr(ppchar(ChestBtn)^+8)^)(0,0, ChestBtn);
 end;
 
-procedure Draw8(ps: PByte; pd: PWord; ds, dd, w, h: int; pal: PWordArray); inline;
-var
-  x: int;
-begin
-  dec(ds, w);
-  dec(dd, w*2);
-  for h:= h downto 1 do
-  begin
-    for x:= w downto 1 do
-    begin
-      pd^:= pal[ps^];
-      inc(ps);
-      inc(pd);
-    end;
-    inc(PChar(ps), ds);
-    inc(PChar(pd), dd);
-  end;
-end;
-
 procedure DrawPaperDollStuff;
 const
   x = 466;
@@ -692,12 +1031,6 @@ asm
   cmp KeyControlMouseBlocked, 0
 end;
 
-procedure KeyControlEnter;
-asm
-  mov byte ptr [NeedRedraw], 1
-  mov [esp], m6*$419F47 + m7*$41D015 + m8*$41C40F
-end;
-
 procedure KeyControlCancel;
 asm
 {$IFDEF mm6}
@@ -709,6 +1042,13 @@ asm
 {$IFEND}
   mov KeyControlMouseBlocked, 0
   cmp KeyControlMouseBlocked, 0
+end;
+
+procedure KeyControlEnter;
+asm
+  // check zero height items?
+  mov byte ptr [NeedRedraw], 1
+  mov [esp], m6*$419F47 + m7*$41D015 + m8*$41C40F
 end;
 
 procedure KeyControl;
@@ -1034,7 +1374,7 @@ begin
   if si < 0 then  // look down
     mul:= min(mul, 1)*0.75*EnsureRange(2 - params.ZBuf/Dist*2, 0, 1)*EnsureRange(2 - h/HLim*2, 0, 1)
   else
-    mul:= min(mul, 5)*0.35;
+    mul:= min(mul - 1, 5)*0.35;
   mul:= 1/EnsureRange(1 + mul*si, 0.73, 2);
   with params do
   begin
@@ -1090,7 +1430,7 @@ begin
   if si < 0 then  // look down
     mul:= min(mul, 1)*0.75*EnsureRange(2 - params.ZBuf/Dist*2, 0, 1)
   else
-    mul:= min(mul, 5)*0.35;
+    mul:= min(mul - 1, 5)*0.35;
   mul:= 1/EnsureRange(1 + mul*si, 0.73, 2);
   with params do
     ScaleX:= Round(ScaleX*mul);
@@ -1290,11 +1630,240 @@ asm
   call FixChestSmartProc
 end;
 
+//----- Fix buffs - prefer new ones if they're longer OR stronger
+
+procedure FixCompareBuff;
+asm
+  jz @std
+  push eax
+{$IFDEF mm6}
+  mov ax, [esp + 8+8 + $10]
+{$ELSE}
+  mov ax, [ebp + $14]
+{$ENDIF}
+  cmp ax, [esi + 8]
+  pop eax
+  jng @skip
+  mov [esp], m6*$44A998 + m7*$45853F + m8*$455DBD
+@skip:
+  test esi, esi
+@std:
+end;
+
+//----- Fix crash due to a facet with no vertexes
+
+procedure FixZeroVertexFacet1;
+asm
+  mov al, [ebx + $5D]
+  test al, al
+  jnz @std
+  mov [esp], m7*$4243CF + m8*$42283D
+@std:
+end;
+
+//----- Allow running without HWLs
+
+procedure FixNoHWL;
+asm
+  cmp [esi], 0
+  jnz @ok
+  mov [esp], m7*$452763 + m8*$44FF98
+@ok:
+end;
+
+//----- Fix conditions priorities
+
+procedure DoFixConditionPriorities;
+const
+  Cursed      = 0;
+  Weak        = 1;
+  Asleep      = 2;
+  Afraid      = 3;
+  Drunk       = 4;
+  Insane      = 5;
+  Poison1     = 6;
+  Disease1    = 7;
+  Poison2     = 8;
+  Disease2    = 9;
+  Poison3     = 10;
+  Disease3    = 11;
+  Paralyzed   = 12;
+  Unconscious = 13;
+  Dead        = 14;
+  Stoned      = 15;
+  Eradicated  = 16;
+  Zombie      = 17;
+  CondOrder: array[0..17] of int = (Eradicated, Dead, Stoned, Unconscious,
+     Paralyzed, Asleep, Weak, Cursed, Disease3, Poison3, Disease2, Poison2,
+     Disease1, Poison1, Insane, Drunk, Afraid, Zombie);
+begin
+  CopyMemory(ptr(m6*$4C276C + m7*$4EDDA0 + m8*$4FDFA8), @CondOrder, SizeOf(CondOrder) - m6*4);
+end;
+
+//----- Fix element hints staying active in some dialogs
+
+var
+  HintDelay: int;
+//  HintXY: TPoint;
+
+//procedure MouseMoveHint(enable: Bool);
+//const
+//  p = PPoint($1006138);
+//begin
+//  if enable then
+//  begin
+//    HintXY:= p^;
+//    HintDelay:= -1;
+//  end else
+//    if (HintDelay = -1) and ((p.X <> HintXY.X) or (p.Y <> HintXY.Y)) then
+//      HintDelay:= HintStayTime;
+//end;
+
+procedure UpdateHintHook(std: TProcedure);
+const
+  p = PChar(int(_StatusText) + 200);
+  MouseXY = PPoint($1006138);
+var
+  ok: Boolean;
+  old: char;
+  oldN: int;
+begin
+//  if m8 = 1 then
+//    MouseMoveHint(false);
+  if m8 = 0 then
+    ok:= (_DialogsHigh^ > 0) and (_CurrentScreen^ <> 0)
+  else
+    with MouseXY^ do
+      ok:= (_CurrentScreen^ in [7,10,15,23,29]) and (Y < 389);
+  if ok then
+  begin
+    old:= p^;
+    oldN:= _ActionQueue^.Count;
+    if old <> #0 then
+      p^:= #1;
+    std;
+    if (p^ <> #1) or (_ActionQueue^.Count - oldN > 0) and (_ActionQueue^.Items[oldN].Action <> 122) then
+      HintDelay:= HintStayTime + 1;
+    if (HintDelay = 0) and (old <> #0) then
+    begin
+      if m6 = 1 then
+        _SetHint(0,0,' ')
+      else
+        _NeedUpdateStatus^:= true;
+      p^:= #0;
+    end;
+    if HintDelay > 0 then
+      dec(HintDelay);
+    if p^ = #1 then
+      p^:= old;
+{    if _ActionQueue^.Count - oldN <= 0 then
+      TRSWnd(_MainWindow^).Text:= '-'
+    else
+      with _ActionQueue^.Items[oldN] do
+        TRSWnd(_MainWindow^).Text:= Format('%d %d %d', [Action, Info1, Info2]);}
+//    TRSWnd(_MainWindow^).Text:= IntToStr(_ActionQueue^.Count - oldN);//HintDelay);
+  end else
+    std;
+end;
+{const
+  StatusText = int(_StatusText) + 200;
+  NeedUpdateStatus = int(_NeedUpdateStatus);
+asm
+  push eax
+  mov al, [StatusText]
+  mov byte ptr [StatusText], 0
+  or [NeedUpdateStatus], al
+  pop eax
+end;}
+
+//procedure UpdateHintMM8(n: int);
+//begin
+//  for n := n to _ActionQueue.Count - 1 do
+//    if _ActionQueue^.Items[oldN].Action <> 122 then
+//
+//end;
+
+//procedure DlgMouseMove;
+//const
+//  ActionCount = $51E330;
+//asm
+//  mov edx, [ActionCount]
+//  push edx
+//  push esi
+//  mov ecx, ebx
+//  call dword ptr [eax + 2Ch]
+//  pop eax
+//  sub eax, [ActionCount]
+//  jz @exit
+//  call MouseMoveHint
+//@exit:
+//end;
+
+//----- Restore AnimatedTFT bit from Blv rather than Dlv to avoid crash
+
+procedure FixReadFacetBit;
+asm
+	mov edx, [esp+4]
+	mov edx, [edx]
+	mov ecx, [eax]
+	and cx, $4000
+	and dx, $FFFF - $4000
+	or dx, cx
+	mov [eax], edx
+end;
+
+//----- Fix monsters blocking shots of other monsters
+
+procedure FixMonsterBlockShots;
+const
+  Mon_IsAgainstMon: int = m7*$40104C + m8*$401051;
+asm
+  mov ecx, [ebp - $10]
+  sub ecx, m7*$86 + m8*$8E
+  lea edx, [_MapMonsters + eax]
+  call Mon_IsAgainstMon
+  test eax, eax
+  push m7*$471724 + m8*$470282
+end;
+
+//----- Fix item spells when cast onto item with index 0
+
+procedure FixItemSpells;
+asm
+{$IFDEF mm6}
+  jnz @std
+  cmp word ptr [ebx], 29  // Enchant Item
+  jnz @std
+{$ELSE}
+	jz @std
+	cmp ax, 4   // Fire Aura
+	jz @mine
+	cmp ax, 28  // Recharge Item
+	jz @mine
+	cmp ax, 30  // Enchant Item
+	jz @mine
+	cmp ax, 91  // Vampiric Weapon
+	jz @mine
+	jmp @std
+{$ENDIF}
+@mine:
+	xor eax, eax
+	mov [esp], m6*$42274F + m7*$427ED4 + m8*$42610B
+@std:
+end;
+
 //----- HooksList
 
 var
+  HooksCommon: array[1..3] of TRSHookInfo = (
+    (p: m6*$453ACE + m7*$463341 + m8*$461316; newp: @UpdateHintHook;
+       t: RShtCallStore; Querry: hqFixStayingHints), // Fix element hints staying active in some dialogs
+    (p: m6*$4226F8 + m7*$427E71 + m8*$4260A8; newp: @FixItemSpells;
+       t: RShtAfter; size: 7 - m6), // Fix item spells when cast onto item with index 0
+    ()
+  );
 {$IFDEF MM6}
-  Hooks: array[1..29] of TRSHookInfo = (
+  Hooks: array[1..40] of TRSHookInfo = (
     (p: $457567; newp: @WindowWidth; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $45757D; newp: @WindowHeight; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $454340; newp: @WindowProcHook; t: RShtFunctionStart; size: 8), // Window procedure hook
@@ -1308,6 +1877,7 @@ var
     (p: $419DBF; newp: @KeyControl; t: RShtBefore; size: 6), // Control certain dialogs with keyboard
     (p: $45472C; size: 6), // Control certain dialogs with keyboard (allow keyboard everywhere)
     (p: HookWindowProc; newp: @KeyControlCheckUnblock; t: RShtBefore), // Control certain dialogs with keyboard
+    (p: $40CEB8; old: 11; new: 0; t: RSht1), // Spellbook misbehaves when controlled with keyboard
     (p: $41146D; newp: @EnchantItemRightClick; t: RShtAfter), // Allow right click in item spell dialogs
     (p: $41E092; newp: @ChestVerticalHook6; t: RShtCall; Querry: hqPlaceChestItemsVertically), // Place items in chests vertically
     (p: $41E4D7; newp: @FixChestsCompact; t: RShtAfter; size: 7; Querry: hqFixChestsByCompacting), // Fix chests by compacting
@@ -1323,10 +1893,20 @@ var
     (p: $43E37F; newp: @CloseNPCDialog6; t: RShtBefore; size: 6), // Allow entering maps from NPC dialog
     (p: $43DE74; newp: @CloseNPCDialog2; t: RShtBefore), // Allow entering maps from NPC dialog
     (p: $456347; newp: @FixChestSmartHook; t: RShtCall; size: 8; Querry: 19), // Fix chests: reorder to preserve important items
+    (p: $44A97F; newp: @FixCompareBuff; t: RShtAfter; size: 6), // Fix buffs - prefer new ones if they're longer OR stronger
+    (p: $45B860; newp: @MouseLookHook; t: RShtJmp; size: 8), // Mouse look
+    (p: $4B9168; newp: @MouseLookHook2; t: RSht4), // Mouse look
+    (p: $43532D; backup: @@MouseLookHook3Std; newp: @MouseLookHook3; t: RShtCall), // Mouse look
+    (p: $44C880; newp: @ClearKeyStatesHook; t: RShtJmp; size: 8), // Clear my keys as well
+    (p: $4A7316; old: 5000; newp: @WinScreenDelay; newref: true; t: RSht4), // Control Win screen delay during which all input is ignored
+    (p: $411F7D; old: $4CB6B8; new: $4CB2C4; t: RSht4), // In Awards screen Up and Down arrows were switched when pressed
+    (p: $411FA4; old: $4CB2C4; new: $4CB6B8; t: RSht4), // In Awards screen Up and Down arrows were switched when pressed
+    (p: $41FCC7; old: 30; new: 36; t: RSht1), // Fix ring view magnifying glass click width
+    (p: $42CF9C; old: 30; new: 36; t: RSht1), // Fix ring view magnifying glass click width
     ()
   );
 {$ELSEIF defined(MM7)}
-  Hooks: array[1..52] of TRSHookInfo = (
+  Hooks: array[1..67] of TRSHookInfo = (
     (p: $47B84E; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (monsters)
     (p: $47B296; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (items)
     (p: $47AD40; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (sprites)
@@ -1378,10 +1958,25 @@ var
     (p: $4483D8; newp: @CloseNPCDialog; t: RShtBefore; size: 6), // Allow entering maps from NPC dialog
     (p: $448017; newp: @CloseNPCDialog2; t: RShtBefore; size: 7), // Allow entering maps from NPC dialog
     (p: $450284; newp: @FixChestSmartHook; t: RShtCall; size: 8; Querry: 19), // Fix chests: reorder to preserve important items
+    (p: $45852A; newp: @FixCompareBuff; t: RShtAfter), // Fix buffs - prefer new ones if they're longer OR stronger
+    (p: $423B32; newp: @FixZeroVertexFacet1; t: RShtBefore), // Fix crash due to a facet with no vertexes
+    (p: $46A08E; newp: @MouseLookHook; t: RShtJmp; size: 10), // Mouse look
+    (p: $4D825C; newp: @MouseLookHook2; t: RSht4), // Mouse look
+    (p: $4160C5; backup: @@MouseLookHook3Std; newp: @MouseLookHook3; t: RShtCall), // Mouse look
+    (p: $459E78; newp: @ClearKeyStatesHook; t: RShtJmp; size: 6), // Clear my keys as well
+    (p: $4BFC6C; old: 5000; newp: @WinScreenDelay; newref: true; t: RSht4), // Control Win screen delay during which all input is ignored
+    (p: $43C046; old: $5074F0; new: $5074E8; t: RSht4), // In Awards screen Up and Down arrows were switched when pressed
+    (p: $43C06A; old: $5074E8; new: $5074F0; t: RSht4), // In Awards screen Up and Down arrows were switched when pressed
+    (p: $422621; newp: ptr($422650); t: RShtJmp; size: 6), // Leftover code from MM6
+    (p: $45275E; newp: @FixNoHWL; t: RShtBefore), // Allow running without HWLs
+    (p: $421893; old: 30; new: 32; t: RSht1), // Fix ring view magnifying glass click width
+    (p: $434A6C; old: 30; new: 32; t: RSht1), // Fix ring view magnifying glass click width
+    (p: $49A745; old: $4CA780; newp: @FixReadFacetBit; t: RShtCall), // Restore AnimatedTFT bit from Blv rather than Dlv to avoid crash
+    (p: $4716EE; newp: @FixMonsterBlockShots; t: RShtJmp; size: 7; Querry: hqFixMonsterBlockShots), // Fix monsters blocking shots of other monsters
     ()
   );
 {$ELSE}
-  Hooks: array[1..48] of TRSHookInfo = (
+  Hooks: array[1..59] of TRSHookInfo = (
     (p: $47AB35; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Monsters not visible on the sides of the screen
     (p: $47A55E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Items not visible on the sides of the screen
     (p: $48B37E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Effects not visible on the sides of the screen
@@ -1429,13 +2024,27 @@ var
     (p: $4456ED; newp: @CloseNPCDialog; t: RShtBefore; size: 7), // Allow entering maps from NPC dialog
     (p: $44533D; newp: @CloseNPCDialog2; t: RShtBefore; size: 7), // Allow entering maps from NPC dialog
     (p: $44D9AC; newp: @FixChestSmartHook; t: RShtCall; size: 8; Querry: 19), // Fix chests: reorder to preserve important items
+    (p: $455DA8; newp: @FixCompareBuff; t: RShtAfter), // Fix buffs - prefer new ones if they're longer OR stronger
+    (p: $421FA9; newp: @FixZeroVertexFacet1; t: RShtBefore; size: 6), // Fix crash due to a facet with no vertexes
+    (p: $4683FE; newp: @MouseLookHook; t: RShtJmp; size: 10), // Mouse look
+    (p: $4E8210; newp: @MouseLookHook2; t: RSht4), // Mouse look
+    (p: $415584; backup: @@MouseLookHook3Std; newp: @MouseLookHook3; t: RShtCall), // Mouse look
+    (p: $45773F; newp: @ClearKeyStatesHook; t: RShtJmp; size: 6), // Clear my keys as well
+    (p: $46504A; newp: @ClearKeyStatesHook; t: RShtBefore), // Clear keys when entering the game
+    (p: $4BD7AE; old: 5000; newp: @WinScreenDelay; newref: true; t: RSht4), // Control Win screen delay during which all input is ignored
+    (p: $44FF93; newp: @FixNoHWL; t: RShtBefore), // Allow running without HWLs
+    (p: $497C3A; old: $4D96B0; newp: @FixReadFacetBit; t: RShtCall), // Restore AnimatedTFT bit from Blv rather than Dlv to avoid crash
+    (p: $47024C; newp: @FixMonsterBlockShots; t: RShtJmp; size: 7; Querry: hqFixMonsterBlockShots), // Fix monsters blocking shots of other monsters
+//    (p: $4D1A93; newp: @DlgMouseMove; t: RShtCall; size: 6; Querry: hqFixStayingHints), // Fix element hints staying active in some dialogs
     ()
   );
 {$IFEND}
 
 procedure ApplyMMHooks;
 begin
+  CheckHooks(HooksCommon);
   CheckHooks(Hooks);
+  RSApplyHooks(HooksCommon);
   RSApplyHooks(Hooks);
   if PlaceChestItemsVertically then
     RSApplyHooks(Hooks, hqPlaceChestItemsVertically);
@@ -1445,6 +2054,15 @@ begin
     RSApplyHooks(Hooks, hqSpriteAngleCompensation);
   if SpriteInteractIgnoreId then
     RSApplyHooks(Hooks, hqSpriteInteractIgnoreId);
+  if FixConditionPriorities then
+    DoFixConditionPriorities;
+  if HintStayTime > 0 then
+    RSApplyHooks(HooksCommon, hqFixStayingHints);
+  if OptFixMonsterBlockShots then
+    RSApplyHooks(Hooks, hqFixMonsterBlockShots);
+
+{  if HintStayTime > 0 then
+    RSApplyHooks(Hooks, hqFixStayingHints);}
 end;
 
 procedure ApplyMMDeferredHooks;
@@ -1487,4 +2105,8 @@ begin
   RSApplyHooks(Hooks, hqWindowSize);
 end;
 
+initialization
+finalization
+  if EmptyCur <> 0 then
+    DestroyCursor(EmptyCur);
 end.

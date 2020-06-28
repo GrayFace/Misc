@@ -227,6 +227,10 @@ begin
 
   if hk.t in [RShtBStr, RShtStr] then
     Result:= CompareMem(ptr(hk.p), PChar(hk.oldstr), length(hk.oldstr) + IfThen(hk.t = RShtStr, 1, 0))
+  else if hk.t = RSht1 then
+    Result:= RSGetHookValue(hk) = byte(hk.old)
+  else if hk.t = RSht2 then
+    Result:= RSGetHookValue(hk) = word(hk.old)
   else
     Result:= RSGetHookValue(hk) = hk.old;
 end;

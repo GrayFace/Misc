@@ -263,6 +263,10 @@ Version 2.4:
 (MM6)
 [-] Static Charge cost at Expert was incorrect. Spells cost wasn't taken from Speels.txt
 
+Version 2.4.1:
+(MM6-MM8)
+[+] MouseDX, MouseDY in PatchOptions
+
 
 Если загрузить сейв, где все рожи одинаковые, а потом сейв с разными, будут черные пятна на месте рож
 
