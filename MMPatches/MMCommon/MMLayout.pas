@@ -189,6 +189,9 @@ const
   lvQuestion = 'Game.Question';
   lvTreeHints = 'Game.TreeHints';
   lvDrawButton = 'Game.DrawButton';
+  lvHintAreaTop = 'Game.HintAreaTop';
+  lvHintAreaRight = 'Game.HintAreaRight';
+  lvEnableAttackSpell = 'Game.EnableAttackSpell';
   CanvasScreen = -1;
   CanvasTimer = -2;
   CanvasBase = 0;       lvcBase = 'Game.BaseUI';

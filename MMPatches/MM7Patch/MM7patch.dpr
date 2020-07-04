@@ -304,7 +304,12 @@ Version 2.5:
 [+] FixConditionPriorities
 [+] HintStayTime
 [-] Casting stronger buffs did nothing if a weaker, but longer one is in place
-[-] Item spells were causing bugs when cast onto the very 1st item in the inventory 
+[-] Item spells were causing bugs when cast onto the very 1st item in the inventory
+[-] Now you can pick up stolen items from corpses of thieves (in MM7 and MM8 this was the case, but there was no indication)
+[!!] Names.txt and Global.txt in MM6 - cmp with 7, "Minotuars" in MM8 Promotion Quest NPC
+[!!] Fix 'Of Recovery'
+[!!] Change minimap color for color blind
+[!!] Support dgVoodoo option
 (MM6, MM7)
 [-] Snow X speed was effected by strafing too much
 (MM7, MM8)
@@ -312,22 +317,30 @@ Version 2.5:
 [+] The game doesn't crash on exit if d3dsprite.hwl and d3dbitmap.hwl are missing
 [-] Another crash caused by vertexless facets
 [-] Restore AnimatedTFT bit from Blv rather than Dlv to avoid crash
-[-] OptFixMonsterBlockShots
+[-] FixMonstersBlockingShots
+[-] Duration string for items wasn't localized
 [-] My bug: Crash in full screen if BorderlessFullscreen=0
 [-] My bug: Mipmaps were always on in full screen if BorderlessFullscreen=0 and MipmapsCount>1
 [-] My bug: Empty icons were causing division by zero in UI Layout code
 [-] My bug: Empty sprites causing a crash in D3D mode
 (MM6)
-[-] End game movies were unskippable
+[-] End game movies were unskippable, as well as the intro on first launch
 [-] Game wasn't paused in Enchant Item screen
+[-] FixParalize
 [-] My bug: Keyboard control in spell book was causing spells to be cast accidentally with arrow keys
 (MM7)
 [+] Minor tweaks to UI Layout mode
 [-] If current fines are due, arcomage win/lose count wasn't added to awards
 [-] Master Healer NPC was messing up one of player buffs when activated 
-[-] Artifacts weren't generated properly as objects on the ground 
+[-] Artifacts weren't generated properly as objects on the ground
+[-] Artifacts generated specifically as level 7 items weren't marked as found
+[-] FixLichImmune - Lich was becoming immune to elemental magic if resistances are 200
+(MM8)
+[-] Vampires weren't immune to Mind
 
-[!!] (tested in MM7) unconscious players don't wrok in Display Inventory screen
+
+[!!] (tested in MM7) unconscious players don't work in Display Inventory screen
+[!!] Buffer house animations to avoid restart and MM6 mouse item tunneling
 
 [!!] MouseLookShooterAim
 [!!] dgVoodoo support
@@ -492,15 +505,16 @@ recovery is almost nonexistent. - both in MM7 and 8.
 - The Haste spell doesn't seem to shorten recovery time from casting
 spells. (both MM7 and 8). Looks like Mok fixed it only for weapons.
 
-- In MM7 many quests don't appear in the Awards section upon completion.
-This needs a double-check.
-
 - When you point your mouse over The Oldest Tree, you get a subtitle
 "tree69". Awkwarrrrd ;p
 
 - The Heal spell is supposed to be cast on distant targets starting at
 Expert in Body Magic--it can be, however, from the very beginning, even
 with basic skill. This should be fixed in both MM7 and 8.
+
+- MM6: Perception NPCs not working
+
+- tons of MM6 bugs: https://www.celestialheavens.com/forum/post/quote?f=10&p=381583
 
 Xfing:
 

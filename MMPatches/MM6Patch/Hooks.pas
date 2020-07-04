@@ -32,15 +32,6 @@ begin
   ZeroMemory(_ObjectByPixel^, _ScreenW^*_ScreenH^*4);  // avoid crash
 end;
 
-procedure DoPlaySound;
-asm
-  mov ecx, _PlaySoundStruct
-  push _PlaySound
-end;
-
-var
-  PlaySound: procedure(id: int; a3: int = 0; a4: int = 0; a5: int = -1; a6: int = 0; a7: int = 0; a8: int = 0; a9: int = 0); stdcall;
-
 function IncreaseRecoveryRateProc(v, n1: int; member:ptr):int; forward;
 
 procedure QuickLoad;
@@ -2950,14 +2941,41 @@ end;
 
 //----- Fix Paralyze
 
-procedure FixParalyze;
+procedure FixParalyzeHook;
+const
+  Monster_ChooseTargetMember: int = $4219B0;
+  Character_DoBadThing: int = $480010;
+  Party_Players = $944C68;
 asm
+  cmp word ptr [esi], 8080
+  jnz @std
+  cmp edx, 4
+  jnz @std
+  mov eax, [esi+4Ch]  // Owner
+  sar eax, 3
+  imul eax, _MonOff_Size
+  add eax, _MonstersPtr
+  push eax            // mon
+  mov ecx, $4D51D8
+  call Monster_ChooseTargetMember
+  mov ecx, [Party_Players + eax*4] // this
+  push 12             // thing
+  call Character_DoBadThing
+  mov edx, 4
+@std:
+end;
+
+//----- Make HookPopAction useable with straight Delphi funcitons
+
+procedure PopActionAfter;
+asm
+  mov ecx, [$4D5F48]
 end;
 
 //----- HooksList
 
 var
-  HooksList: array[1..282] of TRSHookInfo = (
+  HooksList: array[1..285] of TRSHookInfo = (
     (p: $42ADE7; newp: @RunWalkHook; t: RShtCall), // Run/Walk check
     (p: $453AD3; old: $42ADA0; newp: @KeysHook; t: RShtCall), // My keys handler
     (p: $45456E; old: $417F90; newp: @WindowProcCharHook; t: RShtCall), // Map Keys
@@ -3019,7 +3037,7 @@ var
     (p: $482BBE; newp: ptr($482C17); t: RShtJmp; size: $482C17 - $482BBF), // remove NWC 'Increases rate of Recovery' implementation attempt
     (p: $4885F9; newp: ptr($1024448B); t: RSht4), // remove NWC 'Increases rate of Recovery' implementation attempt
     (p: $4885FD; newp: ptr($488656); t: RShtJmp; size: $488656 - $4885FE), // remove NWC 'Increases rate of Recovery' implementation attempt
-    (p: $482E60; old: 50; newp: @Options.IncreaseRecoveryRateStrength; newref: true; t: RSht4), // strength of 'Increases rate of Recovery'
+    (p: $482E60; old: 50; newp: @Options.IncreaseRecoveryRateStrength; newref: true; t: RSht4; Querry: -1), // strength of 'Increases rate of Recovery'
     (p: $47E51C; newp: @DaggerTrippleHook; t: RShtCall; Querry: 10), // ProgressiveDaggerTrippleDamage
     (p: $47E640; newp: @DaggerTrippleHook; t: RShtCall; Querry: 10), // ProgressiveDaggerTrippleDamage
     (p: $49D93F; old: 1500; newp: @Options.HorsemanSpeakTime; newref: true; t: RSht4; Querry: -1), // Horseman delay
@@ -3237,9 +3255,11 @@ var
     (p: $453650; newp: @PostponeIntroHook; t: RShtAfter; Querry: hqPostponeIntro), // Postpone intro
     (p: $448F66; newp: @FixSpellsCost; t: RShtAfter), // Fix Static Charge cost, sync spells cost
     (p: $4A6D02; size: 6), // End game movies were unskippable
+    (p: $457BA4; size: 2), // Intro movies were unskippable on 1st launch
     (p: $42AF6B; old: 10; new: 2; t: RSht1), // Snow X speed was effected by strafing too much
     (p: $42AFD3; old: -10; new: -2; t: RSht1), // Snow X speed was effected by strafing too much
-    //(p: $432084; newp: @FixParalyze; t: RShtBefore), // Fix Paralyze
+    (p: $45C7A1; newp: @FixParalyzeHook; t: RShtBefore; size: 6; Querry: hqFixParalyze), // Fix Paralyze
+    (p: HookPopAction; newp: @PopActionAfter; t: RShtBefore; size: 6), // Make HookPopAction useable with straight Delphi funcitons
     ()
   );
 
@@ -3326,6 +3346,8 @@ begin
     RSApplyHooks(HooksList, hqFixSmackDraw);
   if Options.SupportTrueColor then
     RSApplyHooks(HooksList, hqTrueColor);
+  if Options.FixParalyze then
+    RSApplyHooks(HooksList, hqFixParalyze);
   ApplyMMDeferredHooks;
 end;
 
@@ -3335,7 +3357,6 @@ exports
   GetCustomLodsList,
   GetLodRecords;
 initialization
-  @PlaySound:= @DoPlaySound;
   ArrowCur:= LoadCursorFromFile('Data\MouseCursorArrow.cur');
   if ArrowCur = 0 then
     ArrowCur:= LoadCursor(GetModuleHandle(nil), 'Arrow');

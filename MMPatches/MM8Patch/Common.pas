@@ -17,6 +17,8 @@ const
   _MainMenuCode = pint($6CEB24);
   _CurrentCharScreen = pint($5185A8);
   _NeedRedraw = pint($587ADC);
+  _TextBuffer1 = pchar($5DF0E0);
+  _TextBuffer2 = pchar($55D5B0);
   _TextGameSaved = ppchar($601E88);
   _ItemInMouse = pint($B7CA64);
   _PartyMembers = $B7CA48;
@@ -42,7 +44,6 @@ const
   _SaveSlot2 = pint($6F30C0);
   _SaveSlotsFiles = PSaveSlotFiles($6CADCC);
   _SaveSlotsCount = pint($6CACFC);
-  _TextBuffer1 = pchar($5DF0E0);
   __ItemsTxt = $41CE60;
   _ItemsTxt = pint(__ItemsTxt);
   _MainWindow = puint($6F3934);
@@ -54,6 +55,7 @@ const
   _MapMonsters = $61C540;
   _IsD3D = pbool($EC1980);
   _startinwindow = pbool($EC1984);
+  _PlayersArray = $B2187C;
   __Windowed = $F019D8;
   _Windowed = pbool(__Windowed);
   _GreenColorBits = pint($F01A50);
@@ -85,15 +87,14 @@ const
   _ShowStatusText: procedure(a0, seconds: int; text: PChar) = ptr($4496C5);
   _LoadPaperDollGraphics: procedure(_: int = 0; __: int = 0; unk: int = -1) = ptr($4398E6);
   _access: function(fileName: PChar; unk: int = 0): int cdecl = ptr($4DC7E5);
-  _malloc: function(size:int):ptr cdecl = ptr($4D9F62);
-  _new: function(size:int):ptr cdecl = ptr($4D9E0B);
-  _free: procedure(p:ptr) cdecl = ptr($4DA09C);
   _PermAlloc: function(n1,n2: int; allocator: ptr; name: PChar; size, unk: int):ptr = ptr($424B4D);
   _PermAllocator = ptr($73F910);
   _LoadMapTrack: procedure = ptr($4AA3E7);
   _ExitScreen: procedure(n1: int = 0; n2: int = 0; a1: int = $1006148; a6: int = 0; a5: int = 0; a4: int = 0; a3: int = 1; a2: int = 27) = ptr($4D1D6A);
   _IsScreenOpaque: function: BOOL = ptr($421886);
   _IsMoviePlaying: function: Boolean = ptr($4BCFA0);
+  _PlaySound = $4A87DC;
+  _PlaySoundStruct = $FEB360;
   _StopSounds: procedure(_: int = 0; __: int = 0; this: int = $FEB360; a1: int = -1; a2: int = -1) = ptr($4A9BF7);
   _strcmpi: function(const s1, s2: PChar): int cdecl = ptr($4DA920);
 
@@ -108,14 +109,13 @@ const
   _RGBtoHSV: procedure(_: int; var S, H, V: Single; B, G, R: Single) = ptr($48A088);
   _HSVtoRGB: procedure(_: int; var G, R: Single; V, S, H: Single; var B: Single) = ptr($489F21);
 {    pk: int;  // palette kind: 2 = 16 bits, 1 = 24 bits, 0 = none
-    forceNew, inEnglishD: BOOL;
-  _LoadLodBitmap: function(_,__, lod: int; param: TLoadBitmapParams; name: PChar): int = ptr($410D70);}
+    forceNew, inEnglishD: BOOL;}
+  _LoadLodBitmap: function(_,__, lod: int; palKind: int64; name: PChar): int = ptr($410D70);
+  _DoLoadLodBitmap: function(_,__, lod: int; palKind: int64; name: PChar; var bmp): int = ptr($410ED8);
   _LoadBitmapInPlace: function(_,__, lod: int; palKind: int; name: PChar; var bmp): int = ptr($411931);
   //_FreeBitmap: procedure(_,_1: int; var bmp) = ptr($410A10);
   _BitmapsLod = $72DC60;
   _IconsLod = $70D3E8;
-  _LoadPcx: function(_,_1: int; var pcx; _2: int; lang: BOOL; name: PChar): int = ptr($4106F3);
-  _FreePcx: procedure(_,_1: int; var pcx) = ptr($40F7F6);
 
   _LockSurface: function(surf: IUnknown; var desc; flags: int = 1): bool stdcall = ptr($49E9C0);
 
@@ -138,8 +138,6 @@ const
 
   _Mon_IsAgainstMon: function(_, defender, attacker: ptr): int = ptr($401051);
   
-  _ItemOff_Size = $24;
-
   _MonOff_vx = $9C;
   _MonOff_vy = $9E;
   _MonOff_Size = $3CC;

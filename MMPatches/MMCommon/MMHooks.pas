@@ -12,10 +12,12 @@ uses
 procedure ApplyMMHooks;
 procedure ApplyMMDeferredHooks;
 procedure ApplyMMHooksSW;
+procedure NeedWindowSize;
+procedure LoadInterface;
+procedure InterfaceColorChanged(_: Bool; Replace: Boolean; Align: int);
 function GetCoordCorrectionIndoorX: ext;
 function GetCoordCorrectionIndoorY: ext;
 function IsLayoutActive(CanActivate: Boolean = true): Boolean; inline;
-procedure NeedWindowSize;
 function TransformMousePos(x, y: int; out x1: int): int;
 function MyGetAsyncKeyState(vKey: Integer): SHORT; {$IFNDEF MM6}stdcall;{$ENDIF}
 function CheckKey(key: int):Boolean;
@@ -881,11 +883,12 @@ const
 var
   p: PWordArray;
 begin
+  NeedScreenWH;
   p:= _ScreenBuffer^;
   if _CurrentScreen^ <> 15 then
-    Draw16(@p[y*640], @p[x - x0 + y*640], 640*2, 640*2, x0 + 1, h, 0, ldkOpaque);
+    Draw16(@p[y*SW], @p[x - x0 + y*SW], SW*2, SW*2, x0 + 1, h, 0, ldkOpaque);
   with _IconsLodLoaded.Items[_LPicTopbar^] do
-    Draw8(@Image[x], @p[x], Rec.w, 640*2, Rec.w - x, Rec.h, Palette16);
+    Draw8(@Image[x], @p[x], Rec.w, SW*2, Rec.w - x, Rec.h, Palette16);
   ChestBtnPos^:= ChestBtnPosMine;
 end;
 
@@ -1704,37 +1707,22 @@ end;
 
 var
   HintDelay: int;
-//  HintXY: TPoint;
-
-//procedure MouseMoveHint(enable: Bool);
-//const
-//  p = PPoint($1006138);
-//begin
-//  if enable then
-//  begin
-//    HintXY:= p^;
-//    HintDelay:= -1;
-//  end else
-//    if (HintDelay = -1) and ((p.X <> HintXY.X) or (p.Y <> HintXY.Y)) then
-//      HintDelay:= HintStayTime;
-//end;
 
 procedure UpdateHintHook(std: TProcedure);
 const
   p = PChar(int(_StatusText) + 200);
   MouseXY = PPoint($1006138);
+  MDlgCount = pint($1006148+88);
 var
   ok: Boolean;
   old: char;
   oldN: int;
 begin
-//  if m8 = 1 then
-//    MouseMoveHint(false);
   if m8 = 0 then
     ok:= (_DialogsHigh^ > 0) and (_CurrentScreen^ <> 0)
   else
     with MouseXY^ do
-      ok:= (_CurrentScreen^ in [7,10,15,23,29]) and (Y < 389);
+      ok:= (Y < 389) and ((_CurrentScreen^ in [7,10,15,23]) or (_CurrentScreen^ = 29) and (MDlgCount^ = 2));
   if ok then
   begin
     old:= p^;
@@ -1756,48 +1744,9 @@ begin
       dec(HintDelay);
     if p^ = #1 then
       p^:= old;
-{    if _ActionQueue^.Count - oldN <= 0 then
-      TRSWnd(_MainWindow^).Text:= '-'
-    else
-      with _ActionQueue^.Items[oldN] do
-        TRSWnd(_MainWindow^).Text:= Format('%d %d %d', [Action, Info1, Info2]);}
-//    TRSWnd(_MainWindow^).Text:= IntToStr(_ActionQueue^.Count - oldN);//HintDelay);
   end else
     std;
 end;
-{const
-  StatusText = int(_StatusText) + 200;
-  NeedUpdateStatus = int(_NeedUpdateStatus);
-asm
-  push eax
-  mov al, [StatusText]
-  mov byte ptr [StatusText], 0
-  or [NeedUpdateStatus], al
-  pop eax
-end;}
-
-//procedure UpdateHintMM8(n: int);
-//begin
-//  for n := n to _ActionQueue.Count - 1 do
-//    if _ActionQueue^.Items[oldN].Action <> 122 then
-//
-//end;
-
-//procedure DlgMouseMove;
-//const
-//  ActionCount = $51E330;
-//asm
-//  mov edx, [ActionCount]
-//  push edx
-//  push esi
-//  mov ecx, ebx
-//  call dword ptr [eax + 2Ch]
-//  pop eax
-//  sub eax, [ActionCount]
-//  jz @exit
-//  call MouseMoveHint
-//@exit:
-//end;
 
 //----- Restore AnimatedTFT bit from Blv rather than Dlv to avoid crash
 
@@ -1852,18 +1801,469 @@ asm
 @std:
 end;
 
+//----- Fix deliberately generated artifacts not marked as found
+// In MM6 this routine ignores ArtifactsFound completely.
+
+procedure FixUnmarkedArtifacts;
+asm
+  mov byte ptr [$ACD3FE + eax], 1
+end;
+
+//----- Fix item picture change causing inventory corruption
+
+procedure RemoveInvItem(a: PIntegerArray; slot: int);
+var
+  i: int;
+begin
+  a[0]:= 0;
+  a:= @a[-slot];
+  slot:= -1 - slot;
+  for i := 0 to 137 do
+    if a[i] = slot then
+      a[i]:= 0;
+end;
+
+var
+  LastRemovedItem: int;
+
+procedure FixRemoveInvItemPlayer;
+asm
+  // item number: ecx (mm6), esi (7-8)
+  {$IFDEF mm6}mov LastRemovedItem, ecx{$ENDIF}
+  {$IFDEF mm6}mov edx, ebx{$ELSE}mov edx, [esp + $14]{$ENDIF}
+  mov eax, edi
+  call RemoveInvItem
+  push m6*$48755E + m7*$492AC6 + m8*$4913D7
+  ret 4*m6
+end;
+
+procedure RemoveInvItemChest(a: PInt2Array; slot: int);
+var
+  i: int;
+begin
+  a[slot]:= 0;
+  slot:= -1 - slot;
+  for i := 0 to 137 do
+    if a[i] = slot then
+      a[i]:= 0;
+end;
+
+procedure FixRemoveInvItemChest;
+asm
+  add eax, _Chests + _ChestOff_Inventory
+  {$IFDEF mm6}mov edx, [esp + $20 - 8]{$ENDIF}
+  {$IFDEF mm7}mov edx, [ebp - $C]{$ENDIF}
+  call RemoveInvItemChest
+  push m6*$41EDB5 + m7*$420BA2 + m8*$420125
+  ret 4*m6
+end;
+
+//----- Loot stolen items from thief's corpse
+
+procedure FixMonStealCheck;
+asm
+  // only steal unenchanted items
+  lea eax, [esi+ebx*4+128h]
+  cmp dword ptr [eax + _ItemOff_Bonus], 0
+  jnz @skip
+  cmp dword ptr [eax + _ItemOff_Bonus2], 0
+  jnz @skip
+  test [eax + _ItemOff_Condition], (_ItemCond_Broken + _ItemCond_Stolen + _ItemCond_Hardened)
+  jnz @skip
+  mov eax, [eax + _ItemOff_Number]
+  ret
+@skip:
+  xor eax, eax
+end;
+
+procedure FixMonSteal;
+asm
+  cmp [esp + 4], 20
+  jz @steal
+  jmp eax
+@steal:
+  cmp word ptr [edi + _MonOff_Item], 0
+  jz @DoSteal
+  ret 4
+@DoSteal:
+  mov LastRemovedItem, 0
+  push [esp + 4]
+  call eax
+  mov eax, LastRemovedItem
+  mov [edi + _MonOff_Item], ax
+  ret 4
+end;
+
+//----- Don't show stealing animation if nothing's stolen
+
+procedure FixMonStealDisplay;
+asm
+  cmp eax, 20
+  jnz @std
+  mov edx, [ebp + $C]
+  cmp dword ptr [edx + _MonOff_Item1], 0
+  jz @std
+  cmp dword ptr [edx + _MonOff_Item2], 0
+  jz @std
+  mov ecx, -1
+@std:
+end;
+
+//----- Show that stolen item was found
+
+procedure FixStolenLootHint;
+const
+  TextBuffer2 = int(_TextBuffer2);
+  _sprintf: int = m7*$4CAD70 + m8*$4D9F10;
+asm
+  push eax  // std function
+  cmp dword ptr [ebp - 8], 0  // already found an item
+  jnz @skip
+  mov eax, [edi]
+  // code based on 425108 (mm7)
+  lea eax, [eax+eax*2]
+  shl eax, 4
+  mov edx, [m7*$426C53 + m8*$425118 - 4]
+  mov eax, [eax + edx]
+  mov edx, [ebp - 4]  // gold
+  push eax  // item name
+  mov eax, m7*$5E475C + m8*$601BA4
+  cmp edx, 0
+  jz @nogold
+  push edx  // gold
+  add eax, $5E47A8 - $5E475C
+@nogold:
+  push dword ptr [eax]  // format string
+  push TextBuffer2
+  call _sprintf
+  add esp, 0Ch
+  cmp dword [ebp - 4], 0
+  jz @nogold2
+  pop ecx
+@nogold2:
+  mov edx, 2
+  mov ecx, TextBuffer2
+  call _ShowStatusText
+  mov ecx, esi
+@skip:
+end;
+
+//----- Draw bitmap as internal minimap background
+
+{var
+  MinimapBkgPcx: TLoadedPcx;
+
+procedure MinimapBkgHook(_,__, screen, color, height, width, top, left: int);
+begin
+  _DrawPcx(0,0, screen, MinimapBkgPcx, top, left);
+end;}
+
+var
+  MinimapBkgBmp: int;
+
+procedure MinimapBkgHook(_,__, screen, color, height, width, top, left: int);
+begin
+  _DrawBmpOpaque(0,0, screen, _IconsLodLoaded.Items[MinimapBkgBmp], top, left);
+end;
+{var
+  p: PWordArray;
+begin
+  NeedScreenWH;
+  p:= _ScreenBuffer^;
+  with _IconsLodLoaded.Items[MinimapBkgBmp] do
+    Draw8t(@Image[0], @p[left + top*SW], Rec.w, SW*2, Rec.w, Rec.h, Palette16);
+end;}
+
+//----- Load alignment-dependant interface
+
+procedure InterfaceColorChangedHook;
+asm
+  push ecx
+  push edx
+  call InterfaceColorChanged
+  pop edx
+  pop ecx
+end;
+
+//----- Attack spell
+
+const
+  ASpellUpX = m6*242 + m7*477;
+  ASpellUpY = m6*332 + m7*406;
+  ASpellBtnX = m6*ASpellUpX + m7*517;
+  ASpellBtnY = m6*ASpellUpY + m7*415;
+var
+  ASpellIcon: int = -1;
+  ASpellIconDn: int = -1;
+  ASpellPressed, ASpellHovered: Boolean;
+  ASpellIconHover: PBoolean;
+
+procedure DrawSpellBook;
+var
+  p: PWordArray;
+begin
+  NeedScreenWH;
+  p:= _ScreenBuffer^;
+  with _IconsLodLoaded.Items[ASpellIcon] do
+    Draw8t(@Image[0], @p[ASpellUpX + ASpellUpY*SW], Rec.w, SW*2, Rec.w, Rec.h, Palette16);
+  if (m7 = 1) and ASpellPressed then
+    with _IconsLodLoaded.Items[ASpellIconDn] do
+      Draw8t(@Image[0], @p[ASpellBtnX + ASpellBtnY*SW], Rec.w, SW*2, Rec.w, Rec.h, Palette16);
+  ASpellPressed:= false;
+end;
+
+{$IFNDEF mm8}
+procedure BuildSpellBook(dlg: ptr);
+begin
+  with _IconsLodLoaded.Items[ASpellIconDn].Rec do
+    _AddButton(dlg, ASpellBtnX, ASpellBtnY, w, h, 1, 78, 88, 2, 0, _NoHint, nil);
+end;
+{$ELSE}
+procedure BuildSpellBook(dlg: ptr);
+var
+  p: ptr;
+begin
+  p:= NewButtonMM8(88, 88, 2);
+  ASpellIconHover:= ptr(PChar(p) + $13);
+  ASpellHovered:= false;
+  SetupButtonMM8(p, 0, 330, true, 'STSASu', 'STSASd');
+  AddToDlgMM8(dlg, p);
+end;
+{$ENDIF}
+
+procedure BuildSpellBookHook;
+asm
+{$IFDEF mm6}
+  mov eax, edi
+{$ELSE}
+  mov eax, esi
+{$ENDIF}
+  jmp BuildSpellBook
+end;
+
+procedure FetchSpellSound(sp: int);
+const
+  base = m6*$939CA0 + m7*$A95F00 + m8*$ADEF80;
+  f: procedure(_,__,this, pl, spell: int) = ptr(m6*$488BF0 + m7*$49482E + m8*$492B52);
+var
+  i: int;
+begin
+  i:= _CurrentMember^;
+  f(0,0, base + $AFD8*i, i, sp);
+end;
+
+function GetSpName(sp: int): PChar;
+begin
+  if sp = 0 then
+    Result:= _GlobalTxt[153]
+  else
+    Result:= pptr(m6*$56ABD0 + m7*$5CBEB0 + m8*$5E8278 + ($24 - m6*8)*sp)^;
+end;
+
+procedure ASpellBookAction(hint, cast: Boolean);
+const
+  aSet = 0;
+  aRemove = 1;
+  aNoSpell = 2;
+var
+  off, sp, qsp, code: int;
+  pl: PByteArray;
+begin
+  if (m8 = 0) and not hint then
+    PlaySound(75);
+  if not (hint or cast) then
+    ASpellPressed:= true;
+  pl:= GetCurrentPlayer;
+  if pl = nil then
+    exit;
+  off:= _CharOff_AttackQuickSpell;
+  if cast then
+    off:= _CharOff_QuickSpell;
+  sp:= _SpellBookSelectedSpell^;
+  if sp <> 0 then
+    inc(sp, 11*pl[_CharOff_SpellBookPage]);
+  qsp:= pl[off];
+  code:= aSet;
+  if (sp = 0) or (sp = qsp) then
+    if qsp = 0 then
+      code:= aNoSpell
+    else
+      code:= aRemove;
+  if hint and cast then
+  begin
+    _ActionQueue.Items[0].Info1:= code and 1;
+    exit;
+  end;
+  if hint then
+    case code of
+      aRemove:
+        _SetHint(0,0, PChar(Format(SRemoveASpell, [GetSpName(qsp)])));
+      aNoSpell:
+        _SetHint(0,0, PChar(SChooseASpell));
+      else
+        if qsp = 0 then
+          _SetHint(0,0, PChar(Format(SSetASpell, [GetSpName(sp)])))
+        else
+          _SetHint(0,0, PChar(Format(SSetASpell2, [GetSpName(qsp), GetSpName(sp)])));
+    end
+  else
+    case code of
+      aSet:
+      begin
+        pl[off]:= sp;
+        FetchSpellSound(sp);
+        _FaceAnim(0,0, pl, 0, 12);
+      end;
+      else begin
+        pl[off]:= 0;
+        PlaySound((1-m8)*203 + m8*136);
+      end;
+    end;
+  _ActionQueue.Items[0].Action:= 0;
+end;
+
+//procedure ASpellUse;
+//var
+//  pl: ptr;
+//begin
+//  if (m7 = 1) and (pint($6BE244)^ = 1) then
+//    exit;
+//  if (m8 = 1) and (_ActionQueue.Count > 1) then
+//    _ActionQueue.Count:= IfThen(_ActionQueue.Items[0].Info2 <> 0, 2, 1);
+//  _ActionQueue.Items[0].Action:= 0;
+//  pl:= GetCurrentPlayer;
+//  if pl = nil then
+//    exit;
+//end;
+
+procedure ASpellPopAction;
+begin
+  with _ActionQueue.Items[0] do
+    case Action of
+      78, 88: // hint, click
+        if (Info1 = 2) or (Info1 = 0) and (m6 = 1) then
+          ASpellBookAction(Action = 78, Info1 <> 2);
+    end;
+end;
+
+var
+  TestedASpell: Bool;
+
+procedure AttackKeyHook;
+asm
+  xor TestedASpell, 1
+  jz @std
+  // check AttackSpell
+  call GetCurrentPlayer
+  test eax, eax
+  jz @std
+{$IFDEF mm6}
+  mov esi, eax
+  mov eax, 2E8BA2E9h
+  mov bl, [esi + _CharOff_AttackQuickSpell]
+{$ENDIF}
+{$IFDEF mm7}
+  mov esi, eax
+  mov ebp, 0Bh
+  mov bl, [esi + _CharOff_AttackQuickSpell]
+{$ENDIF}
+{$IFDEF mm8}
+  mov edi, eax
+  mov bl, [edi + _CharOff_AttackQuickSpell]
+{$ENDIF}
+  mov [esp], m6*$42B18D + m7*$4300AA + m8*$42E84C
+  ret
+@std:
+  mov TestedASpell, 0
+end;
+
+procedure QSpellKeyHook;
+asm
+  // if it was an AttackSpell, set Info1 to 1
+  mov ecx, TestedASpell
+{$IFDEF mm6}
+  mov [$4D5F50 + edx*4], ecx
+{$ELSE}
+  mov [m7*$50C870 + m8*$51E338 + eax*4], ecx
+{$ENDIF}
+  mov TestedASpell, 0
+end;
+
+procedure QSpellUseHook;
+const
+  info = m6*($3E4-$3C8) + m7*($5FC-$5E4) + m8*($6C0-$6A4);
+asm
+{$IFNDEF mm7}
+  mov ecx, eax
+{$ENDIF}
+  cmp [esp + info], 1
+  jnz @std
+  movzx ecx, byte ptr [ecx + _CharOff_AttackQuickSpell]
+  ret
+@std:
+  movzx ecx, byte ptr [ecx + _CharOff_QuickSpell]
+end;
+
+procedure ASpellHintMM8;
+begin
+  if ASpellIconHover^ then
+    AddAction(78, 2, 0)
+  else if ASpellHovered then
+  begin
+    _StatusText.Text[true][0]:= #0;
+    _NeedUpdateStatus^:= true;
+  end;
+  ASpellHovered:= ASpellIconHover^;
+end;
+
+// Quick Spell buttons hints in MM8
+
+//function SpellBookHoverItem(std: ptr; _: int; this: ptr; item: PChar): int;
+//type
+//  TF = function(_,__: int; this: ptr; item: PChar): int;
+//var
+//  id: int;
+//begin
+//  Result:= TF(std)(0,0, this, item);
+//  if item = nil then
+//  begin
+//    _SetHint(0,0,'');
+//    _NeedUpdateStatus^:= true;
+//    exit;
+//  end;
+//  id:= pint(item + $C)^;
+//  if id = 88 then
+//    AddAction(78, pint(item + $CC)^, 0)
+//  else if id = 113 then
+//    _SetHint(0,0, _GlobalTxt[79]);
+//end;
+
 //----- HooksList
 
 var
-  HooksCommon: array[1..3] of TRSHookInfo = (
+  HooksCommon: array[1..11] of TRSHookInfo = (
     (p: m6*$453ACE + m7*$463341 + m8*$461316; newp: @UpdateHintHook;
        t: RShtCallStore; Querry: hqFixStayingHints), // Fix element hints staying active in some dialogs
     (p: m6*$4226F8 + m7*$427E71 + m8*$4260A8; newp: @FixItemSpells;
        t: RShtAfter; size: 7 - m6), // Fix item spells when cast onto item with index 0
+    (p: m6*$487496 + m7*$492A50 + m8*$49135D; newp: @FixRemoveInvItemPlayer;
+       t: RShtJmp; size: 7 - m7*2), // Fix item picture change causing inventory corruption
+    (p: m6*$41ECEF + m7*$420AEA + m8*$420078; newp: @FixRemoveInvItemChest;
+       t: RShtJmp; size: 7), // Fix item picture change causing inventory corruption
+    (p: HookLoadInterface; newp: @LoadInterface; t: RShtBefore),
+    (p: m6*$40CF6E + m7*$4118B2 + m8*$4CA92C; newp: @BuildSpellBookHook;
+       t: RShtAfter; Querry: hqAttackSpell), // Attack spell
+    (p: HookPopAction; newp: @ASpellPopAction; t: RShtBefore; Querry: hqAttackSpell), // Attack spell
+    (p: m6*$42B252 + m7*$43019B + m8*$42E928; newp: @AttackKeyHook;
+       t: RShtBefore; Querry: hqAttackSpell), // Attack spell
+    (p: m6*$42B1FD + m7*$43013D + m8*$42E8D7; newp: @QSpellKeyHook;
+       t: RShtCall; size: 7; Querry: hqAttackSpell), // Attack spell
+    (p: m6*$42C47C + m7*$433D3A + m8*$431591; newp: @QSpellUseHook;
+       t: RShtCall; size: 7 - m6; Querry: hqAttackSpell), // Attack spell
     ()
   );
 {$IFDEF MM6}
-  Hooks: array[1..40] of TRSHookInfo = (
+  Hooks: array[1..43] of TRSHookInfo = (
     (p: $457567; newp: @WindowWidth; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $45757D; newp: @WindowHeight; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $454340; newp: @WindowProcHook; t: RShtFunctionStart; size: 8), // Window procedure hook
@@ -1903,10 +2303,13 @@ var
     (p: $411FA4; old: $4CB2C4; new: $4CB6B8; t: RSht4), // In Awards screen Up and Down arrows were switched when pressed
     (p: $41FCC7; old: 30; new: 36; t: RSht1), // Fix ring view magnifying glass click width
     (p: $42CF9C; old: 30; new: 36; t: RSht1), // Fix ring view magnifying glass click width
+    (p: $480CE6; newp: @FixMonStealCheck; t: RShtCall; size: 7), // Loot stolen items from thief's corpse
+    (p: $431DE7; newp: @FixMonSteal; t: RShtCallStore), // Loot stolen items from thief's corpse
+    (p: $40DE33; newp: @DrawSpellBook; t: RShtAfter; Querry: hqAttackSpell), // Attack spell
     ()
   );
 {$ELSEIF defined(MM7)}
-  Hooks: array[1..67] of TRSHookInfo = (
+  Hooks: array[1..76] of TRSHookInfo = (
     (p: $47B84E; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (monsters)
     (p: $47B296; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (items)
     (p: $47AD40; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (sprites)
@@ -1972,11 +2375,21 @@ var
     (p: $421893; old: 30; new: 32; t: RSht1), // Fix ring view magnifying glass click width
     (p: $434A6C; old: 30; new: 32; t: RSht1), // Fix ring view magnifying glass click width
     (p: $49A745; old: $4CA780; newp: @FixReadFacetBit; t: RShtCall), // Restore AnimatedTFT bit from Blv rather than Dlv to avoid crash
+    (p: $47E787; old: $4CA780; newp: @FixReadFacetBit; t: RShtCall), // Restore AnimatedTFT bit from Odm rather than Ddm to avoid crash
     (p: $4716EE; newp: @FixMonsterBlockShots; t: RShtJmp; size: 7; Querry: hqFixMonsterBlockShots), // Fix monsters blocking shots of other monsters
+    (p: $450657; newp: @FixUnmarkedArtifacts; t: RShtBefore), // Fix deliberately generated artifacts not marked as found
+    (p: $48DF0C; newp: @FixMonStealDisplay; t: RShtAfter; size: 6), // Don't show stealing animation if nothing's stolen
+    //(p: $426D46; size: 12), // Demonstrate recovered stolen items
+    (p: $426D49; newp: @FixStolenLootHint; t: RShtCallStore), // Show that stolen item was found
+    (p: $426D61; size: 7), // Stolen items enabling multi-loot
+    (p: $426D95; size: 7), // Stolen items enabling multi-loot
+    (p: $441E26; newp: @MinimapBkgHook; t: RShtCall; Querry: hqMinimapBkg), // Draw bitmap as internal minimap background 
+    (p: $422698; newp: @InterfaceColorChangedHook; t: RShtBefore), // Load alignment-dependant interface
+    (p: $412B5B; newp: @DrawSpellBook; t: RShtAfter; Querry: hqAttackSpell), // Attack spell
     ()
   );
 {$ELSE}
-  Hooks: array[1..59] of TRSHookInfo = (
+  Hooks: array[1..66] of TRSHookInfo = (
     (p: $47AB35; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Monsters not visible on the sides of the screen
     (p: $47A55E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Items not visible on the sides of the screen
     (p: $48B37E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Effects not visible on the sides of the screen
@@ -2034,55 +2447,67 @@ var
     (p: $4BD7AE; old: 5000; newp: @WinScreenDelay; newref: true; t: RSht4), // Control Win screen delay during which all input is ignored
     (p: $44FF93; newp: @FixNoHWL; t: RShtBefore), // Allow running without HWLs
     (p: $497C3A; old: $4D96B0; newp: @FixReadFacetBit; t: RShtCall), // Restore AnimatedTFT bit from Blv rather than Dlv to avoid crash
+    (p: $47DCAD; old: $4D96B0; newp: @FixReadFacetBit; t: RShtCall), // Restore AnimatedTFT bit from Odm rather than Ddm to avoid crash
     (p: $47024C; newp: @FixMonsterBlockShots; t: RShtJmp; size: 7; Querry: hqFixMonsterBlockShots), // Fix monsters blocking shots of other monsters
-//    (p: $4D1A93; newp: @DlgMouseMove; t: RShtCall; size: 6; Querry: hqFixStayingHints), // Fix element hints staying active in some dialogs
+    (p: $48D396; newp: @FixMonStealDisplay; t: RShtAfter; size: 6), // Don't show stealing animation if nothing's stolen
+    //(p: $425182; size: 12), // Demonstrate recovered stolen items
+    (p: $425185; newp: @FixStolenLootHint; t: RShtCallStore), // Show that stolen item was found
+    (p: $42519D; size: 7), // Stolen items enabling multi-loot
+    (p: $4251D1; size: 7), // Stolen items enabling multi-loot
+    (p: $43EA7C; newp: @MinimapBkgHook; t: RShtCall; Querry: hqMinimapBkg), // Draw bitmap as internal minimap background
+    (p: $4CA240; newp: @ASpellHintMM8; t: RShtAfter; Querry: hqAttackSpell), // Attack spell
+//    (p: $4E9BA4; newp: @SpellBookHoverItem; t: RShtCodePtrStore), // Quick Spell buttons hints
     ()
   );
 {$IFEND}
+
+procedure ApplyHooks(Querry: int);
+begin
+  RSApplyHooks(HooksCommon, Querry);
+  RSApplyHooks(Hooks, Querry);
+end;
 
 procedure ApplyMMHooks;
 begin
   CheckHooks(HooksCommon);
   CheckHooks(Hooks);
-  RSApplyHooks(HooksCommon);
-  RSApplyHooks(Hooks);
+  ApplyHooks(0);
   if PlaceChestItemsVertically then
-    RSApplyHooks(Hooks, hqPlaceChestItemsVertically);
+    ApplyHooks(hqPlaceChestItemsVertically);
   if FixChestsByCompacting then
-    RSApplyHooks(Hooks, hqFixChestsByCompacting);
+    ApplyHooks(hqFixChestsByCompacting);
   if SpriteAngleCompensation then
-    RSApplyHooks(Hooks, hqSpriteAngleCompensation);
+    ApplyHooks(hqSpriteAngleCompensation);
   if SpriteInteractIgnoreId then
-    RSApplyHooks(Hooks, hqSpriteInteractIgnoreId);
+    ApplyHooks(hqSpriteInteractIgnoreId);
   if FixConditionPriorities then
     DoFixConditionPriorities;
   if HintStayTime > 0 then
-    RSApplyHooks(HooksCommon, hqFixStayingHints);
-  if OptFixMonsterBlockShots then
-    RSApplyHooks(Hooks, hqFixMonsterBlockShots);
-
-{  if HintStayTime > 0 then
-    RSApplyHooks(Hooks, hqFixStayingHints);}
+    ApplyHooks(hqFixStayingHints);
+  if Options.FixMonstersBlockingShots then
+    ApplyHooks(hqFixMonsterBlockShots);
 end;
 
 procedure ApplyMMDeferredHooks;
 begin
   if Options.PaperDollInChests > 0 then
-    RSApplyHooks(Hooks, hqPaperDollInChests);
+    ApplyHooks(hqPaperDollInChests);
   if Options.PaperDollInChests = 2 then
-    RSApplyHooks(Hooks, hqPaperDollInChests2);
+    ApplyHooks(hqPaperDollInChests2);
   if (Options.PaperDollInChests > 0) and not Options.HigherCloseRingsButton then
-    RSApplyHooks(Hooks, hqPaperDollInChestsAndOldCloseRings);
+    ApplyHooks(hqPaperDollInChestsAndOldCloseRings);
   if Options.FixSFT then
-    RSApplyHooks(Hooks, hqFixSFT);
+    ApplyHooks(hqFixSFT);
   if Options.FixChestsByReorder then
-    RSApplyHooks(Hooks, 19);
+    ApplyHooks(19);
+  if Options.EnableAttackSpell then
+    ApplyHooks(hqAttackSpell);
 end;
 
 procedure ApplyMMHooksSW;
 begin
   if ClickThroughEffects then
-    RSApplyHooks(Hooks, hqClickThruEffects);
+    ApplyHooks(hqClickThruEffects);
 end;
 
 procedure NeedWindowSize;
@@ -2102,7 +2527,58 @@ begin
     WindowHeight:= (WindowWidth*3 + 2) div 4;
   WindowWidth:= max(640, WindowWidth);
   WindowHeight:= max(480, WindowHeight);
-  RSApplyHooks(Hooks, hqWindowSize);
+  ApplyHooks(hqWindowSize);
+end;
+
+procedure LoadInterface;
+begin
+{  c:= MinimapColor;
+  i:= _GreenColorBits^;
+  MinimapColor:= c shr (24-5) shl (i + 5) + Word(c) shr (16 - i) + byte(c) shr 3;}
+  //  Count < 1000) and (_DoLoadLodBitmap(0,0, _IconsLod, 2, 'mapbkg', Items[Count]) <> -1) then
+{  if (m6 = 0) and (_LodFind(0,0, _IconsLod, 0, 'mapbkg.pcx') <> nil) then
+  begin
+    _LoadPcx(0,0, MinimapBkgPcx, 0, 'mapbkg.pcx');
+    RSApplyHooks(Hooks, hqMinimapBkg);
+  end;}
+  with _IconsLodLoaded^ do
+    if (m6 = 0) and (Count < 1000) and (_DoLoadLodBitmap(0,0, _IconsLod, 2, 'mapbkg', Items[Count]) <> -1) then
+    begin
+      MinimapBkgBmp:= Count;
+      inc(Count);
+      ApplyHooks(hqMinimapBkg);
+    end;
+  if Options.EnableAttackSpell and (m6 = 1) then
+  begin
+    ASpellIcon:= _LoadLodBitmap(0,0, _IconsLod, 2, 'TabASpell');
+    ASpellIconDn:= ASpellIcon;
+  end;
+  if Options.EnableAttackSpell and (m7 = 1) then
+    ASpellIconDn:= _LoadLodBitmap(0,0, _IconsLod, 2, 'IB-ASpellD');
+end;
+
+procedure InterfaceColorChanged(_: Bool; Replace: Boolean; Align: int);
+const
+  ReplaceBmp: function(_,__,lod: int; PalKind: int; name: PChar; var bmp): int = ptr($4101BD);
+
+  function Letter: string;
+  begin
+    case Align of
+      0: Result:= 'B';
+      2: Result:= 'C';
+      else Result:= 'A';
+    end;
+  end;
+  procedure Bmp(var i: int; const s: string);
+  begin
+    if Replace then
+      ReplaceBmp(0,0, _IconsLod, 2, PChar(s + Letter), _IconsLodLoaded.Items[i])
+    else
+      i:= _LoadLodBitmap(0,0, _IconsLod, 2, PChar(s + Letter));
+  end;
+begin
+  if Options.EnableAttackSpell then
+    Bmp(ASpellIcon, 'IB-ASpell-');
 end;
 
 initialization

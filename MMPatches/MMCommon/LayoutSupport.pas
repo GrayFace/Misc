@@ -51,6 +51,7 @@ type
     IniSect: string;
     WasActive, Activated: Boolean;
     LastScreen: int;
+    HintAreaTop, HintAreaRight: int;
     class var OnLoad: array of TProcedure;
     function GetMousePos: TPoint;
     function GetContextMenuPos(w, h, scale: int): TRect;
@@ -68,6 +69,7 @@ type
     procedure Deactivate;
     procedure ReloadLayout;
     procedure UpdateMinMax;
+    procedure HintSuppression;
   public
     RenderRect: TRect;
     RenderCenterX, RenderCenterY: ext;
@@ -468,7 +470,7 @@ var
   pcx: TLoadedPcx;
 begin
   FillChar(pcx, SizeOf(pcx), 0);
-  _LoadPcx(0,0, pcx, 0, {$IFDEF MM8}false,{$ENDIF} PChar(Name));
+  _LoadPcx(0,0, pcx, 0, PChar(Name));
   w:= pcx.w;
   SetLength(a, w*pcx.h);
   if pcx.Buf = nil then  exit;
@@ -578,6 +580,18 @@ begin
     OnLoad[i]();
 end;
 
+procedure TLayoutSupport.HintSuppression;
+begin
+  if _StatusText.Text[true][0] = #0 then
+    exit;
+  if (HintAreaTop > 0) and ((HintAreaTop >= 480) or (GameCursorPos^.Y < HintAreaTop)) or
+     (HintAreaRight <> 0) and ((HintAreaRight < 0) or (GameCursorPos^.X >= HintAreaRight)) then
+  begin
+    _StatusText.Text[true][0]:= #0;
+    _NeedUpdateStatus^:= true;
+  end;
+end;
+
 function TLayoutSupport.SwapCanvas(item: TLayoutContextSwap): Boolean;
 var
   p: pptr;
@@ -654,6 +668,7 @@ begin
     end;
   L.Vars[lvPaperDollInChests]:= Options.PaperDollInChests;
   L.Vars[lvTreeHints]:= TreeHintsVal;
+  L.Vars[lvEnableAttackSpell]:= BoolToInt[Options.EnableAttackSpell];
 {$IFDEF MM7}
   if _UITextColor^ and $10000 = 0 then
   begin
@@ -680,7 +695,11 @@ begin
   L.Vars[lvPlayers]:= _Party_MemberCount^;
 {$ENDIF}
   Result:= not L.Updated;
-  if L.Updated then  exit;
+  if L.Updated then
+  begin
+    HintSuppression;
+    exit;
+  end;
 
   // do update
   FillChar(CanvasUsed, length(CanvasUsed)*SizeOf(CanvasUsed[CanvasMax]), 0);
@@ -708,11 +727,14 @@ begin
   if not IsNan(L.Locals[lvDebug]) then
     SetWindowText(_MainWindow^, PChar(FloatToStr(L.Locals[lvDebug])));
   ShowTreeHints:= (L.Locals[lvTreeHints] <> 0);
+  HintAreaTop:= Round(L.Locals[lvHintAreaTop]);
+  HintAreaRight:= Round(L.Locals[lvHintAreaRight]);
 {$IFDEF MM7}
   _UITextColor^:= Round(L.Locals[lvTextColor]) or $10000;
   _UITextShadowColor^:= Round(L.Locals[lvTextShadowColor]);
   ScreenHasRightSide:= L.Locals[lvCustomRightSide] <> 0;
 {$ENDIF}
+  HintSuppression;
   if L.Locals[lvReloadLayout] <> 0 then
     ReloadLayout;
 end;

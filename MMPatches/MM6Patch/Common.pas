@@ -87,7 +87,6 @@ const
   _OpenInventory_result = pint($4D50CC);
   _LoadPaperDollGraphics: TProcedure = ptr($411E80);
   _access: function(fileName: PChar; unk: int = 0): int cdecl = ptr($4B885E);
-  _malloc: function(size:int):ptr cdecl = ptr($4AE753);
   _PermAlloc: function(n1,n2: int; allocator: ptr; name: PChar; size, unk: int):ptr = ptr($421390);
   _PermAllocator = ptr($5FCB50);
   _ProcessActions: procedure = ptr($42ADA0);
@@ -104,6 +103,8 @@ const
   _CommandsArray = $6A72A0;
   _AddCommand: procedure(a1, a2, this, cmd: int) = ptr($467A50);
 
+  _LoadLodBitmap: function(_,__, lod: int; palKind: int; name: PChar): int = ptr($40B430);
+  _DoLoadLodBitmap: function(_,__, lod: int; palKind: int; name: PChar; var bmp): int = ptr($40B760);
   _IconsLod = $4CB6D0;
 
   _Chest_CanPlaceItem: function(n1, itemType, pos, chest: int): BOOL = ptr($41DE90);
@@ -120,8 +121,6 @@ const
   _Character_SetDelay: procedure(n1, n2: int; this: ptr; delay: int) = ptr($482C80);
   _TurnBased_CharacterActed: procedure(n1: int = 0; n2: int = 0; this: int = $4C7DF0) = ptr($404EB0);
 
-  _ItemOff_Size = $1C;
-
   _MonOff_X = $7E;
   _MonOff_Y = $80;
   _MonOff_Z = $82;
@@ -129,6 +128,7 @@ const
   _MonOff_vy = $86;
   _MonOff_BodyRadius = $78;
   _MonOff_Size = $224;
+  _MonstersPtr = $5FEFD8;
 
   GameCursorPos = PPoint($6A6120);
   

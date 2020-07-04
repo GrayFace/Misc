@@ -24,15 +24,6 @@ begin
   Result:= pptr(_PartyMembers + 4*_CurrentMember^)^;
 end;
 
-procedure DoPlaySound;
-asm
-  mov ecx, _PlaySoundStruct
-  push _PlaySound
-end;
-
-var
-  PlaySound: procedure(id: int; a3: int = 0; a4: int = 0; a5: int = -1; a6: int = 0; a7: int = 0; a8: int = 0; a9: int = 0); stdcall;
-
 procedure QuickLoad;
 begin
   _Paused^:= 1;
@@ -3115,10 +3106,29 @@ asm
   mov [esi-80h], ebx
 end;
 
+//----- Lich becoming immune to all magic with sufficient Day of Protection
+
+procedure FixLichImmuneHook;
+asm
+  mov eax, [ebp + 8]
+  cmp eax, 7
+  jz @ok
+  cmp eax, 8
+  jz @ok
+  or al, $80  // not immune
+@ok:
+end;
+
+//----- Make HookPopAction useable with straight Delphi funcitons
+
+procedure PopActionAfter;
+asm
+end;
+
 //----- HooksList
 
 var
-  HooksList: array[1..313] of TRSHookInfo = (
+  HooksList: array[1..321] of TRSHookInfo = (
     (p: $45B0D1; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $4655FE; old: $452C75; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave file name localization
     (p: $45E5A4; old: $45E2D0; backup: @FillSaveSlotsStd; newp: @FillSaveSlotsHook; t: RShtCall), // Fix Save/Load Slots
@@ -3430,7 +3440,15 @@ var
     (p: $42FE94; old: 10; new: 2; t: RSht1), // Snow X speed was effected by strafing too much
     (p: $42FF15; old: -10; new: -2; t: RSht1), // Snow X speed was effected by strafing too much
     (p: $4BB762; newp: @FixMasterHealer; t: RShtCall), // Fix Master Healer messing up some buff
-    (p: $4501E8; size: 5), // Fix artifacts not being generated as objects on the ground 
+    (p: $4501E8; size: 5), // Fix artifacts not being generated as objects on the ground
+    (p: $41E0CC; old: $4E32A4; newp: @SDuration; newref: true; t: RSht4), // Duration text
+    (p: $41E0F2; old: $4E329C; newp: @SDurationYr; newref: true; t: RSht4), // Duration text
+    (p: $41E126; old: $4E3294; newp: @SDurationMo; newref: true; t: RSht4), // Duration text
+    (p: $41E162; old: $4E328C; newp: @SDurationDy; newref: true; t: RSht4), // Duration text
+    (p: $41E1A6; old: $4E3284; newp: @SDurationHr; newref: true; t: RSht4), // Duration text
+    (p: $41E1F2; old: $4E327C; newp: @SDurationMn; newref: true; t: RSht4), // Duration text
+    (p: $48D4F3; newp: @FixLichImmuneHook; t: RShtCall; size: 6; Querry: hqFixLichImmune), // Lich becoming immune to all magic with sufficient Day of Protection
+    (p: HookPopAction; newp: @PopActionAfter; t: RShtBefore; size: 9), // Make HookPopAction useable with straight Delphi funcitons
     ()
   );
 
@@ -3493,6 +3511,8 @@ begin
     RSApplyHooks(HooksList, hqInactivePlayersFix);
   if TurnBasedWalkDelay > 0 then
     RSApplyHooks(HooksList, hqFixTurnBasedWalking);
+  if FixLichImmune then
+    RSApplyHooks(HooksList, hqFixLichImmune);
   ApplyMMHooks;
 
   RSDebugUseDefaults;
@@ -3551,7 +3571,6 @@ exports
   GetCustomLodsList,
   GetLodRecords;
 initialization
-  @PlaySound:= @DoPlaySound;
   ArrowCur:= LoadCursorFromFile('Data\MouseCursorArrow.cur');
   if ArrowCur = 0 then
     ArrowCur:= LoadCursor(GetModuleHandle(nil), 'Arrow');

@@ -44,6 +44,10 @@ const
   hqSprite32Bit = 57;
   hqFixStayingHints = 58;
   hqFixMonsterBlockShots = 59;
+  hqMinimapBkg = 60;
+  hqFixLichImmune = 61;
+  hqFixParalyze = 62;
+  hqAttackSpell = 63;
 
 {$IFDEF mm6}
   m6 = 1;
@@ -60,8 +64,10 @@ const
 {$IFEND}
 
   HookEachTick = m6*$453AD3 + m7*$46334B + m8*$461320; // OnAction
-  HookLoadLods = m6*$45761E + m7*$4655FE + m8*$463862; // set hook after
+  HookPopAction = m6*$42B2C9 + m7*$43056D + m8*$42EE83; // use RShtBefore
+  HookLoadLods = m6*$45761E + m7*$4655FE + m8*$463862; // use RShtAfter
   HookWindowProc = m6*$454340 + m7*$463828 + m8*$4618FF; // use RShtFunctionStart or RShtBefore
+  HookLoadInterface = m6*$4534D0 + m7*$462E36 + m8*$460DA0; // on game start. Use RShtBefore
 
 type
   TOptions = packed record
@@ -127,7 +133,9 @@ type
     MouseDX: Double;                          //
     MouseDY: Double;                          //
     TrueColorSprites: LongBool;               // (unused in MM6)
-    FixMonstersStoppingProjectiles: LongBool; // (unused in MM6)
+    FixMonstersBlockingShots: LongBool;       // (unused in MM6)
+    FixParalyze: LongBool;                    // (MM6 only for now)
+    EnableAttackSpell: LongBool;              //
   end;
 
 var
@@ -166,15 +174,16 @@ var
   ScalingParam1, ScalingParam2, MLookRawMul: ext;
 
   RecoveryTimeInfo, PlayerNotActive, SDoubleSpeed, SNormalSpeed,
-  QuickSaveName, QuickSaveDigitSpace, SArmorHalved, SArmorHalvedMessage: string;
+  QuickSaveName, QuickSaveDigitSpace, SArmorHalved, SArmorHalvedMessage,
+  SDuration, SDurationYr, SDurationMo, SDurationDy, SDurationHr,
+  SDurationMn, SRemoveASpell, SChooseASpell, SSetASpell, SSetASpell2: string;
 
   CapsLockToggleRun, NoDeathMovie, FreeTabInInventory, ReputationNumber,
   AlwaysStrafe, StandardStrafe, MouseLookChanged, MLookRaw, FixInfiniteScrolls,
   FixInactivePlayersActing, BorderlessFullscreen, BorderlessProportional,
   MouseLookCursorHD, SmoothScaleViewSW, WasIndoor, SpriteAngleCompensation,
   PlaceChestItemsVertically, FixChestsByCompacting, FixConditionPriorities,
-  SpriteInteractIgnoreId, ClickThroughEffects, Autorun,
-  OptFixMonsterBlockShots: Boolean;
+  SpriteInteractIgnoreId, ClickThroughEffects, Autorun, FixLichImmune: Boolean;
   DoubleSpeed: BOOL;
   {$IFNDEF mm6}
   NoVideoDelays, DisableAsyncMouse, ShowTreeHints: Boolean;
@@ -423,6 +432,9 @@ type
   PPartyBuffs = ^TPartyBuffs;
   TPartyBuffs = array[0..19 - m6*4] of TSpellBuff;
 
+  PGlobalTxt = ^TGlobalTxt;
+  TGlobalTxt = array[0..(m6*596 + m7*677 + m8*750) - 1] of PChar;
+
 const
   _ActionQueue: PActionQueue = ptr(m6*$4D5F48 + m7*$50CA50 + m8*$51E330);
   PowerOf2: array[0..15] of int = (1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768);
@@ -445,30 +457,62 @@ const
   _ShowHits = pbool(m6*$6107EC + m7*$6BE1F8 + m8*$6F39B8);
   _SetHint: procedure(_,__: int; s: PChar) = ptr(m6*$418F40 + m7*$41C061 + m8*$041B711);
   _NoIntro = pbool(m6*$6A5F64 + m7*$71FE8C + m8*$75CDF8);
-  _ChestOff_Items = 4;
-  _ChestOff_Inventory = 4 + _ItemOff_Size*140;
   _SpritesToDraw: PPSpriteToDrawArray = ptr(m6*$4338A6 + m7*$43FC6D + m8*$43CBF1);
   _SpritesToDrawCount: pint = ptr(m6*$4DA9B8 + m7*$518660 + m8*$529F40);
 {$IFNDEF MM6}
   _SpritesD3D = PPSpriteD3DArray(_SpritesLod + $ECB0);
 {$ENDIF}
   _SoundVolume = pint(m6*$6107E3 + m7*$6BE1EF + m8*$6F39AF);
+  _GlobalTxt = PGlobalTxt(m6*$56B830 + m7*$5E4000 + m8*$601448);
   _DialogsHigh = pint(m6*$4D46BC + m7*$5074B0 + m8*$518CE8);
   _Dialogs: ^TVisibleDlgArray = ptr(m6*$4CB5F8 + m7*$507460 + m8*$5185B4);
   _DlgArray: ^TDlgArray = ptr(m6*$4D48F8 + m7*$506DE8 + m8*$518608);
   _HouseScreen = pint(m6*$9DDD8C + m7*$F8B01C + m8*$FFD408);
+  _SpellBookSelectedSpell = pint(m6*$4CB214 + m7*$5063CC + m8*$517B1C);
+
+  _ItemOff_Number = 0;
+  _ItemOff_Bonus = 4;
+  _ItemOff_BonusStrength = 8;
+  _ItemOff_Bonus2 = 12;
+  _ItemOff_Charges = 16;
+  _ItemOff_Condition = 20;
+  _ItemOff_Size = $24 - 8*m6;
+
+  _ItemCond_Identified = 1;
+  _ItemCond_Broken = 2;
+  _ItemCond_TemporaryBonus = 8;
+  _ItemCond_Stolen = $100*(1 - m6);
+  _ItemCond_Hardened = $200*(1 - m6);
+
+  _ChestOff_Items = 4;
+  _ChestOff_Inventory = 4 + _ItemOff_Size*140;
 
   _CharOff_ItemMainHand = m6*$142C + m7*$194C + m8*$1C08;
   _CharOff_Items = m6*$128 + m7*$1F0 + m8*$484;
+  _CharOff_Inventory = m6*$105C + m7*$157C + m8*$1810;
   _CharOff_Recover = m6*$137C + m7*$1934 + m8*$1BF2;
   _CharOff_SpellPoints = m6*$1418 + m7*$1940 + m8*$1BFC;
+  _CharOff_SpellBookPage = m6*$152E + m7*$1A4E + m8*$1C44;
   _CharOff_QuickSpell = m6*$152F + m7*$1A4F + m8*$1C45;
-  _CharOff_QuickSpell2 = m6*$13 + m7*$BB + m8*$1C8E; // my addition
+  _CharOff_AttackQuickSpell = m6*$137E + m7*$1936 + m8*$1C8E; // my addition (alt: m6*$13 + m7*$BB + m8*$1C8E)
   _CharOff_Size = m6*$161C + m7*$1B3C + m8*$1D28;
 
+  _MonOff_Item = $a4 + m7*$10 + m8*$18;
+  _MonOff_Item1 = m7*$234 + m8*$2BC;
+  _MonOff_Item2 = _MonOff_Item1 + _ItemOff_Size;
+
 const
+  _malloc: function(size:int):ptr cdecl = ptr(m6*$4AE753 + m7*$4CADC2 + m8*$4D9F62);
+  _new: function(size:int):ptr cdecl = ptr(m6*$4AEBA5 + m7*$4CB06B + m8*$4D9E0B);
+  _free: procedure(p:ptr) cdecl = ptr(m6*$4AE724 + m7*$4CAEFC + m8*$4DA09C);
   _ProcessActions: TProcedure = ptr(m6*$42ADA0 + m7*$4304D6 + m8*$42EDD8);
-  _LoadBitmap: function(_, __, this, pal: int; name: PChar): int = ptr(m6*$40B430 + m7*$40FB2C + m8*$410D70);
+  _LoadBitmap: function(_, __, this: int; pal: {$IFNDEF mm8}int{$ELSE}int64{$ENDIF}; name: PChar): int = ptr(m6*$40B430 + m7*$40FB2C + m8*$410D70);
+  _DrawBmpTrans: procedure(_, __, screen: int; bmp:{$IFNDEF mm8}uint{$ELSE}uint64{$ENDIF}; y, x: int) = ptr(m7*$4A6204 + m8*$4A419B);
+  _DrawBmpOpaque: procedure(_, __, screen: int; var bmp: TLoadedBitmap; y, x: int) = ptr(m7*$4A5E42 + m8*$4A3CD5);
+  _LoadPcx: function(_,_1: int; var pcx: TLoadedPcx; _2: {$IFNDEF mm8}int{$ELSE}int64{$ENDIF}; name: PChar): int = ptr(m6*$409E50 + m7*$40F420 + m8*$4106F3);
+  _FreePcx: procedure(_,_1: int; var pcx: TLoadedPcx) = ptr(m6*$4091F0 + m7*$40E52B + m8*$40F7F6);
+  _DrawPcx: procedure(_,__, screen: int; var pcx: TLoadedPcx; y, x: int) = ptr(m7*$4A5B73 + m8*$4A3A04);
+  _FaceAnim: procedure(_,__: int; pl: ptr; _3, action: int) = ptr(m6*$488CA0 + m7*$4948A9 + m8*$492BCD);
 
 {$IFNDEF mm6}
 var
@@ -503,9 +547,14 @@ procedure NeedScreenWH;
 procedure Draw8(ps: PByte; pd: PWord; ds, dd, w, h: int; pal: PWordArray);
 procedure Draw8t(ps: PByte; pd: PWord; ds, dd, w, h: int; pal: PWordArray);
 function FindDlg(id: int): PDlg;
+function NewButtonMM8(id, action: int; actionInfo: int = 0; hintAction: int = 0): ptr;
+procedure SetupButtonMM8(btn: ptr; x, y: int; transp: Bool; normalPic: PChar = nil; pressedPic: PChar = nil; hoverPic: PChar = nil; disabledPic: PChar = nil; englishD: Bool = false);
+procedure AddToDlgMM8(dlg, btn: ptr);
+function GetCurrentPlayer: ptr;
 
 var
   SetSpellBuff: procedure(this: ptr; time: int64; skill, power, overlay, caster: int); stdcall;
+  PlaySound: procedure(id: int; a3: int = 0; a4: int = 0; a5: int = -1; a6: int = 0; a7: int = 0; a8: int = 0; a9: int = 0); stdcall;
 
 implementation
 
@@ -528,7 +577,7 @@ var
   ini, iniOverride: TIniFile;
   sect: string;
 
-  function ReadString(const key, default: string): string;
+  function ReadString(const key, default: string; write: Boolean = true): string;
   begin
     if iniOverride <> nil then
     begin
@@ -539,12 +588,13 @@ var
     Result:= ini.ReadString(sect, key, #13#10);
     if Result = #13#10 then
     begin
-      ini.WriteString(sect, key, default);
+      if write then
+        ini.WriteString(sect, key, default);
       Result:= default;
     end;
   end;
 
-  function ReadInteger(const key: string; default: int): int;
+  function ReadInteger(const key: string; default: int; write: Boolean = true): int;
   begin
     if iniOverride <> nil then
     begin
@@ -555,14 +605,15 @@ var
     Result:= ini.ReadInteger(sect, key, 0);
     if (Result = 0) and (ini.ReadInteger(sect, key, 1) <> 0) then
     begin
-      ini.WriteInteger(sect, key, default);
+      if write then
+        ini.WriteInteger(sect, key, default);
       Result:= default;
     end;
   end;
 
-  function ReadBool(const key: string; default: Boolean): Boolean;
+  function ReadBool(const key: string; default: Boolean; write: Boolean = true): Boolean;
   begin
-    Result := ReadInteger(key, Ord(Default)) <> 0;
+    Result := ReadInteger(key, Ord(Default), write) <> 0;
   end;
 
   function ReadFloat(const key: string; default: Double; write: Boolean = true): Double;
@@ -755,7 +806,10 @@ begin
       WinScreenDelay:= ini.ReadInteger(sect, 'WinScreenDelay', 500);
       FixConditionPriorities:= ini.ReadBool(sect, 'FixConditionPriorities', true);
       HintStayTime:= ini.ReadInteger(sect, 'HintStayTime', 2);
-      OptFixMonsterBlockShots:= ReadBool('FixMonstersBlockingShots', false);
+      {$IFNDEF mm6}FixMonstersBlockingShots:= ReadBool('FixMonstersBlockingShots', false);{$ENDIF}
+      {$IFDEF mm7}FixLichImmune:= ini.ReadBool(sect, 'FixLichImmune', true);{$ENDIF}
+      {$IFDEF mm6}FixParalyze:= ini.ReadBool(sect, 'FixParalyze', true);{$ENDIF}
+      EnableAttackSpell:= ReadBool('EnableAttackSpell', true);
 
 {$IFDEF mm6}
       if FileExists(AppPath + 'mm6text.dll') then
@@ -818,8 +872,27 @@ begin
       SNormalSpeed:= ReadString('NormalSpeed', 'Normal Speed');
       {$IFDEF mm7}SArmorHalved:= ReadString('ArmorHalved', 'Armor Halved');{$ENDIF}
       {$IFNDEF mm6}SArmorHalvedMessage:= ReadString('ArmorHalvedMessage', '%s halves armor of %s');{$ENDIF}
+{$IFNDEF mm8}
+      SChooseASpell:= ReadString('ChooseAttackSpell', 'Select a spell then click here to set an Attack Spell');
+      SSetASpell:= ReadString('SetAttackSpell', 'Set %s as the Attack Spell');
+      SSetASpell2:= ReadString('SwitchAttackSpell', 'Set as Attack Spell (instead of %s)');
+      SRemoveASpell:= ReadString('RemoveAttackSpell', 'Click here to remove your Attack Spell (%s)');
+{$ELSE}
+      SChooseASpell:= ReadString('ChooseAttackSpell', 'No Attack Spell');
+      SSetASpell:= ReadString('SetAttackSpell', 'Set as Attack Spell');
+      SSetASpell2:= ReadString('SwitchAttackSpell', 'Change Attack Spell (%s)');
+      SRemoveASpell:= ReadString('RemoveAttackSpell', 'Remove Attack Spell (%s)');
+{$ENDIF}
       HorsemanSpeakTime:= ReadInteger('HorsemanSpeakTime', 1500);
       BoatmanSpeakTime:= ReadInteger('BoatmanSpeakTime', 2500);
+{$IFNDEF mm6}
+      SDuration:= ReadString('Duration', 'Duration:', false);
+      SDurationYr:= ReadString('DurationYr', ' %d:yr', false);
+      SDurationMo:= ReadString('DurationMo', ' %d:mo', false);
+      SDurationDy:= ReadString('DurationDy', ' %d:dy', false);
+      SDurationHr:= ReadString('DurationHr', ' %d:hr', false);
+      SDurationMn:= ReadString('DurationMn', ' %d:mn', false);
+{$ENDIF}
 
     finally
       ini.Free;
@@ -1170,6 +1243,65 @@ begin
   Result:= nil;
 end;
 
+procedure CallPtr; // ecx, pfunc, params...
+asm
+  pop edx
+  pop ecx
+  xchg edx, [esp]
+  jmp edx
+end;
+
+procedure CallVMT; // ecx, VMTOffset, params...
+asm
+  pop edx
+  pop ecx
+  xchg edx, [esp]
+  mov eax, [ecx]
+  jmp [eax + edx]
+end;
+
+function NewButtonMM8(id, action: int; actionInfo: int = 0; hintAction: int = 0): ptr;
+type
+  TF = function(btn: ptr; f, id, action, actionInfo, hintAction: int): ptr; stdcall;
+begin
+  Result:= TF(@CallPtr)(_new($E0), $4C2439, id, action, actionInfo, hintAction);
+end;
+
+procedure SetupButtonMM8(btn: ptr; x, y: int; transp: Bool; normalPic: PChar = nil; pressedPic: PChar = nil; hoverPic: PChar = nil; disabledPic: PChar = nil; englishD: Bool = false);
+type
+  TF = procedure(btn: ptr; VMTOff: int; var xy: TPoint; transp: Bool; normalPic, pressedPic, hoverPic, disabledPic: PChar; englishD: Bool); stdcall;
+var
+  p: TPoint;
+begin
+  p.X:= x;
+  p.Y:= y;
+  TF(@CallVMT)(btn, 168, p, transp, normalPic, pressedPic, hoverPic, disabledPic, englishD);
+end;
+
+procedure AddToDlgMM8(dlg, btn: ptr);
+type
+  TF = procedure (dlg: ptr; VMTOff: int; btn: ptr); stdcall;
+begin
+  TF(@CallVMT)(dlg, 164, btn);
+end;
+
+function GetCurrentPlayer: ptr;
+const
+  PartyMembers = PPtrArray(m6*$944C68 + m7*$A74F48 + m8*$B7CA4C);
+begin
+  Result:= nil;
+  if _CurrentMember^ < 0 then  exit;
+  Result:= PartyMembers[_CurrentMember^ - 1];
+  if m8 = 1 then
+    Result:= ptr(_PlayersArray + _CharOff_Size*int(Result));
+end;
+
+procedure DoPlaySound;
+asm
+  mov ecx, _PlaySoundStruct
+  push _PlaySound
+end;
+
 procedure __SetSpellBuff;
 asm
   pop ecx
@@ -1233,5 +1365,6 @@ exports
   SaveBufferToBitmap;
 initialization
   @SetSpellBuff:= @__SetSpellBuff;
+  @PlaySound:= @DoPlaySound;
 end.
 

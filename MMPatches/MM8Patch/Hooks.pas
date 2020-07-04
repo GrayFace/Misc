@@ -3098,7 +3098,7 @@ end;
 //----- HooksList
 
 var
-  HooksList: array[1..318] of TRSHookInfo = (
+  HooksList: array[1..325] of TRSHookInfo = (
     (p: $458E18; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $463862; old: $450493; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave/quicksave filenames localization
     (p: $4CD509; t: RShtNop; size: 12), // Fix Save/Load Slots: it resets SaveSlot, SaveScroll
@@ -3418,6 +3418,13 @@ var
     (p: $460FA2; newp: @PostponeIntroHook; t: RShtAfter; size: 7; Querry: hqPostponeIntro), // Postpone intro
     (p: $44C264; newp: @TreeHintsHook; t: RShtAfter), // Hints for non-interactive sprites
     (p: $48C0A4; newp: @FixTurnBasedHire; t: RShtAfter; size: 7), // Fix hiring in turn-based mode
+    (p: $41D678; old: $4F4020; newp: @SDuration; newref: true; t: RSht4), // Duration text
+    (p: $41D69E; old: $4F4018; newp: @SDurationYr; newref: true; t: RSht4), // Duration text
+    (p: $41D6D2; old: $4F4010; newp: @SDurationMo; newref: true; t: RSht4), // Duration text
+    (p: $41D70E; old: $4F4008; newp: @SDurationDy; newref: true; t: RSht4), // Duration text
+    (p: $41D752; old: $4F4000; newp: @SDurationHr; newref: true; t: RSht4), // Duration text
+    (p: $41D79E; old: $4F3FF8; newp: @SDurationMn; newref: true; t: RSht4), // Duration text
+    (p: $48CDF6; size: 10), // Fix vampires immunity
     ()
   );
 
