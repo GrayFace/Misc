@@ -21,7 +21,8 @@ type
     RShtJmp2, RShtBStr, RShtStr, RShtCallStore, RShtBefore, RShtAfter,
     RShtFunctionStart, RShtCodePtrStore);
 {
-  RShtBefore, RShtAfter - seemlessly "insert" new code before/after
+  RShtBefore, RShtAfter - seemlessly "insert" new code before/after using JMP
+   (note that RShtAfter can't be stacked)
   RShtCallStore - store original function ptr in eax
   RShtFunctionStart - like RShtCallStore, but placed at the start of a function
 
@@ -140,8 +141,12 @@ begin
   new:= int(Hook.newp);
   if new = 0 then  new:= Hook.new;
   if Hook.newref then  new:= pint(new)^;
-  if Hook.add <> 0 then  new:= RSGetHookValue(Hook) + Hook.add;
   if Hook.backup <> nil then  pint(Hook.backup)^:= RSGetHookValue(Hook);
+  if Hook.add <> 0 then
+    if Hook.newref then
+      inc(new, Hook.add)
+    else
+      new:= RSGetHookValue(Hook) + Hook.add;
 
   VirtualProtect(ptr(p), sz, PAGE_EXECUTE_READWRITE, @OldProtect);
   case Hook.t of
@@ -156,7 +161,7 @@ begin
       CopyMemory(ptr(p), PChar(Hook.newstr), sz0);
     RShtCallStore:
     begin
-      p1:= RSAllocCode(10);
+      p1:= RSAllocCode(10);      // p: call p1
       pbyte(p1)^:= $B8;          // mov eax, @orig
       pint(p1+1)^:= RSGetHookValue(Hook);
       Jmp(p, p1, true);
@@ -164,7 +169,7 @@ begin
     end;
     RShtBefore:
     begin
-      p1:= RSAllocCode(sz + 10);
+      p1:= RSAllocCode(sz + 10); // p: jmp p1
       CopyCode(p1 + 5, p, sz);
       Jmp(p, p1);
       Jmp(p1, new, true);        // call @hook
@@ -173,7 +178,7 @@ begin
     end;
     RShtAfter:
     begin
-      p1:= RSAllocCode(sz + 10);
+      p1:= RSAllocCode(sz + 10); // p: jmp p1
       CopyCode(p1, p, sz);       // std
       Jmp(p, p1);
       pbyte(p1 + sz)^:= $68;     // push @after
@@ -182,13 +187,13 @@ begin
     end;
     RShtFunctionStart:
     begin
-      p1:= RSAllocCode(sz + 15);
+      p1:= RSAllocCode(sz + 15); // p: jmp p1
       CopyCode(p1 + 10, p, sz);
       Jmp(p, p1);
       pbyte(p1)^:= $B8;          // mov eax, @std
       pint(p1+1)^:= p1 + 10;
       Jmp(p1 + 5, new);          // jmp @hook
-      Jmp(p1 + 10 + sz, p + sz); // std...jmp @after
+      Jmp(p1 + 10 + sz, p + sz); // @std: std...jmp @after
       if Hook.backup <> nil then  pint(Hook.backup)^:= p1 + 10;
     end;
     RShtCodePtrStore:
@@ -210,7 +215,7 @@ var
   hk: PRSHookInfo;
 begin
   hk:= @Hooks;
-  while hk.p <> 0 do
+  while (hk.p <> 0) or (hk.Querry <> 0) do
   begin
     if hk.Querry = Querry then
       RSApplyHook(hk^);
@@ -241,7 +246,7 @@ var
 begin
   hk:= @Hooks;
   Result:= 0;
-  while hk.p <> 0 do
+  while (hk.p <> 0) or (hk.Querry <> 0) do
   begin
     if not RSCheckHook(hk^) then  exit;
     inc(hk);
@@ -256,7 +261,7 @@ var
 begin
   hk:= @Hooks;
   Result:= 0;
-  while hk.p <> 0 do
+  while (hk.p <> 0) or (hk.Querry <> 0) do
   begin
     if (hk.Querry = Querry) and not RSCheckHook(hk^) then  exit;
     inc(hk);

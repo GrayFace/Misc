@@ -82,7 +82,6 @@ Type: files; Name: "{app}\{#MM}.ICD";
 [Files]
 Source: "Files\*.*"; Excludes: "*.bak"; DestDir: "{app}"; Flags: promptifolder ignoreversion recursesubdirs; BeforeInstall: BeforeInst;
 Source: "Data\*"; Excludes: "*.bak"; DestDir: "{app}\Data\"; Tasks: lods1 lods2;
-Source: "BaseWater\00 patch.bitmaps.lod"; DestDir: "{app}\Data\"; Check: BaseWaterCheck;
 Source: "OptData\01 water.bitmaps.lwd"; DestDir: "{app}\Data\"; Tasks: water1 water2;
 Source: "OptData\00 patch.icons.lod"; DestDir: "{app}\Data\"; Tasks: icons1 icons2;
 Source: "OptFiles\*"; Excludes: "*.bak"; DestDir: "{app}"; Flags: onlyifdoesntexist recursesubdirs; AfterInstall: AfterInst;
@@ -300,8 +299,6 @@ end;
 
 procedure AfterInst;
 begin
-  if IsTaskSelected('water1 water2') then
-    DeleteFile(ExpandConstant('{app}\Data\00 patch.bitmaps.lod'))
-  else if BaseWaterCheck then
+  if BaseWaterCheck then
     DeleteFile(ExpandConstant('{app}\Data\01 water.bitmaps.lwd'));
 end;

@@ -163,6 +163,7 @@ const
   lvRenderedScreen = 'Game.RenderedScreen';
   lvCharScreen = 'Game.CharScreen';
   lvHouseScreen = 'Game.HouseScreen';
+  lvHouseEnterMap = 'Game.HouseEnterMap';
   lvMainMenuCode = 'Game.MainMenuCode';
   lvLoading = 'Game.Loading';
   lvPlayers = 'Game.Players';
@@ -192,6 +193,8 @@ const
   lvHintAreaTop = 'Game.HintAreaTop';
   lvHintAreaRight = 'Game.HintAreaRight';
   lvEnableAttackSpell = 'Game.EnableAttackSpell';
+  lvClockHeight = 'Game.ClockHeight';
+  lvShooterMode = 'Game.ShooterMode';
   CanvasScreen = -1;
   CanvasTimer = -2;
   CanvasBase = 0;       lvcBase = 'Game.BaseUI';

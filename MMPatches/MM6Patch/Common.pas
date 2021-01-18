@@ -7,8 +7,9 @@ uses
 
 type
   TSaveSlotFile = array[0..279] of char;
-  TSaveSlotFiles = array[0..19] of TSaveSlotFile;
+  TSaveSlotFiles = array[0..39] of TSaveSlotFile;
   PSaveSlotFiles = ^TSaveSlotFiles;
+  PPSaveSlotFiles = ^PSaveSlotFiles;
 
 const
   _Paused = pint($4D5184);
@@ -31,7 +32,8 @@ const
   _TurnBasedDelays = $4C6CA8;
   _SaveSlot = pint($6A5F6C);
   _SaveScroll = pint($6A5F68);
-  _SaveSlotsFiles = PSaveSlotFiles($5F883C);
+  _SaveSlotsFiles = PPSaveSlotFiles($44EA02);
+  _SaveSlotsFilesLim = PPChar($44EB08);
   _SaveSlotsCount = pint($5FB9B4);
   __ItemsTxt = $41C4F5;
   _ItemsTxt = pint(__ItemsTxt);
@@ -42,7 +44,9 @@ const
   _Party_Z = pint($908CA0);
   _Party_Direction = pint($908CA4);
   _Party_Angle = pint($908CA8);
-  _Party_Height = $908C70;
+  __Party_Height = $908C70;
+  _Party_Height = pint(__Party_Height);
+  _Party_EyeLevel = pint($908C78);
   _ScreenW = pint($971074);
   _ScreenH = pint($971070);
   _ScreenBuffer = pptr($9B108C);
@@ -97,6 +101,7 @@ const
   _DrawInventory: procedure(n1,n2, member: int) = ptr($4165E0);
   _ExitMovie: procedure(_1: int = 0; _2: int = 0; _3: int = $9DE330) = ptr($4A5D10);
   _StopSounds: procedure(_: int = 0; __: int = 0; _3: int = $9CF598; _4: int = -1; _5: int = -1) = ptr($48FB40);
+  _strcmpi: function(const s1, s2: PChar): int cdecl = ptr($4AF370);
   _AddButton: function(dlg: ptr; x, y, w, h, shape, cmdX, action, acionInfo, key: int; hint: PChar; SpritesVarArg: ptr): ptr cdecl varargs = ptr($41A170);
   _DeleteButton: procedure(_,__: int; btn: ptr) = ptr($41A110);
 
@@ -134,6 +139,7 @@ const
   
 const
   SWrong: string = 'This is not a valid mm6.exe file. Check failed at address %X';
+  SCaption: string = 'GrayFace MM7 Patch';
   SIni = 'mm6.ini';
   SIni2 = 'mm6lang.ini';
   DummyFalse: Bool = false;

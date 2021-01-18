@@ -19,17 +19,12 @@ var
 
 //----- Functions
 
-function GetCurrentMember:ptr;
-begin
-  Result:= pptr(_PartyMembers + 4*_CurrentMember^)^;
-end;
-
 procedure QuickLoad;
 begin
   _Paused^:= 1;
   pint($69CDA8)^:= 1;
   _StopSounds;
-  _SaveSlotsFiles[0]:= 'quiksave.mm7';
+  _SaveSlotsFiles^[0]:= 'quiksave.mm7';
   _DoLoadGame(0, 0, 0);
   pint($6A0BC8)^:= 3;
 end;
@@ -201,7 +196,7 @@ begin
     name:= SaveSpecial;
 
   if save then
-    count:= 40
+    count:= (_SaveSlotsFilesLim^ - ptr(_SaveSlotsFiles^)) div SizeOf(TSaveSlotFile)
   else
     count:= _SaveSlotsCount^;
 
@@ -495,13 +490,18 @@ end;
 //----- Show recovery time in Attack/Shoot description
 
 function AttackDescriptionProc(str: PChar; shoot: LongBool):PChar;
+const
+  MinDelay = pint1($42EFC9);
 var
   member: PChar;
   i: int;
   blaster: Boolean;
 begin
   blaster:= false;
-  member:= GetCurrentMember;
+  Result:= str;
+  member:= GetCurrentPlayer;
+  if member = nil then
+    exit;
   i:= pint(member + _CharOff_ItemMainHand)^;
   if (i > 0) then
   begin
@@ -509,8 +509,8 @@ begin
     blaster:= (pint(i + $14)^ and 2 = 0) and (pbyte(_ItemsTxt^ + $30*pint(i)^ + $1D)^ = 7);
   end;
   i:= _Character_GetWeaponDelay(0, 0, member, shoot and not blaster);
-  if (i < 30) and not (shoot or blaster) then
-    i:= 30;
+  if (i < MinDelay^) and not (shoot or blaster) then
+    i:= MinDelay^;
   StrLCopy(_TextBuffer2, str, 499);
   Result:= StrLCat(_TextBuffer2, ptr(Format(RecoveryTimeInfo, [i])), 499);
 end;
@@ -1934,9 +1934,8 @@ begin
   LoadCustomLods($6A08E0, 'games.lod', 'chapter');
   LoadLodsOld;
   if _IsD3D^ then
-    ApplyHooksD3D
-  else
-    ApplyMMHooksSW;
+    ApplyHooksD3D;
+  ApplyMMHooksLodsLoaded;
 end;
 
 //----- Custom LODs - Vid
@@ -2606,20 +2605,20 @@ asm
   push std
   ret
 @dragon:
-  mov eax, [_Party_Height]
+  mov eax, [__Party_Height]
   // push Party_Height
   push eax
   // Party_Height = Party_Height*3/2
   sar eax, 1
   lea eax, [eax + eax*2]
-  mov [_Party_Height], eax
+  mov [__Party_Height], eax
   // call <std>
   push [esp + 3*4]
   push [esp + 3*4]
   call std
   // restore Party_Height
   pop ecx
-  mov [_Party_Height], ecx
+  mov [__Party_Height], ecx
   // return
   ret 8
 end;
@@ -2900,18 +2899,6 @@ begin
   Result:= GetWindowRect(hWnd, lpRect);
 end;
 
-//----- Inactive players could attack
-
-procedure InactivePlayerActFix;
-begin
-  if (_CurrentMember^ <> 0) and
-     (pword(int(GetCurrentMember) + _CharOff_Recover)^ > 0) then
-  begin
-    _CurrentMember^:= _FindActiveMember;
-    _NeedRedraw^:= 1;
-  end;
-end;
-
 //----- Fix multiple steps at once in turn-based mode
 
 var
@@ -3125,10 +3112,17 @@ procedure PopActionAfter;
 asm
 end;
 
+//----- Remember clock area to extend it with UI layout
+
+procedure RememberClockArea;
+asm
+  mov ClockArea, eax
+end;
+
 //----- HooksList
 
 var
-  HooksList: array[1..321] of TRSHookInfo = (
+  HooksList: array[1..320] of TRSHookInfo = (
     (p: $45B0D1; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $4655FE; old: $452C75; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave file name localization
     (p: $45E5A4; old: $45E2D0; backup: @FillSaveSlotsStd; newp: @FillSaveSlotsHook; t: RShtCall), // Fix Save/Load Slots
@@ -3403,8 +3397,6 @@ var
     (p: $440090; old: $D0; new: $C4; t: RSht4), // Support changing FOV indoor in D3D mode
     (p: $440516; old: $D0; new: $C4; t: RSht4), // Support changing FOV indoor in D3D mode
     (p: $48AF26; old: $D0; new: $C4; t: RSht4), // Support changing FOV indoor in D3D mode
-    (p: $421E12; size: 2; Querry: hqInactivePlayersFix), // Inactive characters couldn't interact with chests + allow selecting them regularly
-    (p: $433EB9; newp: @InactivePlayerActFix; t: RShtBefore; size: 6; Querry: hqInactivePlayersFix), // Inactive players could attack
     (p: $42FD15; newp: @FixTurnBasedWalking; t: RShtAfter; size: 6; Querry: hqFixTurnBasedWalking), // Fix multiple steps at once in turn-based mode
     (p: $42FD65; newp: @FixTurnBasedWalking; t: RShtAfter; size: 6; Querry: hqFixTurnBasedWalking), // Fix multiple steps at once in turn-based mode
     (p: $42FDBD; newp: @FixTurnBasedWalking; t: RShtAfter; size: 6; Querry: hqFixTurnBasedWalking), // Fix multiple steps at once in turn-based mode
@@ -3449,6 +3441,7 @@ var
     (p: $41E1F2; old: $4E327C; newp: @SDurationMn; newref: true; t: RSht4), // Duration text
     (p: $48D4F3; newp: @FixLichImmuneHook; t: RShtCall; size: 6; Querry: hqFixLichImmune), // Lich becoming immune to all magic with sufficient Day of Protection
     (p: HookPopAction; newp: @PopActionAfter; t: RShtBefore; size: 9), // Make HookPopAction useable with straight Delphi funcitons
+    (p: $41BD94; newp: @RememberClockArea; t: RShtAfter), // Remember clock area to extend it with UI layout
     ()
   );
 
@@ -3480,7 +3473,7 @@ begin
   CheckHooks(HooksList);
   CheckHooksD3D;
   if not SupportMM7ResTool and (pint($434AA2)^ <> 470) then
-    if RSMessageBox(0, MMResToolError, 'GrayFace MM7 Patch', MB_ICONEXCLAMATION or MB_OKCANCEL) <> ID_OK then
+    if RSMessageBox(0, MMResToolError, SCaption, MB_ICONEXCLAMATION or MB_OKCANCEL) <> ID_OK then
       ExitProcess(0);
   ExtendSpriteLimits;
   ReadDisables;
@@ -3507,8 +3500,6 @@ begin
     RSApplyHooks(HooksList, hqBorderless);
   if (MipmapsCount > 1) or (MipmapsCount < 0) then
     RSApplyHooks(HooksList, hqMipmaps);
-  if FixInactivePlayersActing then
-    RSApplyHooks(HooksList, hqInactivePlayersFix);
   if TurnBasedWalkDelay > 0 then
     RSApplyHooks(HooksList, hqFixTurnBasedWalking);
   if FixLichImmune then

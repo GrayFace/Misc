@@ -18,11 +18,6 @@ var
 
 //----- Functions
 
-function GetCurrentMember:ptr;
-begin
-  Result:= pptr(_PartyMembers + 4*_CurrentMember^)^;
-end;
-
 procedure OpenCharScreen;
 begin
   if _CurrentMember^ = 0 then
@@ -39,7 +34,7 @@ begin
   _Paused^:= 1;
   pint($610444)^:= 1;
   _StopSounds;
-  _SaveSlotsFiles[0]:= 'quiksave.mm6';
+  _SaveSlotsFiles^[0]:= 'quiksave.mm6';
   _DoLoadGame(0, 0, 0);
   pint($6199C0)^:= 3;
 end;
@@ -220,7 +215,7 @@ begin
     name:= SaveSpecial;
 
   if save then
-    count:= 40
+    count:= (_SaveSlotsFilesLim^ - ptr(_SaveSlotsFiles^)) div SizeOf(TSaveSlotFile)
   else
     count:= _SaveSlotsCount^;
 
@@ -527,13 +522,18 @@ end;
 //----- Show recovery time in Attack/Shoot description
 
 function AttackDescriptionProc(str: PChar; shoot: LongBool):PChar;
+const
+  MinDelay = pint1($42A239);
 var
   member: PChar;
   i: int;
   blaster: Boolean;
 begin
   blaster:= false;
-  member:= GetCurrentMember;
+  Result:= str;
+  member:= GetCurrentPlayer;
+  if member = nil then
+    exit;
   i:= pint(member + _CharOff_ItemMainHand)^;
   if (i > 0) then
   begin
@@ -541,8 +541,8 @@ begin
     blaster:= (pint(i + $14)^ and 2 = 0) and (pbyte(_ItemsTxt^ + $28*pint(i)^ + $15)^ = 8);
   end;
   i:= _Character_GetWeaponDelay(0, 0, member, shoot and not blaster);
-  if (i < 30) and not (shoot or blaster) then
-    i:= 30;
+  if (i < MinDelay^) and not (shoot or blaster) then
+    i:= MinDelay^;
   i:= IncreaseRecoveryRateProc(i, 0, member);
   StrLCopy(_TextBuffer2, str, 499);
   Result:= StrLCat(_TextBuffer2, ptr(Format(RecoveryTimeInfo, [i])), 499);
@@ -816,7 +816,7 @@ var
   rate: int;
 begin
   rate:= 100 + _Character_CalcSpecialBonusByItems(0, 0, member, 17);
-  Result:= (v*100 + rate div 2) div rate;
+  Result:= RDiv(v*100, rate);
 end;
 
 procedure IncreaseRecoveryRateHook;
@@ -1995,7 +1995,7 @@ begin
   LoadCustomLods($61AA10, 'sprites.lod',  'sprites08');
   LoadCustomLods($6104F8, 'games.lod', 'chapter');
   LoadLodsOld;
-  ApplyMMHooksSW;
+  ApplyMMHooksLodsLoaded;
 end;
 
 //----- Custom LODs - Vid
@@ -2626,20 +2626,20 @@ asm
   push std
   ret
 @dragon:
-  mov eax, [_Party_Height]
+  mov eax, [__Party_Height]
   // push Party_Height
   push eax
   // Party_Height = Party_Height*3/2
   sar eax, 1
   lea eax, [eax + eax*2]
-  mov [_Party_Height], eax
+  mov [__Party_Height], eax
   // call <std>
   push [esp + 3*4]
   push [esp + 3*4]
   call std
   // restore Party_Height
   pop ecx
-  mov [_Party_Height], ecx
+  mov [__Party_Height], ecx
   // return
   ret 8
 end;
@@ -2840,18 +2840,6 @@ begin
   Result:= GetWindowRect(hWnd, lpRect);
 end;
 
-//----- Inactive players could attack
-
-procedure InactivePlayerActFix;
-begin
-  if (_CurrentMember^ <> 0) and
-     (pword(int(GetCurrentMember) + _CharOff_Recover)^ > 0) then
-  begin
-    _CurrentMember^:= _FindActiveMember;
-    _NeedRedraw^:= 1;
-  end;
-end;
-
 //----- Allow loading quick save from death movie + NoDeathMovie
 
 var
@@ -2975,7 +2963,7 @@ end;
 //----- HooksList
 
 var
-  HooksList: array[1..285] of TRSHookInfo = (
+  HooksList: array[1..283] of TRSHookInfo = (
     (p: $42ADE7; newp: @RunWalkHook; t: RShtCall), // Run/Walk check
     (p: $453AD3; old: $42ADA0; newp: @KeysHook; t: RShtCall), // My keys handler
     (p: $45456E; old: $417F90; newp: @WindowProcCharHook; t: RShtCall), // Map Keys
@@ -3247,8 +3235,6 @@ var
     (p: $454B26; newp: @GetRestoredRect; t: RShtCall; size: 6), // Allow window maximization
     (p: $4589F1; newp: @GetRestoredRect; t: RShtCall; size: 6), // Allow window maximization
     (p: $458B17; newp: @GetRestoredRect; t: RShtCall; size: 6), // Allow window maximization
-    (p: $42022C; size: 6; Querry: hqInactivePlayersFix), // Inactive characters couldn't interact with chests + allow selecting them regularly
-    (p: $42C4CE; newp: @InactivePlayerActFix; t: RShtBefore; size: 6; Querry: hqInactivePlayersFix), // Inactive players could attack
     (p: $438A90; newp: @MinimapZoomHook; t: RShtFunctionStart; size: 6), // Remember minimap zoom indoors
     (p: $444CF5; old: $7F; new: $7D; t: RSht1), // TFT.bin was animated incorrectly (first frame was longer, last frame was shorter)
     (p: $4B9194; newp: @MyLoadCursor; t: RSht4), // Load cursors from Data
@@ -3302,8 +3288,6 @@ begin
     RSApplyHooks(HooksList, 22);
   if BorderlessFullscreen then
     RSApplyHooks(HooksList, hqBorderless);
-  if FixInactivePlayersActing then
-    RSApplyHooks(HooksList, hqInactivePlayersFix);
   if NoPlayerSwap then
     RSApplyHooks(HooksList, hqNoPlayerSwap);
   FixConditionSpells;

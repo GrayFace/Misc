@@ -9,6 +9,7 @@ type
   TSaveSlotFile = array[0..279] of char;
   TSaveSlotFiles = array[0..19] of TSaveSlotFile;
   PSaveSlotFiles = ^TSaveSlotFiles;
+  PPSaveSlotFiles = ^PSaveSlotFiles;
 
 const
   _Paused = pint($51D33C);
@@ -24,9 +25,14 @@ const
   _PartyMembers = $B7CA48;
   _Party_MemberCount = pint($B7CA60);
   _Party_State = $B7CA88;
+  _Party_X = pint($B21554);
+  _Party_Y = pint($B21558);
+  _Party_Z = pint($B2155C);
   _Party_Direction = pint($B21560);
   _Party_Angle = pint($B21564);
-  _Party_Height = $B20E94;
+  __Party_Height = $B20E94;
+  _Party_Height = pint(__Party_Height);
+  _Party_EyeLevel = pint($B20E9C);
   _EscKeyUnkCheck = pint($519328);
   _TurnBased = pbool($B21728);
   _TurnBasedPhase = pint($509C9C);
@@ -42,7 +48,8 @@ const
   _SaveScroll = pint($6CEA74);
   _SaveSlot = pint($6CEA78);
   _SaveSlot2 = pint($6F30C0);
-  _SaveSlotsFiles = PSaveSlotFiles($6CADCC);
+  _SaveSlotsFiles = PPSaveSlotFiles($45C5D5);
+  _SaveSlotsFilesLim = PPChar($45C674);
   _SaveSlotsCount = pint($6CACFC);
   __ItemsTxt = $41CE60;
   _ItemsTxt = pint(__ItemsTxt);
@@ -110,7 +117,7 @@ const
   _HSVtoRGB: procedure(_: int; var G, R: Single; V, S, H: Single; var B: Single) = ptr($489F21);
 {    pk: int;  // palette kind: 2 = 16 bits, 1 = 24 bits, 0 = none
     forceNew, inEnglishD: BOOL;}
-  _LoadLodBitmap: function(_,__, lod: int; palKind: int64; name: PChar): int = ptr($410D70);
+  _LoadLodBitmap: function(_,__, lod: int; _1,_2, palKind: int; name: PChar): int = ptr($410D70);
   _DoLoadLodBitmap: function(_,__, lod: int; palKind: int64; name: PChar; var bmp): int = ptr($410ED8);
   _LoadBitmapInPlace: function(_,__, lod: int; palKind: int; name: PChar; var bmp): int = ptr($411931);
   //_FreeBitmap: procedure(_,_1: int; var bmp) = ptr($410A10);
@@ -153,6 +160,7 @@ function GameCursorPos:PPoint;
 
 const
   SWrong: string = 'This is not a valid mm8.exe file. Check failed at address %X';
+  SCaption: string = 'GrayFace MM7 Patch';
   SIni = 'mm8.ini';
   SIni2 = 'mm8lang.ini';
   DummyFalse: Bool = false;

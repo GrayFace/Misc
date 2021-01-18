@@ -15,11 +15,6 @@ implementation
 
 //----- Functions
 
-function GetCurrentMember:ptr;
-begin
-  Result:= ptr(_CharactersTable + pint(_PartyMembers + 4*_CurrentMember^)^*_CharOff_Size);
-end;
-
 procedure OpenInventory;
 const // from 420D69
   NeedRedraw = int(_NeedRedraw);
@@ -79,7 +74,7 @@ begin
   _Paused^:= 1;
   pint($6CAD00)^:= 1;
   _StopSounds;
-  _SaveSlotsFiles[0]:= 'quiksave.dod';
+  _SaveSlotsFiles^[0]:= 'quiksave.dod';
   _DoLoadGame(0, 0, 0);
   pint($6CEB28)^:= 3;
 end;
@@ -195,7 +190,7 @@ begin
     name:= SaveSpecial;
 
   if save then
-    count:= 20
+    count:= (_SaveSlotsFilesLim^ - ptr(_SaveSlotsFiles^)) div SizeOf(TSaveSlotFile)
   else
     count:= _SaveSlotsCount^;
 
@@ -492,11 +487,16 @@ var
   TextBuffer: array[0..499] of char;
 
 function AttackDescriptionProc(str: PChar; shoot: LongBool; memberId:int):PChar;
+const
+  MinDelay = pint1($42DA52);
 var
   member: PChar;
   i: int;
   blaster: Boolean;
 begin
+  Result:= str;
+  if memberId < 0 then
+    exit;
   blaster:= false;
   member:= ptr(_CharactersTable + _CharOff_Size*memberId);
   i:= pint(member + _CharOff_ItemMainHand)^;
@@ -506,8 +506,8 @@ begin
     blaster:= (pint(i + $14)^ and 2 = 0) and (pbyte(_ItemsTxt^ + $30*pint(i)^ + $1D)^ = 7);
   end;
   i:= _Character_GetWeaponDelay(0, 0, member, shoot and not blaster);
-  if (i < 30) and not (shoot or blaster) then
-    i:= 30;
+  if (i < MinDelay^) and not (shoot or blaster) then
+    i:= MinDelay^;
   StrLCopy(TextBuffer, str, 499);
   Result:= StrLCat(TextBuffer, ptr(Format(RecoveryTimeInfo, [i])), 499);
 end;
@@ -1977,9 +1977,8 @@ begin
   LoadCustomLods($6F330C, PChar(Lang + 'D.lod'), 'language');
   LoadLodsOld;
   if _IsD3D^ then
-    ApplyHooksD3D
-  else
-    ApplyMMHooksSW;
+    ApplyHooksD3D;
+  ApplyMMHooksLodsLoaded;
 end;
 
 //----- Custom LODs - Vid
@@ -2550,20 +2549,20 @@ asm
   push std
   ret
 @dragon:
-  mov eax, [_Party_Height]
+  mov eax, [__Party_Height]
   // push Party_Height
   push eax
   // Party_Height = Party_Height*3/2
   sar eax, 1
   lea eax, [eax + eax*2]
-  mov [_Party_Height], eax
+  mov [__Party_Height], eax
   // call <std>
   push [esp + 3*4]
   push [esp + 3*4]
   call std
   // restore Party_Height
   pop ecx
-  mov [_Party_Height], ecx
+  mov [__Party_Height], ecx
   // return
   ret 8
 end;
@@ -2925,18 +2924,6 @@ begin
   Result:= GetWindowRect(hWnd, lpRect);
 end;
 
-//----- Inactive players could attack
-
-procedure InactivePlayerActFix;
-begin
-  if (_CurrentMember^ <> 0) and
-     (pword(int(GetCurrentMember) + _CharOff_Recover)^ > 0) then
-  begin
-    _CurrentMember^:= _FindActiveMember;
-    _NeedRedraw^:= 1;
-  end;
-end;
-
 //----- Fix multiple steps at once in turn-based mode
 
 var
@@ -3093,6 +3080,40 @@ asm
   mov dword ptr [$B21728], 0
   test esi, esi
 @ok:
+end;
+
+//----- Fix artifact skill bonus stacking
+
+var
+  IsArtBonus: Boolean;
+  ArtBonusBefore: int;
+
+procedure FixArtifactBonuses1;
+asm
+  cmp esi, 16
+  jl @skip
+  cmp esi, 23
+  jng @ok
+  cmp esi, 43
+  jl @skip
+  cmp esi, 46
+  jg @skip
+@ok:
+  mov IsArtBonus, true
+  mov ArtBonusBefore, ebp
+@skip:
+end;
+
+procedure FixArtifactBonuses2;
+asm
+  cmp IsArtBonus, false
+  jz @skip
+  mov IsArtBonus, false
+  mov eax, ebp
+  mov ebp, ArtBonusBefore
+  sub eax, ebp
+  add dword ptr [esp + 18h], eax 
+@skip:
 end;
 
 //----- HooksList
@@ -3392,8 +3413,6 @@ var
     (p: $43D47A; old: $D0; new: $C4; t: RSht4), // Support changing FOV indoor in D3D mode
     (p: $48A804; old: $D0; new: $C4; t: RSht4), // Support changing FOV indoor in D3D mode
     (p: $420F1F; size: 2), // Inactive characters couldn't interact with chests
-    (p: $420E14; size: 6; Querry: hqInactivePlayersFix), // Select inactive characters
-    (p: $4316B2; newp: @InactivePlayerActFix; t: RShtBefore; size: 6; Querry: hqInactivePlayersFix), // Inactive players could attack
     (p: $42EBFF; newp: @FixTurnBasedWalking; t: RShtAfter; size: 6; Querry: hqFixTurnBasedWalking), // Fix multiple steps at once in turn-based mode
     (p: $42EBCE; newp: @FixTurnBasedWalking; t: RShtAfter; size: 6; Querry: hqFixTurnBasedWalking), // Fix multiple steps at once in turn-based mode
     (p: $42E669; newp: @FixTurnBasedWalking; t: RShtAfter; size: 6; Querry: hqFixTurnBasedWalking), // Fix multiple steps at once in turn-based mode
@@ -3425,6 +3444,8 @@ var
     (p: $41D752; old: $4F4000; newp: @SDurationHr; newref: true; t: RSht4), // Duration text
     (p: $41D79E; old: $4F3FF8; newp: @SDurationMn; newref: true; t: RSht4), // Duration text
     (p: $48CDF6; size: 10), // Fix vampires immunity
+    (p: $48E659; newp: @FixArtifactBonuses1; t: RShtBefore; size: 6), // Fix artifact skill bonus stacking
+    (p: $48EC2D; newp: @FixArtifactBonuses2; t: RShtBefore; size: 9), // Fix artifact skill bonus stacking
     ()
   );
 
@@ -3469,8 +3490,6 @@ begin
     RSApplyHooks(HooksList, 24);
   if BorderlessFullscreen then
     RSApplyHooks(HooksList, hqBorderless);
-  if FixInactivePlayersActing then
-    RSApplyHooks(HooksList, hqInactivePlayersFix);
   if TurnBasedWalkDelay > 0 then
     RSApplyHooks(HooksList, hqFixTurnBasedWalking);
   if NoWaterShoreBumpsSW then

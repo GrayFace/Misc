@@ -7,8 +7,9 @@ uses
 
 type
   TSaveSlotFile = array[0..279] of char;
-  TSaveSlotFiles = array[0..19] of TSaveSlotFile;
+  TSaveSlotFiles = array[0..39] of TSaveSlotFile;
   PSaveSlotFiles = ^TSaveSlotFiles;
+  PPSaveSlotFiles = ^PSaveSlotFiles;
 
 const
   _Paused = pint($50BA64);
@@ -24,9 +25,14 @@ const
   _ItemInMouse = pint($AD458C);
   _PartyMembers = $A74F44;
   _Party_State = $AD45B0;
+  _Party_X = pint($ACD4EC);
+  _Party_Y = pint($ACD4F0);
+  _Party_Z = pint($ACD4F4);
   _Party_Direction = pint($ACD4F8);
   _Party_Angle = pint($ACD4FC);
-  _Party_Height = $ACCE3C;
+  __Party_Height = $ACCE3C;
+  _Party_Height = pint(__Party_Height);
+  _Party_EyeLevel = pint($ACCE44);
   _EscKeyUnkCheck = pint($507A40);
   _TurnBased = pbool($ACD6B4);
   _TurnBasedPhase = pint($4F86DC);
@@ -36,7 +42,8 @@ const
   _AutosaveName = PPChar($5E4040);
   _SaveScroll = pint($6A0B1C);
   _SaveSlot = pint($6A0B20);
-  _SaveSlotsFiles = PSaveSlotFiles($69CE74);
+  _SaveSlotsFiles = PPSaveSlotFiles($45EB63);
+  _SaveSlotsFilesLim = PPChar($45EC35);
   _SaveSlotsCount = pint($69CDA4);
   __ItemsTxt = $41D8E1;
   _ItemsTxt = pint(__ItemsTxt);
@@ -152,6 +159,7 @@ function GameCursorPos:PPoint;
   
 const
   SWrong: string = 'This is not a valid mm7.exe file. Check failed at address %X';
+  SCaption: string = 'GrayFace MM7 Patch';
   SIni = 'mm7.ini';
   SIni2 = 'mm7lang.ini';
   DummyFalse: Bool = false;

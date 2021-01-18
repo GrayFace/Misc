@@ -303,22 +303,54 @@ Version 2.5:
 [+] Direct unaccelerated mouse input supported through hidden MouseSensitivityDirectMul option, but not enabled by default due to low accuracy. Set it to something like 1.5 to try.
 [+] FixConditionPriorities
 [+] HintStayTime
+[+] EnableAttackSpell
+[+] ShowHintWithRMB
+[+] ShooterMode
+[+] GreenItemsWhileRightClick
+[+] AddDescriptions - Descriptions in INI
+[+] DeadPlayerShowItemInfo
+[+] dist_mist, ViewDistanceD3D
+[+] MonSpritesSizeMul
+[+] FixHouseAnimationRestart
+[+] Support dgVoodoo option
+[+] CheckFreeSpace - Free space check when saving a game
 [-] Casting stronger buffs did nothing if a weaker, but longer one is in place
 [-] Item spells were causing bugs when cast onto the very 1st item in the inventory
-[-] Now you can pick up stolen items from corpses of thieves (in MM7 and MM8 this was the case, but there was no indication)
+[-] Now you can pick up stolen items from corpses of thieves (in MM7 and MM8 this was originally the case, but there was no indication)
+[-] Monster hits were causing a player switch even when Endurance eliminates hit recovery
+[-] When casting a Quick Spell the spell points check was incorrect (it assinged GM spell to another school of magic)
+[-] AOE damage wasn't dealt to paralyzed monsters
+[-] Monster spell attacks were broken (esp. Poison Spray, Shrapmetal) (thanks cthscr)
+    MM6: All spells were doing Fire damage
+[-] KeepCurrentDirectory
+[-] Fixed another crash due to facets without vertexes
+[-] My bug: You were able to learn unavailable magic skills with keyboard navigation
+[*] My inactive players acting fix wasn't perfect
+[*] Now spell skills that don't fit are drawn over buttons. Still better than making them inaccessible.
 [!!] Names.txt and Global.txt in MM6 - cmp with 7, "Minotuars" in MM8 Promotion Quest NPC
-[!!] Fix 'Of Recovery'
-[!!] Change minimap color for color blind
-[!!] Support dgVoodoo option
+[!!] Spells.txt Acid Splash element
+[!!] FPS don't do std action?
+[!!] MM8 obelisk in setup
 (MM6, MM7)
 [-] Snow X speed was effected by strafing too much
 (MM7, MM8)
 [+] TrueColorSprites hidden option, off by default to prevent 'out of memory' with HD sprites
 [+] The game doesn't crash on exit if d3dsprite.hwl and d3dbitmap.hwl are missing
+[+] Minimap background picture (mainly for color blind)
+[+] ClickThroughEffects now works in Hardware mode
+[+] SystemDDraw
+[+] IndoorFovMul (0.813)
 [-] Another crash caused by vertexless facets
 [-] Restore AnimatedTFT bit from Blv rather than Dlv to avoid crash
 [-] FixMonstersBlockingShots
 [-] Duration string for items wasn't localized
+[-] Monsters shot at from a distance appearing green on minimap
+[-] Display Inventory screen didn't work with unconscious players
+[-] Damage bonus of Assassins' and Barbarians' enchantments didn't work
+[-] 'GM' spell skill wasn't read from Monsters.txt
+[-] FixIceBoltBlast
+[-] FixEnergyDamageType - Ener damage type was being turned into Earth
+[-] No more gamma.pcx
 [-] My bug: Crash in full screen if BorderlessFullscreen=0
 [-] My bug: Mipmaps were always on in full screen if BorderlessFullscreen=0 and MipmapsCount>1
 [-] My bug: Empty icons were causing division by zero in UI Layout code
@@ -327,6 +359,7 @@ Version 2.5:
 [-] End game movies were unskippable, as well as the intro on first launch
 [-] Game wasn't paused in Enchant Item screen
 [-] FixParalize
+[-] Party was attacking enemies during their dying animation
 [-] My bug: Keyboard control in spell book was causing spells to be cast accidentally with arrow keys
 (MM7)
 [+] Minor tweaks to UI Layout mode
@@ -337,25 +370,19 @@ Version 2.5:
 [-] FixLichImmune - Lich was becoming immune to elemental magic if resistances are 200
 (MM8)
 [-] Vampires weren't immune to Mind
+[-] lloyd pcx broken
 
 
-[!!] (tested in MM7) unconscious players don't work in Display Inventory screen
-[!!] Buffer house animations to avoid restart and MM6 mouse item tunneling
+[!!!] Show 3DO/NWC intros
 
-[!!] MouseLookShooterAim
-[!!] dgVoodoo support
-[!!] Attack quick spell
-[!!] Acid burst - fire damage
+[!!!] Acid burst - fire damage
 
-[!!] View distance
-[!!] HD sprites
 [!!] Smooth video sides
 [!!] Prioritize geometry near the center
 [!!] Night sky, better day/night cycle, sun?
 [!!] Different configs for mouse look/no mouse look? No HKLM
 [!!] What about adding a right-click option that lets you exit conversations and houses?
 [!!] Configurable (Caps Lock) key for mouse look
-[!!] textures from bitmaps (and option to change their gamma or not to change??)
 
 (Figo:) Is there still the limit of how many we can acquire with one party (~13)?
 I've read that in the Merge there is none, so how about a vanilla game?
@@ -384,11 +411,6 @@ The "-30 Earth Resistance" on the relic, Kelebrim, does not work.
 
 Darkloke best:
 
-- Для противников со способностью StealItem сделать возможность лутать обратно
-украденные вещи с их трупов.
-- Опция ini-файла: автоматическое переключение в double speed mode при
-переключении в походовый режим и автоматический возврат к прежнему режиму при
-выходе из него.
 - Иногда в бою с монстрами на открытой местности они выходят за границы уровня,
  таким образом их труп нельзя полутать (только если телекинезом).
  Было бы неплохо повесить на опр. триггер (удаление отряда из радиуса обзора,

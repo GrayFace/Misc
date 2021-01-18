@@ -12,6 +12,7 @@ uses
 
 procedure CheckHooksD3D;
 procedure ApplyHooksD3D;
+procedure OnLoadedD3D;
 function LoadSpriteD3DHook(Name: PChar; PalIndex: int): PHwlBitmap; stdcall;
 
 implementation
@@ -1014,12 +1015,10 @@ end;
 //----- Dynamic indoor FOV. MM8 Bugfix: indoor FOV wasn't extended like outdoor
 
 procedure FixIndoorFOVProcD3D(var v: Single);
-const
-  base = 369;
 begin
   if (m8 = 1) or IsLayoutActive then
     with Options.RenderRect do
-      v:= base*ViewMulFactor*DynamicFovFactor(Right - Left, Bottom - Top);
+      v:= IndoorAntiFov*ViewMulFactor*DynamicFovFactor(Right - Left, Bottom - Top);
 end;
 
 procedure FixIndoorFOVHookD3D;
@@ -1039,25 +1038,12 @@ type
 
 function FixCastRay(var v: TMMSegment; x0, y0, dist: Single): ptr; stdcall;
 var
-  x, y, z, m, s, c: ext;
+  x, y, z, m: ext;
 begin
   Result:= @v;
   FillChar(v, SizeOf(v), 0);
-  // get X, Y, Z in screen space based coordinate system (but with vertical Z)
-  y:= GetViewMul;
-  x:= x0 - _ScreenMiddle.X;
-  z:= _ScreenMiddle.Y - y0 + 0.5; // don't know why +0.5 is needed
-  // transform to world coordinate system
-  // theta:
-  SinCos(_Party_Angle^*Pi/1024, s, c);
-  m:= y*c - z*s;
-  z:= z*c + y*s;
-  // phi:
-  SinCos(_Party_Direction^*Pi/1024, s, c);
-  y:= m*s - x*c;
-  x:= m*c + x*s;
   // dist mul:
-  m:= dist*$10000/sqrt(x*x + y*y + z*z);
+  m:= dist*$10000/CastRay(x, y, z, x0, y0);
   with _CameraPos^ do
   begin
     v[0].x:= X;
@@ -1196,11 +1182,135 @@ begin
   _LoadBitmap(0, 0, _BitmapsLod, 0, 'WtrTyl');
 end;
 
+//----- Delay interface by 1 frame to improve FPS
+
+procedure DelayedRenderProc;
+var
+  info: TDDSurfaceDesc2;
+begin
+  if DXProxyLockInterfaceSurface(info) then  exit;
+  DrawD3D(_ScreenBuffer^, @info);
+  DXProxyUnlockInterfaceSurface;
+  DXProxyDrawLastInterface;
+end;
+
+procedure DelayedRenderHook;
+asm
+  jz @exit
+  cmp DXProxyActive, true
+  jnz @exit
+  call DelayedRenderProc
+  xor eax, eax
+@exit:
+end;
+
+//----- Extend view distance
+
+procedure GroundBoundsHook;
+asm
+  push ecx
+  push edi
+  push ebx  // X-Y swap
+
+  xor ebx, ebx
+	mov ecx, dword [ebp - $58]
+  test ecx, ecx
+  jz @NoSwap
+  cmp ecx, 3
+  jz @NoSwap
+  cmp ecx, 4
+  jz @NoSwap
+  cmp ecx, 7
+  jz @NoSwap
+  // swap X and Y
+  mov ebx, $7ABA10 - $7AB810
+@NoSwap:
+
+	lea edi, [m7*$76D848 + m8*$7AB810 + ebx]  // beginy
+	mov ecx, ($7ABA10 - $7AB810)/4
+	mov eax, 2
+	rep stosd
+
+	lea edi, [m7*$76D448 + m8*$7AB410 + ebx]  // endy
+	mov ecx, ($7AB610 - $7AB410)/4
+	mov eax, 125
+	rep stosd
+
+  neg ebx
+  add ebx, m7*$76DA48 + m8*$7ABA10 + 4  // beginx
+	mov ecx, 128
+@loop:
+	dec ecx
+	mov [ebx + ecx*4], ecx
+	jnz @loop
+
+  pop ebx
+	pop edi
+  pop ecx
+	mov eax, 128
+	push m7*$47FF0C + m8*$47F707
+end;
+
+procedure RemoveViewLimits;
+const
+  count = 8192 + 64*128;  // support drawing all facets and half of all tiles at once
+  PolySize = 268;
+  oldHigh = pint(m7*$4787B7 + m8*$477261);
+  hk0: TRSHookInfo = (t: RSht4);
+{$IFDEF mm7}
+	counts: array[1..9] of int = ($4787B7, $478C6A, $48062A, $480A5B, $480E58, $4814EC, $481802, $481ADF, $487499);
+	refs: array[1..17] of int = ($4784D1, $478B5F, $479363, $479385, $47A568, $47A582, $480565, $48098D, $480D8A, $48141D, $48171C, $4819FF, $481EC8, $487366, $4873AC, $48745F, $487DAE);
+	endrefs: array[1..3] of int = ($47A57A+1, $47A592+1, $487DBA+1);
+	refs2: array[1..3] of int = ($4873BD, $4873ED, $48747A);
+{$ELSE}
+	counts: array[1..10] of int = ($477261, $477738, $477B9B, $47FE0F, $480234, $48064D, $480D56, $48106E, $48134B, $4872DF);
+	refs: array[1..18] of int = ($476F6F, $477469, $477A90, $478294, $4782B8, $479750, $47976A, $47FD52, $48014A, $48057D, $480C86, $480F86, $48126B, $481734, $486CA6, $486CEC, $4872AB, $4876BF);
+	endrefs: array[1..3] of int = ($4876CB+1, $479762+1, $47977A+1);
+	refs2: array[1..3] of int = ($486CFD, $486D31, $4872C5);
+{$ENDIF}
+var
+  hk: TRSHookInfo;
+
+  procedure patch(const a: array of int; add: int);
+  var
+    i: int;
+  begin
+    hk.add:= add;
+    for i := low(a) to high(a) do
+    begin
+      hk.p:= a[i];
+      RSApplyHook(hk);
+    end;
+  end;
+
+var
+  dn: int;
+  off: int;
+begin
+  dn:= count - oldHigh^ - 1;
+  if dn <= 0 then  exit;
+  hk:= hk0;
+  off:= GetMemory(count*PolySize) - ppchar(refs[1])^;
+	patch(counts, dn);
+	patch(refs, off);
+	patch(endrefs, off + dn*PolySize);
+  off:= GetMemory(count*4) - ppchar(refs2[1])^;
+	patch(refs2, off);
+end;
+
 //----- HooksList
 
 var
+  HooksCommon: array[1..3] of TRSHookInfo = (
+    //(p: m7*$6BDF7C + m8*$6F3084; new: 200; t: RSht4; Querry: hqViewDistanceLimits), // Extend view distance
+    //(p: m7*$6BDF80 + m8*$6F3088; new: 200; t: RSht4; Querry: hqViewDistanceLimits), // Extend view distance
+    (p: m7*$6BDF84 + m8*$6F308C; new: 200; t: RSht4; Querry: hqViewDistanceLimits), // Extend view distance
+    (p: m7*$47F8D2 + m8*$47F0CD; newp: @GroundBoundsHook; t: RShtJmp; size: 6; Querry: hqViewDistanceLimits), // Extend view distance
+    ()
+  );
 {$IFDEF MM7}
-  Hooks: array[1..75] of TRSHookInfo = (
+  SkyExtra: Single = 50;
+  Hooks: array[1..76] of TRSHookInfo = (
     (p: $4A4D93; old: $452504; newp: @LoadBitmapD3DHook; t: RShtCall; Querry: 13), // No HWL for bitmaps
     (p: $49EAE3; old: $4523AB; new: $45246B; t: RShtCall; Querry: 13), // No HWL for bitmaps
     (p: $49EB3B; size: 5; Querry: 13), // No HWL for bitmaps
@@ -1275,7 +1385,18 @@ var
     (p: $4A4F3C; old: $4A0ED0; newp: @CopyTexture32Bit; t: RShtCall; Querry: hqTex32Bit2), // 32 bit textures
     (p: $4A4D98; newp: @GetMipmapsCountHook; t: RShtAfter; size: 6; Querry: hqMipmaps), // Calculate mipmaps count depending on the texture in question
     (p: $4649B7; newp: @WatrTylFix; t: RShtBefore), // Fix water in maps without a building with WtrTyl texture and textures with water bit turning into water
-    ()
+    (p: $479A0D; old: $4D8770; newp: @SkyExtra; t: RSht4; Querry: hqViewDistanceLimits), // Extended view distance - draw bigger bottom part
+//    (p: $4A5927; newp: @DelayedRenderHook; t: RShtAfter; size: 6; Querry: hqDelayedInterface), // Delay interface by 1 frame to improve FPS
+{    (p: $47968C; old: $F8BAA4; newp: @Options.RenderRect.Left; t: RSht4; Querry: hqLayout), // Sky rendering in UILayout mode
+    (p: $4796AB; old: $F8BAA8; newp: @Options.RenderRect.Top; t: RSht4; Querry: hqLayout), // Sky rendering in UILayout mode
+    (p: $4796D7; old: $F8BAAC; newp: @Options.RenderRect.Right; t: RSht4; Querry: hqLayout), // Sky rendering in UILayout mode
+    (p: $4796DC; old: $F8BAAC; newp: @Options.RenderRect.Right; t: RSht4; Querry: hqLayout), // Sky rendering in UILayout mode
+    (p: $4796E3; old: $F8BAA4; newp: @Options.RenderRect.Left; t: RSht4; Querry: hqLayout), // Sky rendering in UILayout mode
+    (p: $479869; old: $F8BAA8; newp: @Options.RenderRect.Bottom; t: RSht4; Querry: hqLayout), // Sky rendering in UILayout mode
+    (p: $479559; old: int(_ViewMulOutdoor); newp: @SkyViewMul; t: RSht4; Querry: hqLayout), // Sky rendering in UILayout mode
+    (p: $479565; old: int(_ViewMulOutdoor); newp: @SkyViewMul; t: RSht4; Querry: hqLayout), // Sky rendering in UILayout mode
+    (p: $4795D7; old: int(_ViewMulOutdoor); newp: @SkyViewMul; t: RSht4; Querry: hqLayout), // Sky rendering in UILayout mode
+}    ()
   );
 {$ELSE}
   Hooks: array[1..69] of TRSHookInfo = (
@@ -1347,30 +1468,40 @@ var
     (p: $4A2D21; old: $49E9C0; newp: @CopyTexture32Bit; t: RShtCall; Querry: hqTex32Bit2), // 32 bit textures
     (p: $4A2DEF; old: $49E9C0; newp: @CopyTexture32Bit; t: RShtCall; Querry: hqTex32Bit2), // 32 bit textures
     (p: $4A2C4B; newp: @GetMipmapsCountHook; t: RShtAfter; size: 6; Querry: hqMipmaps), // Calculate mipmaps count depending on the texture in question
+//    (p: $4A37BE; newp: @DelayedRenderHook; t: RShtAfter; size: 6; Querry: hqDelayedInterface), // Delay interface by 1 frame to improve FPS
     ()
   );
 {$ENDIF}
 
 procedure CheckHooksD3D;
 begin
+  CheckHooks(HooksCommon);
   CheckHooks(Hooks);
+end;
+
+procedure ApplyHooks(Querry: int);
+begin
+  RSApplyHooks(HooksCommon, Querry);
+  RSApplyHooks(Hooks, Querry);
 end;
 
 procedure ApplyHooksD3D;
 begin
-  RSApplyHooks(Hooks);
+  ApplyHooks(0);
   if Options.NoBitmapsHwl then
-    RSApplyHooks(Hooks, 13);
+    ApplyHooks(13);
   if Options.SupportTrueColor then
-    RSApplyHooks(Hooks, hqTrueColor);
+    ApplyHooks(hqTrueColor);
   if Options.TrueColorTextures then
-    RSApplyHooks(Hooks, hqTex32Bit);
+    ApplyHooks(hqTex32Bit);
   if Options.TrueColorTextures and Options.NoBitmapsHwl then
-    RSApplyHooks(Hooks, hqTex32Bit2);
+    ApplyHooks(hqTex32Bit2);
   if Options.TrueColorSprites then
-    RSApplyHooks(Hooks, hqSprite32Bit);
+    ApplyHooks(hqSprite32Bit);
   if MipmapsCount <> 0 then
-    RSApplyHooks(Hooks, hqMipmaps);
+    ApplyHooks(hqMipmaps);
+  {if Options.SupportTrueColor and true then
+    ApplyHooks(hqDelayedInterface);}
   if Options.UILayout <> nil then
   begin
     pint(_IconsLod + $11B8C)^:= 5;
@@ -1383,10 +1514,21 @@ begin
       RSShowException;
       Halt;
     end;
-    RSApplyHooks(Hooks, hqLayout);
+    ApplyHooks(hqLayout);
   end;
-  if (Options.UILayout <> nil) {$IFDEF MM8}or FixIndoorFOV{$ENDIF} then
-    RSApplyHooks(Hooks, hqFixIndoorFOV);
+  if (Options.UILayout <> nil) or (IndoorAntiFov <> 369) {$IFDEF MM8}or FixIndoorFOV{$ENDIF} then
+    ApplyHooks(hqFixIndoorFOV);
+end;
+
+procedure OnLoadedD3D;
+begin
+  if ViewDistanceD3D > $2000 then
+    _dist_mist^:= ViewDistanceD3D;
+  if ViewDistanceD3D > 10500 then
+  begin
+    RemoveViewLimits;
+    ApplyHooks(hqViewDistanceLimits);
+  end;
 end;
 
 end.

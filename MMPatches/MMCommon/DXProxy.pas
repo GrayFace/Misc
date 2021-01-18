@@ -15,6 +15,10 @@ function DXProxyScaleRect(const r: TRect): TRect;
 procedure DXProxyOnResize;
 procedure DXProxyDraw(SrcBuf: ptr; info: PDDSurfaceDesc2);
 procedure DXProxyDrawCursor(SrcBuf: ptr; info: PDDSurfaceDesc2);
+// very dirty experimental delayed interface drawing:
+function DXProxyLockInterfaceSurface(out info: TDDSurfaceDesc2): Boolean;
+procedure DXProxyUnlockInterfaceSurface;
+procedure DXProxyDrawLastInterface;
 
 var
   DXProxyRenderW, DXProxyRenderH, DXProxyMipmapCount, DXProxyMipmapCountRes: int;
@@ -480,7 +484,7 @@ procedure CalcRenderLim;
 var
   i: int;
 begin
-  if _IsD3D^ then
+  if _IsD3D^ and not UseVoodoo then
   begin
     RenderLimX:= 2048;
     RenderLimY:= 2048;
@@ -500,7 +504,7 @@ begin
   if RenderMaxHeight >= 480 then
     RenderLimY:= RenderMaxHeight;
   // old DirectX doesn't support anything bigger than 2048
-  if _IsD3D^ then
+  if _IsD3D^ and not UseVoodoo then
   begin
     RenderLimX:= min(RenderLimX, 2048);
     RenderLimY:= min(RenderLimY, 2048);
@@ -519,11 +523,13 @@ var
 begin
   // Bypass dgVoodoo substitute DDraw.dll
   if @DDrawCreate = nil then
-  begin
-    GetSystemDirectory(@path[0], SizeOf(path));
-    if RSLoadProc(@DDrawCreate, IncludeTrailingPathDelimiter(path) + 'ddraw.dll', 'DirectDrawCreate') = 0 then
+    if SystemDDraw then
+    begin
+      GetSystemDirectory(@path[0], SizeOf(path));
+      if RSLoadProc(@DDrawCreate, IncludeTrailingPathDelimiter(path) + 'ddraw.dll', 'DirectDrawCreate') = 0 then
+        @DDrawCreate:= @DirectDrawCreate;
+    end else
       @DDrawCreate:= @DirectDrawCreate;
-  end;
   Result:= DDrawCreate(lpGUID, lplpDD, pUnkOuter);
   DXProxyActive:= (GetWindowLong(_MainWindow^, GWL_STYLE) and WS_BORDER <> 0) or
      BorderlessFullscreen or not _Windowed^;
@@ -640,6 +646,73 @@ begin
   if DXProxyCursorX > 0 then
     DrawCursor(info.lpSurface, info.lPitch);
   DXProxyCursorX:= 0;
+end;
+
+const
+  TransColor32 = $FFFF;
+var
+  DrawSurf, DrawSurfNext: IDirectDrawSurface4;
+
+procedure FillTrans(const desc: TDDSurfaceDesc2);
+var
+  p: PChar;
+  i: int;
+begin
+  p:= desc.lpSurface;
+  for i := 0 to desc.dwHeight - 1 do
+  begin
+    RSFillDWord(p, desc.dwWidth, TransColor32);
+    inc(p, desc.lPitch);
+  end;
+end;
+
+function CreateDrawSurface(const DDraw: IDirectDraw4; var surf: IDirectDrawSurface4;
+   var desc: TDDSurfaceDesc2; w, h: int): Boolean;
+begin
+  with desc.ddpfPixelFormat do
+  begin
+    dwRGBBitCount:= 32;
+    dwRBitMask:= $FF0000;
+    dwGBitMask:= $FF00;
+    dwBBitMask:= $FF;
+    dwRGBAlphaBitMask:= $FF000000;
+  end;
+  desc.ddckCKSrcBlt.dwColorSpaceLowValue:= TransColor32;
+  desc.ddckCKSrcBlt.dwColorSpaceHighValue:= TransColor32;
+  desc.dwWidth:= w;
+  desc.dwHeight:= h;
+  desc.dwFlags:= DDSD_CKSRCBLT + DDSD_CAPS + DDSD_WIDTH + DDSD_HEIGHT;
+  Result:= DDraw.CreateSurface(desc, surf, nil) <> DD_OK;
+end;
+
+function DXProxyLockInterfaceSurface(out info: TDDSurfaceDesc2): Boolean;
+var
+  first: Boolean;
+begin
+  zSwap(DrawSurf, DrawSurfNext);
+  FillChar(info, SizeOf(info), 0);
+  info.dwSize:= SizeOf(info);
+  first:= (DrawSurfNext = nil);
+  Result:= first and CreateDrawSurface(IDirectDraw4(_DDraw^), DrawSurfNext, info, RenderLimX, RenderLimY);
+  Result:= Result or (DrawSurfNext.Lock(nil, info, DDLOCK_NOSYSLOCK or DDLOCK_WAIT, 0) <> DD_OK);
+  if not Result then
+    FillTrans(info);
+end;
+
+procedure DXProxyUnlockInterfaceSurface;
+begin
+  DrawSurfNext.Unlock(nil);
+end;
+
+procedure DXProxyDrawLastInterface;
+var
+  r: TRect;
+begin
+  r:= Rect(0, 0, RenderW, RenderH);
+  if DrawSurf <> nil then
+    BackBuffer.BltFast(0, 0, DrawSurf, @r, DDBLTFAST_WAIT + DDBLTFAST_SRCCOLORKEY)
+  else if DrawSurfNext <> nil then
+    BackBuffer.BltFast(0, 0, DrawSurfNext, @r, DDBLTFAST_WAIT + DDBLTFAST_SRCCOLORKEY);
 end;
 
 { THookedObject }

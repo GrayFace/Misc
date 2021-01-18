@@ -70,6 +70,7 @@ type
     procedure ReloadLayout;
     procedure UpdateMinMax;
     procedure HintSuppression;
+    procedure SetClockHeight(h: int);
   public
     RenderRect: TRect;
     RenderCenterX, RenderCenterY: ext;
@@ -172,6 +173,8 @@ begin
   L.Vars[lvRenderedScreen]:= -1;
   DXProxyMul:= 0;
   Options.RenderRect:= _RenderRect^;
+  inc(Options.RenderRect.Bottom);
+  Options.RenderBottomPixel:= _RenderRect^.Bottom;
   ViewMulFactor:= 1;
   _ViewMulOutdoor^:= 300;
   ShowTreeHints:= (TreeHintsVal <> 0);
@@ -181,6 +184,7 @@ begin
     _UITextColor^:= TextColor[Alignment];
     _UITextShadowColor^:= TextShColor[Alignment];
   end;
+  SetClockHeight(67);
 {$ENDIF}
 end;
 
@@ -549,6 +553,16 @@ begin
   Destroy;
 end;
 
+procedure TLayoutSupport.SetClockHeight(h: int);
+begin
+  if ClockArea <> nil then
+    with ClockArea^ do
+    begin
+      Height:= h;
+      Bottom_:= Top + h - 1;
+    end;
+end;
+
 procedure TLayoutSupport.Sizing(wnd: HWND; side: int; var r: TRect);
 var
   w, h: int;
@@ -641,6 +655,7 @@ begin
   L.Vars[lvScreen]:= _CurrentScreen^;
   L.Vars[lvCharScreen]:= _CurrentCharScreen^;
   L.Vars[lvHouseScreen]:= _HouseScreen^;
+  L.Vars[lvHouseEnterMap]:= BoolToInt[(_HouseExitMap^ <> 0) and (_HouseCurrentNPC^ = _HouseNPCCount^)];
   L.Vars[lvMainMenuCode]:= _MainMenuCode^;
   L.Vars[lvOpaqueScreen]:= BoolToInt[(_MainMenuCode^ >= 0) or _IsLoadingBig^ or _IsMoviePlaying or _IsScreenOpaque];
   L.Vars[lvMoviePlaying]:= BoolToInt[_IsMoviePlaying];
@@ -669,6 +684,7 @@ begin
   L.Vars[lvPaperDollInChests]:= Options.PaperDollInChests;
   L.Vars[lvTreeHints]:= TreeHintsVal;
   L.Vars[lvEnableAttackSpell]:= BoolToInt[Options.EnableAttackSpell];
+  L.Vars[lvShooterMode]:= Options.ShooterMode;
 {$IFDEF MM7}
   if _UITextColor^ and $10000 = 0 then
   begin
@@ -691,6 +707,7 @@ begin
   Updating:= false;
   i:= pint($507A64)^;
   L.Vars[lvQuestion]:= BoolToInt[(_CurrentScreen^ = 19) and (i <> 0) and (pint(i + $1C)^ = 26)];
+  L.Vars[lvClockHeight]:= 67;
 {$ELSE}
   L.Vars[lvPlayers]:= _Party_MemberCount^;
 {$ENDIF}
@@ -733,6 +750,7 @@ begin
   _UITextColor^:= Round(L.Locals[lvTextColor]) or $10000;
   _UITextShadowColor^:= Round(L.Locals[lvTextShadowColor]);
   ScreenHasRightSide:= L.Locals[lvCustomRightSide] <> 0;
+  SetClockHeight(Round(L.Locals[lvClockHeight]));
 {$ENDIF}
   HintSuppression;
   if L.Locals[lvReloadLayout] <> 0 then

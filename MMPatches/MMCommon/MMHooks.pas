@@ -11,10 +11,11 @@ uses
 
 procedure ApplyMMHooks;
 procedure ApplyMMDeferredHooks;
-procedure ApplyMMHooksSW;
+procedure ApplyMMHooksLodsLoaded;
 procedure NeedWindowSize;
 procedure LoadInterface;
 procedure InterfaceColorChanged(_: Bool; Replace: Boolean; Align: int);
+procedure DrawMyInterface;
 function GetCoordCorrectionIndoorX: ext;
 function GetCoordCorrectionIndoorY: ext;
 function IsLayoutActive(CanActivate: Boolean = true): Boolean; inline;
@@ -39,11 +40,15 @@ var
 
 implementation
 
+{$IFNDEF MM6}uses D3DHooks;{$ENDIF}
+
 const
   RingsShown = int(_InventoryRingsShown);
   CurrentScreen = int(_CurrentScreen);
   CurrentMember = int(_CurrentMember);
   NeedRedraw = int(_NeedRedraw);
+  ShooterFirstDelay = 300;
+  ShooterNextDelay = 70;
 
 // Raw mouse input
 const
@@ -143,18 +148,23 @@ begin
   KeysChecked[vKey]:= Result < 0;
 end;
 
-function CheckKey(key: int):Boolean;
+function CheckKey(key: int): Boolean;
 begin
   Result:= (MyGetAsyncKeyState(key) and 1) <> 0;
+end;
+
+function CheckMouseKey(right: Boolean): Boolean;
+const
+  Btn: array[Boolean] of int = (VK_LBUTTON, VK_RBUTTON);
+begin
+  Result:= GetAsyncKeyState(Btn[(GetSystemMetrics(SM_SWAPBUTTON) <> 0) xor right]) < 0;
 end;
 
 //----- Now time isn't resumed when mouse exits, need to check if it's still pressed
 
 procedure CheckRightPressed;
-const
-  Btn: array[Boolean] of int = (VK_RBUTTON, VK_LBUTTON);
 begin
-  if GetAsyncKeyState(Btn[GetSystemMetrics(SM_SWAPBUTTON) <> 0]) >= 0 then
+  if not CheckMouseKey(true) then
     _ReleaseMouse;
 end;
 
@@ -175,7 +185,7 @@ begin
   // Autorun like in WoW
   if CheckKey(Options.AutorunKey) then
     Autorun:= not Autorun;
-  
+
   // MouseLookChangeKey
   if _CurrentScreen^ <> 0 then
     MouseLookChanged:= false
@@ -193,9 +203,15 @@ begin
   // Select 1st player in shops if all are inactive
   if FixInactivePlayersActing and (_CurrentMember^ = 0) and (_CurrentScreen^ = 13) then
     _CurrentMember^:= 1;
+
+  WasInDialog:= (_DialogsHigh^ > 0) or (_CurrentScreen^ <> 0);
 end;
 
 //----- Window procedure hook
+
+var
+  BackupStatusTime: uint;
+  BackupStatusStr: array[0..199] of Char;
 
 procedure MyClipCursor;
 var
@@ -207,6 +223,15 @@ begin
     exit;
 {$ENDIF}
   ClipCursorRel(r);
+end;
+
+procedure ShooterPress(const xy: TSmallPoint; right: Boolean);
+begin
+  if (Options.ShooterMode = fpsOn) and MouseLookOn and (_Paused^ = 0) and PtInView(xy.x, xy.y) then
+  begin
+    ShooterButtons[right]:= true;
+    ShooterDelay:= 0;
+  end;
 end;
 
 type
@@ -230,6 +255,32 @@ begin
   if (msg >= WM_MOUSEFIRST) and (msg <= WM_MOUSELAST) and IsLayoutActive then
     Layout.MouseMessage(msg, wp);
 {$ENDIF}
+  if (msg = WM_LBUTTONDOWN) or (msg = WM_LBUTTONDBLCLK) then
+    ShooterPress(xy, false);
+  if msg = WM_RBUTTONDOWN then
+    ShooterPress(xy, true);
+  if (msg = WM_RBUTTONDOWN) and ShowHintWithRMB then
+  begin
+    BackupStatusTime:= _StatusText.TmpTime;
+    if BackupStatusTime <> 0 then
+    begin
+      CopyMemory(@BackupStatusStr[1], @_StatusText.Text[false], 200);
+      _StatusText.Text[false][0]:= #0;
+      _StatusText.TmpTime:= 0;
+    end;
+  end;
+  if (msg = WM_RBUTTONUP) and (BackupStatusTime <> 0) and (_StatusText.Text[false][0] = #0) and
+     (int(BackupStatusTime - GetTickCount) > 0) then
+  begin
+    _StatusText.TmpTime:= BackupStatusTime;
+    _StatusText.Text[true][0]:= #0;
+    CopyMemory(@_StatusText.Text[false], @BackupStatusStr[1], 200);
+    BackupStatusTime:= 0;
+  end;
+  if (msg = WM_RBUTTONDOWN) and ExitTalkingWithRightButton then
+    if (_CurrentScreen^ in [4, 17, 18, 19]) or
+       (_CurrentScreen^ = 13) and ((_HouseScreen^ in [0, 1, 96, 101, 102, 103]) or (_HouseScreen^ = -1)) then
+      AddAction(113, 0, 0);
 
   Result:= WindowProcStd(w, msg, wp, lp);
 
@@ -372,8 +423,16 @@ begin
   end;
   NeedScreenWH;
   // compatibility with resolution patches like mmtool's one
-  MCenter.X:= (SW - MLSideX) div 2;
-  MCenter.Y:= (SH - MLSideY) div 2;
+  if Options.ShooterMode = 0 then
+  begin
+    MCenter.X:= (SW - MLSideX) div 2;
+    MCenter.Y:= (SH - MLSideY) div 2;
+  end else
+  begin
+    MCenter:= _ScreenMiddle^;
+    inc(MCenter.X, IfThen(_IsD3D^, 1, 2));
+    inc(MCenter.Y, 1);
+  end;
   GetMLookCenter(MCenter, MWndPos);
 
   if EmptyCur = 0 then
@@ -425,9 +484,9 @@ procedure ProcessMouseLook;
     x: int;
   begin
     x:= part + move*factor;
-    Result:= (x + 32) and not 63;
+    Result:= (x + 1024) and not 2047;
     part:= x - Result;
-    Result:= Result div 64;
+    Result:= Result div 2048;
   end;
 
 const
@@ -436,6 +495,7 @@ const
 var
   p: TPoint;
   speed: PPoint;
+  a: int;
 begin
   CheckMouseLook;
   GetCursorPos(p);
@@ -451,14 +511,18 @@ begin
       MLookDY:= p.Y - MLastPos.Y;
     end;
     dir^:= (dir^ - Partial(MLookDX, MLookPartX, speed.X)) and 2047;
-    angle^:= IntoRange(angle^ - Partial(MLookDY, MLookPartY, speed.Y),
-      -Options.MaxMLookAngle, Options.MaxMLookAngle);
+    a:= angle^ - Partial(MLookDY, MLookPartY, speed.Y);
+    with Options do
+      angle^:= IntoRange(a, -MaxMLookAngle, max(MaxMLookAngle, MaxMLookUpAngle));
     if (MLookDX <> 0) or (MLookDY <> 0) then  //(p.X <> MLastPos.X) or (p.Y <> MLastPos.Y) then
     begin
       p:= MWndPos;
       ClientToScreen(_MainWindow^, p);
       SetCursorPos(p.X, p.Y);
     end;
+  end;
+  if MLookRaw then
+  begin
     MLookDX:= 0;
     MLookDY:= 0;
   end;
@@ -473,7 +537,7 @@ begin
   sz:= SizeOf(a);
   GetRawInputData(h, RID_INPUT, a, sz, SizeOf(RAWINPUTHEADER));
   if a.header.dwType <> RIM_TYPEMOUSE then  exit;
-  if a.usFlags and 1 = 0 then
+  if (a.usFlags and 1 = 0) and MouseLookOn and (_MainMenuCode^ < 0) and (GetForegroundWindow = _MainWindow^) then
   begin
     inc(MLookDX, a.lLastX);
     inc(MLookDY, a.lLastY);
@@ -496,8 +560,8 @@ begin
 end;
 
 var
-  MouseLookHook3Std: procedure(a1, a2, this: ptr);
-  MLookBmp: TBitmap;
+  MouseLookHook3Std: function(a1, a2, this: ptr): int;
+  MLookBmp, MLookBmpShooter, MLookHDBmp, MLookHDBmpShooter: TBitmap;
 
 function LoadMLookBmp(const fname: string; fmt: TPixelFormat): TBitmap;
 var
@@ -542,6 +606,10 @@ begin
   else
     fmt:= pf16bit;
   MLookBmp:= LoadMLookBmp('Data\MouseLookCursor.bmp', fmt);
+  if (Options.ShooterMode <> 0) and FileExists('Data\MouseCursorShooter.bmp') then
+    MLookBmpShooter:= LoadMLookBmp('Data\MouseCursorShooter.bmp', fmt);
+  if MLookBmpShooter = nil then
+    MLookBmpShooter:= MLookBmp;
 end;
 
 procedure MLookDraw;
@@ -549,13 +617,17 @@ var
   p1, p2: PChar;
   x, y, w, h, d1, d2: int;
   k, trans: Word;
+  b: TBitmap;
 begin
   if MLookBmp = nil then
     MLookLoadBmp;
-  w:= MLookBmp.Width;
-  h:= MLookBmp.Height;
-  p1:= MLookBmp.ScanLine[0];
-  d1:= PChar(MLookBmp.ScanLine[1]) - p1 - 2*w;
+  b:= MLookBmp;
+  if Options.ShooterMode = fpsOn then
+    b:= MLookBmpShooter;
+  w:= b.Width;
+  h:= b.Height;
+  p1:= b.ScanLine[0];
+  d1:= PChar(b.ScanLine[1]) - p1 - 2*w;
   p2:= PChar(_ScreenBuffer^) + 2*(_ScreenW^*(MCenter.Y - h div 2) + MCenter.X - w div 2);
   d2:= 2*(_ScreenW^ - w);
   trans:= pword(p1)^;
@@ -578,14 +650,23 @@ procedure MLookDrawHD(const p: TPoint);
 var
   r: TRect;
 begin
-  if DXProxyCursorBmp = nil then
-    DXProxyCursorBmp:= LoadMLookBmp('Data\MouseLookCursorHD.bmp', pf32bit);
+  if MLookHDBmp = nil then
+  begin
+    MLookHDBmp:= LoadMLookBmp('Data\MouseLookCursorHD.bmp', pf32bit);
+    if (Options.ShooterMode <> 0) and FileExists('Data\MouseCursorShooterHD.bmp') then
+      MLookHDBmpShooter:= LoadMLookBmp('Data\MouseCursorShooterHD.bmp', pf32bit);
+    if MLookHDBmpShooter = nil then
+      MLookHDBmpShooter:= MLookHDBmp;
+  end;
+  DXProxyCursorBmp:= MLookHDBmp;
+  if Options.ShooterMode = fpsOn then
+    DXProxyCursorBmp:= MLookHDBmpShooter;
   GetClientRect(_MainWindow^, r);
   DXProxyCursorX:= (p.X*DXProxyRenderW*2 div r.Right + 1) div 2 - DXProxyCursorBmp.Width div 2;
   DXProxyCursorY:= (p.Y*DXProxyRenderH*2 div r.Bottom + 1) div 2 - DXProxyCursorBmp.Height div 2;
 end;
 
-procedure MouseLookHook3(a1, a2, this: ptr);
+function MouseLookHook3(std, a2, this: ptr): int;
 begin
   CheckMouseLook;
   if MouseLookOn and not MLookIsTemp then
@@ -595,7 +676,8 @@ begin
     else
       MLookDraw;
 
-  MouseLookHook3Std(nil, nil, this);
+  DrawMyInterface;
+  Result:= MouseLookHook3Std(nil, nil, this);
 end;
 
 //----- Called whenever time is resumed
@@ -1107,6 +1189,18 @@ asm
 @ok:
 end;
 
+procedure KeyControlCheckInvis;
+asm
+{$IFDEF MM7}
+  cmp dword ptr [ecx + $C], 0
+{$ELSE}
+  cmp dword ptr [eax + $C], 0
+{$ENDIF}
+  jnz @ok
+  mov [esp], m6*$419FA2 + m7*$41CF5A + m8*$41C3E9
+@ok:
+end;
+
 //----- Allow right click in item spell dialogs
 
 procedure EnchantItemRightClick;
@@ -1542,6 +1636,22 @@ begin
   Move(ObjectByPixelBackup[0], _ObjectByPixel^[0], length(ObjectByPixelBackup)*4);
 end;
 
+//----- Click through effects D3D
+
+procedure CheckSpriteD3D;
+asm
+  push edx
+  push eax
+  call IsEffectSprite
+  test al, al
+  pop eax
+  pop edx
+  jz @std
+  xor edx, edx
+  mov eax, 6
+@std:
+end;
+
 //----- Proper D3DRend->Init error messages
 
 procedure D3DErrorMessageHook;
@@ -1752,7 +1862,8 @@ end;
 
 procedure FixReadFacetBit;
 asm
-	mov edx, [esp+4]
+  mov eax, [esp+4]
+	mov edx, [esp+8]
 	mov edx, [edx]
 	mov ecx, [eax]
 	and cx, $4000
@@ -1764,15 +1875,28 @@ end;
 //----- Fix monsters blocking shots of other monsters
 
 procedure FixMonsterBlockShots;
-const
-  Mon_IsAgainstMon: int = m7*$40104C + m8*$401051;
 asm
   mov ecx, [ebp - $10]
   sub ecx, m7*$86 + m8*$8E
   lea edx, [_MapMonsters + eax]
-  call Mon_IsAgainstMon
+  call _Mon_IsAgainstMon
   test eax, eax
   push m7*$471724 + m8*$470282
+end;
+
+//----- Fix monsters shot at from a distance appearing green on minimap
+
+procedure FixFarMonstersAppearGreen;
+asm
+  test byte ptr [esi+25h], 080h  // ShowOnMap
+  jnz @std
+  xor edx, edx
+  mov ecx, esi
+  call _Mon_IsAgainstMon
+  test eax, eax
+  jz @std
+  or byte ptr [esi+27h], 1  // ShowAsHostile
+@std:
 end;
 
 //----- Fix item spells when cast onto item with index 0
@@ -1856,6 +1980,21 @@ asm
   call RemoveInvItemChest
   push m6*$41EDB5 + m7*$420BA2 + m8*$420125
   ret 4*m6
+end;
+
+//----- Inactive players could attack
+
+procedure InactivePlayerActFix;
+var
+  old: int;
+begin
+  old:= _CurrentMember^;
+  if (old = 0) or (pword(int(GetCurrentPlayer) + _CharOff_Recover)^ > 0) then
+  begin
+    _CurrentMember^:= _FindActiveMember;
+    if _CurrentMember^ <> old then
+      _NeedRedraw^:= 1;
+  end;
 end;
 
 //----- Loot stolen items from thief's corpse
@@ -1948,15 +2087,7 @@ asm
 @skip:
 end;
 
-//----- Draw bitmap as internal minimap background
-
-{var
-  MinimapBkgPcx: TLoadedPcx;
-
-procedure MinimapBkgHook(_,__, screen, color, height, width, top, left: int);
-begin
-  _DrawPcx(0,0, screen, MinimapBkgPcx, top, left);
-end;}
+//----- Draw bitmap as dungeon minimap background
 
 var
   MinimapBkgBmp: int;
@@ -1965,24 +2096,18 @@ procedure MinimapBkgHook(_,__, screen, color, height, width, top, left: int);
 begin
   _DrawBmpOpaque(0,0, screen, _IconsLodLoaded.Items[MinimapBkgBmp], top, left);
 end;
-{var
-  p: PWordArray;
-begin
-  NeedScreenWH;
-  p:= _ScreenBuffer^;
-  with _IconsLodLoaded.Items[MinimapBkgBmp] do
-    Draw8t(@Image[0], @p[left + top*SW], Rec.w, SW*2, Rec.w, Rec.h, Palette16);
-end;}
 
 //----- Load alignment-dependant interface
 
 procedure InterfaceColorChangedHook;
 asm
+  pop eax
   push ecx
   push edx
-  call InterfaceColorChanged
+  call eax
   pop edx
   pop ecx
+  jmp InterfaceColorChanged
 end;
 
 //----- Attack spell
@@ -1995,8 +2120,9 @@ const
 var
   ASpellIcon: int = -1;
   ASpellIconDn: int = -1;
-  ASpellPressed, ASpellHovered: Boolean;
+  ASpellPressed: Boolean;
   ASpellIconHover: PBoolean;
+  ASpellHint: ShortString;
 
 procedure DrawSpellBook;
 var
@@ -2025,8 +2151,8 @@ var
 begin
   p:= NewButtonMM8(88, 88, 2);
   ASpellIconHover:= ptr(PChar(p) + $13);
-  ASpellHovered:= false;
-  SetupButtonMM8(p, 0, 330, true, 'STSASu', 'STSASd');
+  ASpellHint:= '';
+  SetupButtonMM8(p, 0, 330, true, 'GF-ASpell', 'GF-ASpellD');
   AddToDlgMM8(dlg, p);
 end;
 {$ENDIF}
@@ -2051,6 +2177,15 @@ begin
   i:= _CurrentMember^;
   f(0,0, base + $AFD8*i, i, sp);
 end;
+
+{procedure LoadSpellSound(sp: int);
+var
+  i: int;
+begin
+  i:= _SpellSounds[sp];
+  for i:= i to i + 1 do
+    LoadSound(i, true);
+end;}
 
 function GetSpName(sp: int): PChar;
 begin
@@ -2111,7 +2246,8 @@ begin
       aSet:
       begin
         pl[off]:= sp;
-        FetchSpellSound(sp);
+        if cast then
+          FetchSpellSound(sp);
         _FaceAnim(0,0, pl, 0, 12);
       end;
       else begin
@@ -2121,20 +2257,6 @@ begin
     end;
   _ActionQueue.Items[0].Action:= 0;
 end;
-
-//procedure ASpellUse;
-//var
-//  pl: ptr;
-//begin
-//  if (m7 = 1) and (pint($6BE244)^ = 1) then
-//    exit;
-//  if (m8 = 1) and (_ActionQueue.Count > 1) then
-//    _ActionQueue.Count:= IfThen(_ActionQueue.Items[0].Info2 <> 0, 2, 1);
-//  _ActionQueue.Items[0].Action:= 0;
-//  pl:= GetCurrentPlayer;
-//  if pl = nil then
-//    exit;
-//end;
 
 procedure ASpellPopAction;
 begin
@@ -2147,7 +2269,7 @@ begin
 end;
 
 var
-  TestedASpell: Bool;
+  TestedASpell, WasASpell: Bool;
 
 procedure AttackKeyHook;
 asm
@@ -2161,13 +2283,11 @@ asm
   mov esi, eax
   mov eax, 2E8BA2E9h
   mov bl, [esi + _CharOff_AttackQuickSpell]
-{$ENDIF}
-{$IFDEF mm7}
+{$ENDIF}{$IFDEF mm7}
   mov esi, eax
   mov ebp, 0Bh
   mov bl, [esi + _CharOff_AttackQuickSpell]
-{$ENDIF}
-{$IFDEF mm8}
+{$ENDIF}{$IFDEF mm8}
   mov edi, eax
   mov bl, [edi + _CharOff_AttackQuickSpell]
 {$ENDIF}
@@ -2191,57 +2311,914 @@ end;
 
 procedure QSpellUseHook;
 const
-  info = m6*($3E4-$3C8) + m7*($5FC-$5E4) + m8*($6C0-$6A4);
+  info = m6*($3E4-$3C8) + m7*($5FC-$5E4) + m8*($6C0-$6A4-4);
 asm
 {$IFNDEF mm7}
   mov ecx, eax
 {$ENDIF}
-  cmp [esp + info], 1
-  jnz @std
-  movzx ecx, byte ptr [ecx + _CharOff_AttackQuickSpell]
-  ret
+  push eax
+  cmp dword ptr [esp + info + 4], 1
+  movzx eax, byte ptr [ecx + _CharOff_QuickSpell]
+  jnz @fetch
+  movzx eax, byte ptr [ecx + _CharOff_AttackQuickSpell]
+  mov WasASpell, 2  // always reload ASpell
+@fetch:
+  push eax
+  cmp WasASpell, 0  // last cast was quick spell?
+  jz @noswitch
+  dec WasASpell
+  push edx
+  call FetchSpellSound
+  pop edx
+@noswitch:
+  pop ecx
+  pop eax
+end;
+
+function TryASpell: Boolean;
+var
+  p: PChar;
+  sp, i: int;
+begin
+  Result:= false;
+  p:= GetCurrentPlayer;
+  if p = nil then  exit;
+  sp:= pword(p + _CharOff_AttackQuickSpell)^;
+  if sp = 0 then  exit;
+  i:= PSkills(p + _CharOff_Skills)[(sp-1) div 11 + 12];
+  if i >= 256 then
+    i:= 4
+  else if i >= 128 then
+    i:= 3
+  else if i >= 64 then
+    i:= 2
+  else
+    i:= 1;
+  i:= _SpellInfo[sp].SpellPoints[i];
+  if pint(p + _CharOff_SpellPoints)^ < i then  exit;
+  Result:= true;
+  AddAction(25, 1, 0);
+end;
+
+procedure ASpellClickMon;
+asm
+  jge @std
+  call TryASpell
+  cmp al, 1
 @std:
-  movzx ecx, byte ptr [ecx + _CharOff_QuickSpell]
 end;
 
 procedure ASpellHintMM8;
 begin
   if ASpellIconHover^ then
-    AddAction(78, 2, 0)
-  else if ASpellHovered then
   begin
-    _StatusText.Text[true][0]:= #0;
-    _NeedUpdateStatus^:= true;
+    ASpellBookAction(true, false);
+    ASpellHint:= _StatusText.Text[true];
+  end
+  else if ASpellHint <> '' then
+  begin
+    if ASpellHint = _StatusText.Text[true] then
+    begin
+      _StatusText.Text[true][0]:= #0;
+      _NeedUpdateStatus^:= true;
+    end;
+    ASpellHint:= '';
   end;
-  ASpellHovered:= ASpellIconHover^;
 end;
 
-// Quick Spell buttons hints in MM8
+//----- Shooter mode
 
-//function SpellBookHoverItem(std: ptr; _: int; this: ptr; item: PChar): int;
-//type
-//  TF = function(_,__: int; this: ptr; item: PChar): int;
-//var
-//  id: int;
-//begin
-//  Result:= TF(std)(0,0, this, item);
-//  if item = nil then
-//  begin
-//    _SetHint(0,0,'');
-//    _NeedUpdateStatus^:= true;
-//    exit;
-//  end;
-//  id:= pint(item + $C)^;
-//  if id = 88 then
-//    AddAction(78, pint(item + $CC)^, 0)
-//  else if id = 113 then
-//    _SetHint(0,0, _GlobalTxt[79]);
+const
+  ShooterSwordDelay = 1500;
+  ShooterSwordIconNames: array[0..4] of string = ('GF-Swrd-Red', 'GF-Swrd-Yel', 'GF-Swrd-Gre', 'GF-Swrd-NA', 'GF-Swrd');
+  ShooterSwordCheckMul: array[0..4] of int = (0, 1, 2, -1, 0);
+var
+  ShooterSwordMon: PChar;
+  ShooterSwordTime: uint;
+  ShooterSwordIcons: array[0..4] of int;
+  ShooterDrawn, ShooterQSpell: Boolean;
+
+function ShooterCheckKey(r, left: Boolean): Boolean;
+begin
+  if left and r then
+    Options.ShooterMode:= fpsOn + fpsOff - Options.ShooterMode;
+  Result:= r and not left;
+  if (Options.ShooterMode <> fpsOn) or not ShooterButtons[not left] then
+    exit;
+  // tmp?
+  ShooterButtons[not left]:= CheckMouseKey(not left);
+  if not MouseLookOn then
+    exit;
+  Result:= false;
+  if (ShooterDelay <> 0) and (int(ShooterDelay - GetTickCount) > 0) then
+    exit;
+  if not left then
+    ShooterQSpell:= ShooterButtons[true] or r;
+  if ShooterQSpell then
+    Result:= not left
+  else if left then
+    Result:= ShooterButtons[false];
+  if left then
+    ShooterQSpell:= false;
+  if _TurnBased^ and Result then
+    if ShooterDelay = 0 then
+    begin
+      ShooterDelay:= GetTickCount + ShooterFirstDelay;
+      _ActionQueue.Count:= 0;  // ignore click
+    end else
+      ShooterDelay:= GetTickCount + ShooterNextDelay;
+end;
+
+procedure ShooterCheckKeyHook;
+asm
+{$IFDEF mm6}
+  setnz al
+  mov edx, esi
+{$ELSE}
+  mov edx, [esp + $1C - 8]
+{$ENDIF}
+  sub edx, 7
+  jz @check
+  cmp edx, 1
+  jnz @std
+@check:
+  call ShooterCheckKey
+@std:
+{$IFDEF mm6}
+  test al, al
+{$ENDIF}
+end;
+
+procedure ShooterEachTickHook;
+begin
+  if (_CurrentScreen^ <> 0) or (_Paused^ <> 0) then
+  begin
+    ShooterButtons[false]:= false;
+    ShooterButtons[true]:= ShooterButtons[true] and CheckMouseKey(true);
+  end;
+end;
+
+function ShooterCheckMon(std, _, m: PChar): Bool;
+type
+  TF = function(_,__:int; m: PChar): Bool;
+begin
+  if Options.ShooterMode = fpsOn then
+    Result:= IsMonAlive(m, true)
+  else
+    Result:= TF(std)(0,0, m);
+end;
+
+procedure ShooterFindMon;
+asm
+  cmp Options.ShooterMode, fpsOn
+  jnz @std
+  cmp MouseLookOn, true
+  jnz @std
+  xor eax, eax
+  ret $C - m6*4
+@std:
+  jmp eax
+end;
+
+procedure ShooterCheckMonDirection;
+asm
+  jnz @std
+  cmp Options.ShooterMode, fpsOff
+  jz @std
+  cmp MouseLookOn, false
+  jz @std
+  cmp WasInDialog, true
+@std:
+end;
+
+procedure ShooterRightClick;
+asm
+  cmp Options.ShooterMode, fpsOn
+  jnz @std
+  cmp MouseLookOn, true
+  jnz @std
+  cmp byte ptr [ShooterButtons+1], 0
+  jnz @skip
+@std:
+  jmp eax
+@skip:
+end;
+
+procedure ShooterSetSwordMon(m: PChar);
+begin
+  ShooterSwordMon:= m;
+  ShooterSwordTime:= GetTickCount + ShooterSwordDelay;
+end;
+
+procedure ShooterSetSwordMonHook;
+asm
+  mov eax, esi
+  jmp ShooterSetSwordMon
+end;
+
+function DrawShooter: Boolean;
+const
+{  DrawX = (1-m8)*394 + m8*574 + 16;
+  DrawY = (1-m8)*288 + m8*298 + 18 + 43;
+  MinW = 12;
+  MinH = 14;
+  DeltaW = 40 - 12;}
+  DrawX = (1-m8)*(394 + 18) + m8*(574 + 16) + 42;
+  DrawY = (1-m8)*(288 + 10) + m8*(298 + 18);
+  DeltaW = 40 - 12;
+  MinW = 32 - DeltaW;
+  MinH = 31 - DeltaW;
+var
+  mon: PChar;
+  p: PWordArray;
+  i, hp, full, stage, w, h: int;
+begin
+  Result:= true;
+  NeedScreenWH;
+  p:= _ScreenBuffer^;
+  if ShooterSwordMon <> nil then
+    if (uint(ShooterSwordTime - GetTickCount) > ShooterSwordDelay) or not IsMonAlive(ShooterSwordMon, false) then
+      ShooterSwordMon:= nil;
+  mon:= ShooterSwordMon;
+  if mon = nil then
+  begin
+    i:= GetMouseTarget;
+    if i and 7 = 3 then
+    begin
+      mon:= ptr(_MapMonsters + _MonOff_Size*(i div 8));
+      if not IsMonAlive(mon, true) then
+        mon:= nil;
+    end;
+  end;
+  hp:= 0;
+  full:= 1;
+  if mon <> nil then
+  begin
+    hp:= pint2(mon + _MonOff_HP)^;
+    full:= pint(mon + _MonOff_FullHP)^;
+  end;
+  stage:= 3*2;
+  w:= 0; h:= 0; // Delphi compiler bug (warning)
+  for i := high(ShooterSwordIcons) downto 0 do
+    if (i < stage) and (hp*4 > full*ShooterSwordCheckMul[i]) then
+      with _IconsLodLoaded.Items[ShooterSwordIcons[i]] do
+      begin
+        dec(stage, 3);
+        if (stage > 0) then
+        begin
+          w:= Rec.w;
+          h:= Rec.h;
+        end else
+        begin
+          if hp >= full then
+            continue;
+          h:= DeltaW*(full - hp) div full;
+          w:= MinW + h;
+          h:= MinH + h;
+        end;
+//        Draw8t(@Image[(Rec.h - h)*Rec.w], @p[DrawX + (DrawY - h)*SW], Rec.w, SW*2, w, h, Palette16);
+        Draw8t(@Image[Rec.w - w], @p[DrawX - w + DrawY*SW], Rec.w, SW*2, w, h, Palette16);
+      end;
+end;
+
+procedure ShooterFixProjectilePos(_,__, a: PChar);
+var
+  z: int;
+begin
+  z:= pint(a + _ObjOff_Z)^ - _Party_Z^;
+  if (z >= 0) and (z <= _Party_Height^) then
+    pint(a + _ObjOff_Z)^:= _Party_Z^ + _Party_EyeLevel^ - _Party_Height^ div 6;
+end;
+
+procedure ShooterCreateProjectile;
+asm
+  cmp Options.ShooterMode, fpsOn
+  jnz @std
+  cmp MouseLookOn, true
+  jnz @std
+  cmp WasInDialog, 0
+  jnz @std
+  mov eax, [esp+4]
+  cmp eax, m6*$422580 + m7*$427DB8 + m8*$425FF4
+  jb @std
+  cmp eax, m6*$429C74 + m7*$42E969 + m8*$42D525
+  ja @std
+  push ecx
+  push edx
+  call ShooterFixProjectilePos
+  pop edx
+  pop ecx
+@std:
+end;
+
+//----- Attacking dying monsters
+
+function CanAttackMon(m: PChar): Boolean;
+begin
+  Result:= IsMonAlive(m, false);
+  if Result and (Options.ShooterMode = fpsOn) then
+    ShooterSetSwordMon(m);
+end;
+
+procedure AttackMonHook;
+asm
+  push eax
+  push ecx
+  mov eax, esi
+  call CanAttackMon
+  test al, al
+  pop ecx
+  pop eax
+  jnz @ok
+  mov [esp], $430F02
+  ret
+@ok:
+  test ecx, ecx
+end;
+
+procedure AttackMonHook2;
+asm
+  jz @std
+  cmp ax, $B
+  jz @std
+  cmp ax, 17
+  jz @std
+  cmp ax, 19
+@std:
+end;
+
+//----- Attacking friendly monsters
+
+procedure FixAttackMonster;
+asm
+  mov dword ptr [esp+8], 1
+  jmp eax
+end;
+
+//----- Fix shooting distant monsters indoor
+
+procedure HookHitDistantMonster;
+const
+  IndoorOrOutdoor = int(_IndoorOrOutdoor);
+asm
+  jz @no
+  cmp dword ptr [IndoorOrOutdoor], 2
+  jnz @no
+  cmp dword ptr [ebp - $14 - m8*4], 5120 + 250
+  jl @ok
+@no:
+  mov [esp], m7*$439E0F + m8*$4378C6
+@ok:
+end;
+
+//----- Fix character switch when Endurance eliminates hit recovery
+
+procedure FixZeroRecovery;
+asm
+  cmp dword ptr [esp+4], 0
+  jg @std
+  pop eax
+  pop ecx
+@std:
+  jmp eax
+end;
+
+//----- Show items in green while right mouse buttom is pressed
+
+procedure RMBColorItems;
+const
+  RightButtonPressed = int(_RightButtonPressed);
+asm
+  jz @std
+  cmp dword ptr [RightButtonPressed], 1
+@std:
+end;
+
+//----- Fix wrong Quick Spell spell points check
+
+procedure FixQSpellPointsCheck;
+asm
+{$IFDEF mm6}
+  mov eax, $2E8BA2E9
+  push ecx
+  dec ecx
+  imul ecx
+  pop ecx
+{$ELSE}
+  dec eax
+{$ENDIF}
+end;
+
+//----- Negative resistance may lead to devision by zero
+
+procedure NegativeResHook;
+asm
+  cmp ecx, 0
+  jg @ok
+  mov ecx, 1
+@ok:
+end;
+
+//----- Hint - ignore disappearing hint if RMB is pressed (attempt)
+
+//procedure SetHintHook;
+//const
+//  RightButtonPressed = int(_RightButtonPressed);
+//asm
+//  jz @std
+//  cmp dword ptr [RightButtonPressed], 1
+//{$IFNDEF mm6}
+//  jnz @std
+//  xor eax, eax
+//  cmp eax, 1
+//{$ENDIF}
+//@std:
 //end;
+//
+//procedure DrawHintHook;
+//const
+//  RightButtonPressed = int(_RightButtonPressed);
+//  p = int(_StatusText) + 200;
+//asm
+//{$IFNDEF mm6}
+//  jz @std
+//{$ENDIF}
+//  cmp dword ptr [RightButtonPressed], 1
+//  jnz @std
+//{$IFDEF mm7}
+//  cmp byte ptr [p], 0
+//  setz al
+//  test al, al
+//{$ELSE}
+//  xor eax, eax
+//  cmp al, 1
+//{$ENDIF}
+//@std:
+//end;
+
+//----- Display Inventory screen didn't work with unconscious players
+
+procedure FixDeadDisplayInventory;
+const
+  HouseScreen = int(_HouseScreen);
+asm
+  cmp dword ptr [HouseScreen], 94
+  jz @skip
+  jmp eax
+@skip:
+  mov eax, 1
+end;
+
+//----- Unconscious players identifying items in shop screens and on map
+
+procedure FixDeadIdentifyItemProc;
+asm
+  push edx
+  push ecx
+  call GetCurrentPlayer
+  test eax, eax
+  jz @skip
+  mov ecx, eax
+  call _Character_IsAlive
+  test eax, eax
+  jz @skip
+  mov eax, [__CurrentMember]
+@skip:
+  pop ecx
+  pop edx
+end;
+
+//----- Show item descriptions even for unconscious players
+
+procedure DoShowItemInfo(index: int);
+var
+  p: PChar;
+begin
+  p:= GetCurrentPlayer;
+  if p = nil then
+    exit;
+  _DrawItemInfoBox(0,0, p + _CharOff_Items + index*_ItemOff_Size);
+end;
+
+procedure DeadShowItemInfoProc;
+asm
+{$IFDEF mm6}mov eax, ebp{$ENDIF}
+{$IFDEF mm7}mov eax, [ebp - 8]{$ENDIF}
+{$IFDEF mm8}mov eax, [ebp - $C]{$ENDIF}
+  jmp DoShowItemInfo
+end;
+
+//----- Fix Assassins' and Barbarians' enchantments
+
+procedure FixItemsAssassinsBarbarians;
+asm
+{$IFDEF mm7}mov eax, ebx{$ENDIF}
+  cmp eax, 67
+  jz @ass
+  cmp eax, 68
+  mov eax, 5  // Barbarians' = of Frost
+  jz @ok
+  push m7*$439FA3 + m8*$437AE8
+  ret
+@ass:
+  mov eax, 13  // Assassins' = of Poison
+@ok:
+{$IFDEF mm7}mov ebx, eax{$ENDIF}
+  push m7*$439E7D + m8*$4379AC
+end;
+
+//----- AOE damage wasn't dealt to paralyzed monsters
+
+function MonsterIsAliveHook(_, __, m: PChar): Bool;
+begin
+  Result:= IsMonAlive(m, true);
+end;
+
+//----- Fix 'GM' not being read in Monsters.txt
+
+function FixMonstersSpellGM(str, gm: PChar): int; cdecl;
+begin
+  Result:= _strcmpi(str, gm);
+  if Result <> 0 then
+    Result:= _strcmpi(str, 'GM');
+end;
+
+//----- Monsters.txt - Fix 'Ice Bolt' turning into 'Ice Blast' and vice versa
+
+procedure IceBoltBlastFix;
+const
+  blast: PChar = 'Blast';
+asm
+  mov eax, blast
+  push eax
+  push dword ptr [edi + 8]
+  call _strcmpi
+  test eax, eax
+  pop ecx
+  pop ecx
+  mov eax, 32  // blast
+  jz @ok
+  mov eax, 26  // bolt
+@ok:
+  mov [esp + 4], eax
+end;
+
+//----- Monster sprites size multiplier SW
+
+procedure MonSpritesSizeSW;
+asm
+  cmp Options.MonSpritesSizeMul, 0
+  jz @std
+  mov eax, Options.MonSpritesSizeMul
+{$IFDEF mm6}mov [esp+58h-24h], eax{$ENDIF}
+@std:
+end;
+
+procedure MonSpritesSizeSW2;
+asm
+  cmp Options.MonSpritesSizeMul, 0
+  jz @std
+{$IFDEF mm6}xchg eax, ecx{$ENDIF}
+  imul eax, Options.MonSpritesSizeMul
+  sar eax, 16
+{$IFDEF mm6}xchg eax, ecx{$ENDIF}
+@std:
+end;
+
+//----- Monster sprites size multiplier D3D
+
+var
+  MonSpritesMulBuf: array[0..$27] of byte;
+
+procedure MonSpritesSizeHW;
+const
+  BufSize = SizeOf(MonSpritesMulBuf);
+asm
+  cmp Options.MonSpritesSizeMul, 0
+  jz @std
+	mov eax, offset MonSpritesMulBuf
+@loop:  // copy to buf
+	mov ecx, [edi]
+	mov [eax], ecx
+	add eax, 4
+	add edi, 4
+	cmp eax, offset MonSpritesMulBuf + BufSize
+	jnz @loop
+	mov edi, offset MonSpritesMulBuf
+
+	// width
+	mov eax, [edi + $20]
+	imul eax, Options.MonSpritesSizeMul
+	sar eax, 16
+	mov [edi + $20], eax
+
+	// height
+	mov eax, [edi + $24]
+	imul eax, Options.MonSpritesSizeMul
+	sar eax, 16
+	mov [edi + $24], eax
+
+	// U
+	mov eax, [edi + $10]
+	imul eax, Options.MonSpritesSizeMul
+	sar eax, 16
+	mov [edi + $10], eax
+
+	// V
+	mov eax, [edi + $14]
+	imul eax, Options.MonSpritesSizeMul
+	sar eax, 16
+	mov [edi + $14], eax
+@std:
+end;
+
+//----- Keep temporary files in memory
+
+const
+  SHARE_ALL = FILE_SHARE_DELETE or FILE_SHARE_READ or FILE_SHARE_WRITE;
+var
+  IsTempFile, IsReadTempFile: Boolean;
+  FTempFilesCache: TStringList;
+
+function TempFilesCache: TStringList;
+begin
+  Result:= FTempFilesCache;
+  if Result <> nil then  exit;
+  Result:= TStringList.Create;
+  Result.CaseSensitive:= false;
+  Result.Duplicates:= dupIgnore;
+  Result.Sorted:= true;
+  FTempFilesCache:= Result;
+end;
+
+procedure DelFromCache(lpFileName: PChar);
+var
+  i: int;
+begin
+  with TempFilesCache do
+    if Find(lpFileName, i) then
+    begin
+      CloseHandle(THandle(Objects[i]));
+      Delete(i);
+    end;
+end;
+
+function CreateTempFileProc(lpFileName: PChar; dwDesiredAccess, dwShareMode: DWORD;
+  lpSecurityAttributes: PSecurityAttributes; dwCreationDisposition, dwFlagsAndAttributes: DWORD;
+  hTemplateFile: THandle): THandle; stdcall;
+begin
+  IsTempFile:= false;
+  DelFromCache(lpFileName);
+  Result:= CreateFile(lpFileName, dwDesiredAccess, SHARE_ALL,
+     lpSecurityAttributes, dwCreationDisposition,
+     FILE_ATTRIBUTE_TEMPORARY or FILE_FLAG_DELETE_ON_CLOSE, hTemplateFile);
+  // save handle duplicate to avoid immediate deletion
+  if Result <> INVALID_HANDLE_VALUE then
+  begin
+    TempFilesCache.AddObject(lpFileName, ptr(Result));
+    RSWin32Check(DuplicateHandle(GetCurrentProcess, Result, GetCurrentProcess,
+       @Result, 0, false, DUPLICATE_SAME_ACCESS));
+  end;
+end;
+
+procedure CreateFileHook;
+asm
+  cmp IsTempFile, false
+  jnz CreateTempFileProc
+  cmp IsReadTempFile, false
+  jz @std
+  mov dword ptr [esp + 12], SHARE_ALL
+  mov IsReadTempFile, false
+@std:
+  jmp CreateFile
+end;
+
+procedure SetTempFile;
+asm
+  mov IsTempFile, true
+  jmp eax
+end;
+
+procedure SetReadTempFile;
+asm
+  mov IsReadTempFile, true
+  jmp eax
+end;
+
+procedure SetReadTempFileDel;
+asm
+  mov IsReadTempFile, true
+  push eax
+  mov eax, [esp + 8]
+  push ecx
+  call DelFromCache
+  pop ecx
+end;
+
+function DeleteFileHook(lpFileName: PAnsiChar): BOOL; stdcall;
+begin
+  DelFromCache(lpFileName);
+  Result:= DeleteFileA(lpFileName);
+end;
+
+procedure NoGammaPcxHook(var _,__, b: TLoadedPcx; h, w: int; buf: ptr);
+begin
+  b.WHProduct:= w*h;
+  b.w:= w;
+  b.h:= h;
+  b.Bits:= b.Bits or 1;
+  b.Buf:= buf;
+end;
+
+//----- Buffer house animations, don't restart
+
+type
+  TSmkStruct = packed record
+    Version: int;
+    Width: int;
+    Height: int;
+  end;
+  TSmackToBufferParams = record
+    smk: ^TSmkStruct;
+    x, y, w2, h: int;
+    buf: PChar;
+  end;
+
+var
+  HouseAnimBuf: array of Word;
+  HouseAnimParams: TSmackToBufferParams;
+
+procedure CopyHouseAnimation(reverse: Boolean); inline;
+var
+  p, p0: PChar;
+  i: uint;
+begin
+  with HouseAnimParams do
+  begin
+    p:= buf + y*w2 + x*2;
+    p0:= ptr(HouseAnimBuf);
+    for i:= smk.Height downto 1 do
+    begin
+      if reverse then
+        CopyMemory(p0, p, smk.Width*2)
+      else
+        CopyMemory(p, p0, smk.Width*2);
+      inc(p0, smk.Width*2);
+      inc(p, w2);
+    end;
+  end;
+end;
+
+procedure SmackToBufferProc(var params: TSmackToBufferParams);
+begin
+  HouseAnimParams:= params;
+  with params do
+  begin
+    SetLength(HouseAnimBuf, smk^.Width*smk^.Height);
+    CopyHouseAnimation(true);
+    x:= 0;
+    y:= 0;
+    w2:= smk.Width*2;
+    h:= smk.Height;
+    buf:= ptr(HouseAnimBuf);
+  end;
+end;
+
+procedure SmackToBufferHook;
+asm
+  lea eax, [esp + 4]
+  jmp SmackToBufferProc
+end;
+
+procedure SmackDoFrameHook;
+begin
+  CopyHouseAnimation(false);
+end;
+
+//----- Fix monsters dealing Ener damage type
+
+procedure FixMonEnergyDamage;
+asm
+  cmp eax, 'n'
+  jnz @std
+  mov ecx, 12
+  xchg ecx, [esp + 4]
+  add [esp], 3
+@std:
+end;
+
+//----- Fix FireAr and Rock missiles
+
+function FixMonMissilesProc(_, s, s2: PChar): int; cdecl;
+begin
+  if _strcmpi(s, s2) = 0 then
+    Result:= 0
+  else if _strcmpi(s, 'FireAr') = 0 then
+    Result:= 2+1
+  else if _strcmpi(s, 'Rock') = 0 then
+    Result:= 6+1  // Use Earth, because there's no Rock projectile
+  else
+    Result:= 1;
+end;
+
+procedure FixMonMissiles;
+asm
+  call FixMonMissilesProc
+  lea edi, [eax - 1]  // if no matches are found, this will be used
+end;
+
+//----- Monster spells were broken
+
+procedure FixMonsterSpells;
+asm
+  mov dx, [ebp + $C]
+  mov [ebp - m7*$23 - m8*$1F], dx
+end;
+
+//----- Fix monsters' Shrapmetal spread
+
+procedure FixShrapmetal;
+asm
+  movzx edx, ax
+end;
+
+//----- All spells were doing Fire damage in MM6
+
+procedure FixMonsterSpellsMM6;
+asm
+  dec eax
+  jz @mine
+  xor eax, eax
+  ret
+@mine:
+  movzx eax, byte ptr [edi + 78]
+  imul eax, $1C
+  add eax, [$42C992]
+  movzx eax, byte ptr [eax + $18]
+  add [esp], 3
+end;
+
+//----- Check for 10MB+ before allowing saving
+
+procedure FreeSpaceCheck;
+const
+  Msg = 'Unable to save the game due to insufficient disk space.'#13#10
+    + 'Please press Alt+Tab and free up some space, then press Retry.';
+  MinSpace = 10*1024*1024;
+var
+  FreeSpace: Int64;
+begin
+  while GetDiskFreeSpaceEx('Data', FreeSpace, int64(nil^), nil) and (FreeSpace <= MinSpace) do
+    case RSMessageBox(_MainWindow^, Msg, SCaption, MB_ICONERROR or MB_ABORTRETRYIGNORE or MB_DEFBUTTON2) of
+      ID_IGNORE: break;
+      ID_ABORT: ExitProcess(0);
+    end;
+end;
+
+//----- Don't show sprites from another side of the map with increased FOV
+
+procedure FixSpritesWrapAround;
+const
+  CameraX = m7*$507B60 + m8*$519438;
+  CameraY = CameraX + 4;
+  CameraDir = CameraX + $18;
+asm
+  push eax
+  movsx eax, word ptr [esi - 6]  // sprite Y
+  sub eax, [CameraY]
+  jnl @ch1
+  neg eax
+@ch1:
+  cmp eax, $ffff - 22528  // 43007 max dist_mist
+  jg @skip
+  movsx eax, word ptr [esi - 8]  // sprite X
+  sub eax, [CameraX]
+  jnl @ch2
+  neg eax
+@ch2:
+  cmp eax, $ffff - 22528
+  jng @ok
+@skip:
+  mov dword ptr [esp + 4], m7*$47BC54 + m8*$47AF43
+@ok:
+  pop eax
+end;
+
+//----- Another crash due to facets without vertexes
+
+procedure NoVertexHook;
+asm
+  cmp byte ptr [ebx + _FacetOff_VertexCount], 0
+  jnz @ok
+  xor eax, eax
+  mov [esp], m6*$491A0D + m7*$42451D + m8*$42298C
+@ok:
+end;
 
 //----- HooksList
 
 var
-  HooksCommon: array[1..11] of TRSHookInfo = (
+  HooksCommon: array[1..39] of TRSHookInfo = (
     (p: m6*$453ACE + m7*$463341 + m8*$461316; newp: @UpdateHintHook;
        t: RShtCallStore; Querry: hqFixStayingHints), // Fix element hints staying active in some dialogs
     (p: m6*$4226F8 + m7*$427E71 + m8*$4260A8; newp: @FixItemSpells;
@@ -2250,6 +3227,10 @@ var
        t: RShtJmp; size: 7 - m7*2), // Fix item picture change causing inventory corruption
     (p: m6*$41ECEF + m7*$420AEA + m8*$420078; newp: @FixRemoveInvItemChest;
        t: RShtJmp; size: 7), // Fix item picture change causing inventory corruption
+    (p: m6*$42022C + m7*$421E12 + m8*$420E14; size: 6 - m7*4;
+       Querry: hqInactivePlayersFix), // Inactive characters couldn't interact with chests (6-7) + allow selecting them regularly
+    (p: m6*$42C4CE + m7*$433EB9 + m8*$4316B2; newp: @InactivePlayerActFix;
+       t: RShtBefore; size: 6; Querry: hqInactivePlayersFix), // Inactive players could attack
     (p: HookLoadInterface; newp: @LoadInterface; t: RShtBefore),
     (p: m6*$40CF6E + m7*$4118B2 + m8*$4CA92C; newp: @BuildSpellBookHook;
        t: RShtAfter; Querry: hqAttackSpell), // Attack spell
@@ -2260,10 +3241,66 @@ var
        t: RShtCall; size: 7; Querry: hqAttackSpell), // Attack spell
     (p: m6*$42C47C + m7*$433D3A + m8*$431591; newp: @QSpellUseHook;
        t: RShtCall; size: 7 - m6; Querry: hqAttackSpell), // Attack spell
+    (p: m6*$420C3E + m7*$422559 + m8*$421774; newp: @ASpellClickMon;
+       t: RShtAfter; size: 8; Querry: hqAttackSpell), // Attack spell
+    (p: m6*$42AE57 + m7*$42FCC3 + m8*$42E608; newp: @ShooterCheckKeyHook;
+       t: RShtAfter; Querry: hqShooterMode), // Shooter mode
+    (p: HookEachTick; newp: @ShooterEachTickHook; t: RShtBefore; Querry: hqShooterMode), // Shooter mode
+    (p: m6*$42273E + m7*$427EC4 + m8*$4260FB; newp: @ShooterCheckMon;
+       t: RShtCallStore; Querry: hqShooterMode), // Shooter mode - Monster_CanAct
+    (p: m6*$42A010 + m7*$42ED94 + m8*$42D91D; newp: @ShooterCheckMon;
+       t: RShtCallStore; Querry: hqShooterMode), // Shooter mode - Monster_CanAct
+    (p: m6*$42270C + m7*$427E97 + m8*$4260CE; newp: @ShooterFindMon;
+       t: RShtCallStore; Querry: hqShooterMode), // Shooter mode - FindClosestMonster
+    (p: m6*$42A024 + m7*$42EDA9 + m8*$42D932; newp: @ShooterFindMon;
+       t: RShtCallStore; Querry: hqShooterMode), // Shooter mode - FindClosestMonster
+    (p: m6*$42276C + m7*$427EF1 + m8*$426128; newp: @ShooterCheckMonDirection;
+       t: RShtAfter; size: 5 + m6; Querry: hqShooterMode), // Shooter mode - CalcMissileDirection
+    (p: m6*$454801 + m7*$464366 + m8*$4623E9; newp: @ShooterRightClick;
+       t: RShtCallStore; Querry: hqShooterMode), // Shooter mode - ignore right click
+    (p: m7*$43951B + m8*$436EF2; newp: @ShooterSetSwordMonHook;
+       t: RShtBefore; size: 12; Querry: hqShooterMode - m6*MaxInt), // Shooter mode - last hit monster
+    (p: m6*$42A730 + m7*$42F5C9 + m8*$42E05C; newp: @ShooterCreateProjectile;
+       t: RShtBefore; size: 6; Querry: hqShooterMode), // Shooter mode - shoot from screen middle
+    (p: m6*$42A024 + m7*$42EDA9 + m8*$42D932; newp: @FixAttackMonster;
+       t: RShtCallStore), // Attacking friendly monsters
+    (p: m7*$4395F5 + m8*$436FC3; newp: @HookHitDistantMonster;
+       t: RShtCall; size: 6; Querry: hqFixHitDistantMonstersIndoor - m6*MaxInt), // Fix shooting distant monsters indoor
+    (p: m6*$431E27 + m7*$43A38A + m8*$437EA1; newp: @FixZeroRecovery;
+       t: RShtCallStore), // Fix character switch when Endurance eliminates hit recovery
+    (p: m6*$4320C3 + m7*$43A8B0 + m8*$438341; newp: @FixZeroRecovery;
+       t: RShtCallStore), // Fix character switch when Endurance eliminates hit recovery
+    (p: m6*$416716 + m7*$41A49E + m8*$41A4A0; newp: @RMBColorItems;
+       t: RShtAfter; size: 7; Querry: hqGreenItemsWhileRightClick), // Show items in green while right mouse buttom is pressed
+    (p: m6*$42B197 + m7*$4300AF + m8*$42E855; newp: @FixQSpellPointsCheck;
+       t: RShtBefore; size: 6 + m6), // Fix wrong Quick Spell spell points check
+//    (p: m6*$418F93 + m7*$41C095 + m8*$41B745; newp: @SetHintHook;
+//       t: RShtAfter; size: 5 + m6; Querry: hqShowHintWithRMB), // Hint - ignore disappearing hint if RMB is pressed
+//    (p: m7*$41C165 + m8*$41B7EA; newp: @DrawHintHook;
+//       t: RShtBefore; size: 6; Querry: hqShowHintWithRMB - m6*MaxInt), // Hint - ignore disappearing hint if RMB is pressed
+//    (p: m6*$418E66 + m7*$41C008; newp: @DrawHintHook;
+//       t: RShtAfter; size: 6 - m6; Querry: hqShowHintWithRMB - m8*MaxInt), // Hint - ignore disappearing hint if RMB is pressed
+    (p: m6*$41C58E + m7*$41D96A + m8*$41CEF0; newp: @FixDeadIdentifyItemProc;
+       t: RShtCall; Querry: hqFixDeadIdentifyItem), // Unconscious players identifying items in shop screens and on map
+    (p: m6*$411049 + m7*$4169FD + m8*$4162A5; newp: @DeadShowItemInfoProc;
+       t: RShtCall; size: 6 - m6; Querry: hqDeadShowItemInfo), // Show item descriptions even for unconscious players
+    (p: m6*$41104E + m7*$416A03 + m8*$4162AB; newp: ptr(m6*$4110A8 + m7*$416A81 + m8*$416323);
+       t: RShtJmp; size: 6; Querry: hqDeadShowItemInfo), // Show item descriptions even for unconscious players
+    (p: m6*$430CD9 + m7*$4392F0 + m8*$436CB3; newp: @MonsterIsAliveHook;
+       t: RShtCall), // AOE damage wasn't dealt to paralyzed monsters
+    (p: m6*$41CFED + m7*$41E51A + m8*$41DAF8; newp: @MonSpritesSizeSW;
+       t: RShtBefore; size: 6 - m6), // Monster sprites size multiplier SW
+    (p: m6*$41D06A + m7*$41E52A + m8*$41DB08; newp: @MonSpritesSizeSW2;
+       t: RShtBefore; size: 5 + m6*3), // Monster sprites size multiplier SW
+    (p: m6*$44F3D9 + m7*$45F4E0 + m8*$45CFA7; newp: @FreeSpaceCheck;
+       t: RShtBefore; Querry: hqCheckFreeSpace), // Check for 10MB+ before allowing saving
+    (p: m6*$4919B6 + m7*$423B32 + m8*$421F9C; newp: @NoVertexHook;
+       t: RShtBefore; size: m6*7 + m7*5 + m8*6), // Another crash due to facets without vertexes
+    (p: m6*$4155D2 + m7*$4194F2 + m8*$419141; size: 2 + m8*4), // Don't hide skills that overflow
     ()
   );
 {$IFDEF MM6}
-  Hooks: array[1..43] of TRSHookInfo = (
+  Hooks: array[1..59] of TRSHookInfo = (
     (p: $457567; newp: @WindowWidth; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $45757D; newp: @WindowHeight; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $454340; newp: @WindowProcHook; t: RShtFunctionStart; size: 8), // Window procedure hook
@@ -2278,6 +3315,7 @@ var
     (p: $45472C; size: 6), // Control certain dialogs with keyboard (allow keyboard everywhere)
     (p: HookWindowProc; newp: @KeyControlCheckUnblock; t: RShtBefore), // Control certain dialogs with keyboard
     (p: $40CEB8; old: 11; new: 0; t: RSht1), // Spellbook misbehaves when controlled with keyboard
+    (p: $419F63; newp: @KeyControlCheckInvis; t: RShtBefore; size: 6), // Don't allow using invisible topics with keyboard
     (p: $41146D; newp: @EnchantItemRightClick; t: RShtAfter), // Allow right click in item spell dialogs
     (p: $41E092; newp: @ChestVerticalHook6; t: RShtCall; Querry: hqPlaceChestItemsVertically), // Place items in chests vertically
     (p: $41E4D7; newp: @FixChestsCompact; t: RShtAfter; size: 7; Querry: hqFixChestsByCompacting), // Fix chests by compacting
@@ -2306,10 +3344,25 @@ var
     (p: $480CE6; newp: @FixMonStealCheck; t: RShtCall; size: 7), // Loot stolen items from thief's corpse
     (p: $431DE7; newp: @FixMonSteal; t: RShtCallStore), // Loot stolen items from thief's corpse
     (p: $40DE33; newp: @DrawSpellBook; t: RShtAfter; Querry: hqAttackSpell), // Attack spell
+    (p: $430E72; newp: @AttackMonHook; t: RShtAfter; size: 7), // Attacking dying monsters
+    (p: $42A4D0; newp: @AttackMonHook2; t: RShtCall; size: 6), // Attacking dying monsters
+    (p: $4091B7; newp: @AttackMonHook2; t: RShtAfter; size: 6), // Attacking dying monsters
+    (p: $47F8C6; newp: @NegativeResHook; t: RShtBefore; size: 6), // Negative resistance may lead to devision by zero
+    (p: $4B6511; newp: @CreateFileHook; t: RShtCall; size: 6), // Keep temporary files in memory
+    (p: $4AF6D2; newp: @DeleteFileHook; t: RShtCall; size: 6), // Keep temporary files in memory
+    (p: $44FEDE; newp: @SetTempFile; t: RShtCallStore), // Keep temporary files in memory (lloyd)
+    (p: $40D179; newp: @SetReadTempFile; t: RShtCallStore), // Keep temporary files in memory (lloyd)
+    (p: $44F91C; newp: @SetReadTempFile; t: RShtCallStore), // Keep temporary files in memory (lloyd)
+    (p: $4A68B3; newp: ptr($4A68D3); t: RShtJmp; Querry: hqFixHouseAnimationRestart), // Buffer house animations, don't restart
+    (p: $4A6577; newp: @SmackToBufferHook; t: RShtBefore; size: 6), // Buffer house animations, don't restart
+    (p: $4A60E5; newp: @SmackDoFrameHook; t: RShtAfter; size: 6), // Buffer house animations, don't restart
+    (p: $4581C5; old: $2000; newp: @dist_mist; newref: true; t: RSht4), // dist_mist
+    (p: $431D8A; newp: @FixMonsterSpellsMM6; t: RShtCall; Querry: hqFixMonsterSpells), // All spells were doing Fire damage
+    (p: $43201A; newp: @FixMonsterSpellsMM6; t: RShtCall; Querry: hqFixMonsterSpells), // All spells were doing Fire damage
     ()
   );
 {$ELSEIF defined(MM7)}
-  Hooks: array[1..76] of TRSHookInfo = (
+  Hooks: array[1..107] of TRSHookInfo = (
     (p: $47B84E; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (monsters)
     (p: $47B296; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (items)
     (p: $47AD40; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (sprites)
@@ -2336,6 +3389,7 @@ var
     (p: $463E05; size: 6), // Control certain dialogs with keyboard (allow keyboard everywhere)
     (p: HookWindowProc; newp: @KeyControlCheckUnblock; t: RShtBefore), // Control certain dialogs with keyboard
     (p: $4116FF; old: $FF; new: $53; t: RSht1; size: 4), // Spellbook misbehaves when controlled with keyboard
+    (p: $41CFA8; newp: @KeyControlCheckInvis; t: RShtBefore; size: 6), // Don't allow using invisible topics with keyboard
     (p: $41FFB9; newp: @ChestVerticalHook; t: RShtCall; size: 6; Querry: hqPlaceChestItemsVertically), // Place items in chests vertically
     (p: $41F432; old: $41ECC7; newp: @ShowArmorHalved; t: RSht4), // Fix GM Axe
     (p: $4397C0; newp: @FixGMAxeHook1; t: RShtBefore; size: 7), // Fix GM Axe
@@ -2351,6 +3405,7 @@ var
     (p: $441D10; newp: @DrawDoneHook; t: RShtAfter; Querry: hqClickThruEffects), // Click through effects SW (indoor)
     (p: $47A808; old: $47BAD3; newp: @DrawEffectsHook; t: RShtCallStore; Querry: hqClickThruEffects), // Click through effects SW (outdoor)
     (p: $441D42; newp: @DrawDoneHook; t: RShtAfter; Querry: hqClickThruEffects), // Click through effects SW (outdoor)
+    (p: $4C0739; newp: @CheckSpriteD3D; t: RShtBefore; Querry: hqClickThruEffectsD3D), // Click through effects D3D
     (p: $4A0063; newp: @D3DErrorMessageHook; t: RShtAfter), // Proper D3DRend->Init error messages
     (p: $4A0662; newp: @D3DErrorMessageHook; t: RShtAfter), // Proper D3DRend->Init error messages
     (p: $48DF69; old: 8; new: 7; t: RSht1), // Poison2 and Poison3 swapped
@@ -2377,19 +3432,53 @@ var
     (p: $49A745; old: $4CA780; newp: @FixReadFacetBit; t: RShtCall), // Restore AnimatedTFT bit from Blv rather than Dlv to avoid crash
     (p: $47E787; old: $4CA780; newp: @FixReadFacetBit; t: RShtCall), // Restore AnimatedTFT bit from Odm rather than Ddm to avoid crash
     (p: $4716EE; newp: @FixMonsterBlockShots; t: RShtJmp; size: 7; Querry: hqFixMonsterBlockShots), // Fix monsters blocking shots of other monsters
+    (p: $43951B; newp: @FixFarMonstersAppearGreen; t: RShtBefore; size: 12), // Fix monsters shot at from a distance appearing green on minimap
     (p: $450657; newp: @FixUnmarkedArtifacts; t: RShtBefore), // Fix deliberately generated artifacts not marked as found
     (p: $48DF0C; newp: @FixMonStealDisplay; t: RShtAfter; size: 6), // Don't show stealing animation if nothing's stolen
     //(p: $426D46; size: 12), // Demonstrate recovered stolen items
     (p: $426D49; newp: @FixStolenLootHint; t: RShtCallStore), // Show that stolen item was found
     (p: $426D61; size: 7), // Stolen items enabling multi-loot
     (p: $426D95; size: 7), // Stolen items enabling multi-loot
-    (p: $441E26; newp: @MinimapBkgHook; t: RShtCall; Querry: hqMinimapBkg), // Draw bitmap as internal minimap background 
+    (p: $441E26; newp: @MinimapBkgHook; t: RShtCall; Querry: hqMinimapBkg), // Draw bitmap as dungeon minimap background
     (p: $422698; newp: @InterfaceColorChangedHook; t: RShtBefore), // Load alignment-dependant interface
     (p: $412B5B; newp: @DrawSpellBook; t: RShtAfter; Querry: hqAttackSpell), // Attack spell
+    (p: $48D506; old: $84; new: $8E; t: RSht1), // Negative resistance may lead to devision by zero
+    (p: $4BDAE3; newp: @FixDeadDisplayInventory; t: RShtCallStore), // Display Inventory screen didn't work with unconscious players
+    (p: $439E71; old: $439FA3; newp: @FixItemsAssassinsBarbarians; t: RShtJmp6), // Fix Assassins' and Barbarians' enchantments
+    (p: $455DD6; old: $4CAAF0; newp: @FixMonstersSpellGM; t: RShtCall), // Fix 'GM' not being read in Monsters.txt
+    (p: $455EEC; old: $4CAAF0; newp: @FixMonstersSpellGM; t: RShtCall), // Fix 'GM' not being read in Monsters.txt
+    (p: $454B8E; newp: @IceBoltBlastFix; t: RShtBefore; Querry: hqFixIceBoltBlast), // Monsters.txt - Fix 'Ice Bolt' turning into 'Ice Blast'
+    (p: $41E5E6; newp: @MonSpritesSizeHW; t: RShtBefore; size: 6), // Monster sprites size multiplier D3D
+    (p: $41E649; newp: @MonSpritesSizeSW2; t: RShtBefore; size: 6), // Monster sprites size multiplier D3D
+    (p: $4D4C8F; newp: @CreateFileHook; t: RShtCall; size: 6), // Keep temporary files in memory
+    (p: $4CCC18; newp: @DeleteFileHook; t: RShtCall; size: 6), // Keep temporary files in memory
+    (p: $45E2C1; newp: @SetTempFile; t: RShtCallStore), // Keep temporary files in memory (lloyd)
+    (p: $411B8E; newp: @SetReadTempFile; t: RShtCallStore), // Keep temporary files in memory (lloyd)
+    (p: $45FA0C; newp: @SetReadTempFile; t: RShtCallStore), // Keep temporary files in memory (lloyd)
+    (p: $432B2D; size: $432B47 - $432B2D), // Don't save gamma.pcx
+    (p: $432B4C; old: $40E56A; newp: @NoGammaPcxHook; t: RShtCall), // Don't save gamma.pcx
+    (p: $434983; size: $43499D - $434983), // Don't save gamma.pcx
+    (p: $4349A2; old: $40E56A; newp: @NoGammaPcxHook; t: RShtCall), // Don't save gamma.pcx
+    //(p: $4BF533; newp: ptr($4BF586); t: RShtJmp; Querry: hqFixHouseAnimationRestart), // Buffer house animations, don't restart
+    (p: $4BF559; newp: ptr($4BF586); t: RShtJmp; size: 10; Querry: hqFixHouseAnimationRestart), // Buffer house animations, don't restart
+    (p: $4BF31E; newp: @SmackToBufferHook; t: RShtBefore; size: 6; Querry: hqFixHouseAnimationRestart), // Buffer house animations, don't restart
+    (p: $4BF06E; newp: @SmackDoFrameHook; t: RShtAfter; size: 6; Querry: hqFixHouseAnimationRestart), // Buffer house animations, don't restart
+    (p: $4BF011; old: $4BE8BD; new: $4BF02F; t: RShtJmp; Querry: hqFixHouseAnimationRestart), // Buffer house animations, don't restart
+    (p: $454D3A; newp: @FixMonEnergyDamage; t: RShtAfter; Querry: hqFixMonsterAttackTypes), // Fix monsters dealing Ener damage type
+    (p: $454E89; newp: @FixMonMissiles; t: RShtCall; Querry: hqFixMonsterAttackTypes), // Fix FireAr and Rock missiles
+    //(p: $466528 + m8*$4648D5; old: $2000; new: 10500; t: RSht4), // Default dist_mist
+    (p: $404AF0; newp: @FixMonsterSpells; t: RShtBefore; Querry: hqFixMonsterSpells), // Monster spells were broken
+    (p: $40583A; t: RShtNop; size: 4; Querry: hqFixMonsterSpells), // Monster spells were broken
+    (p: $404F99; t: RShtNop; size: 4; Querry: hqFixMonsterSpells), // Monster spells were broken
+    (p: $40570B; newp: @FixShrapmetal; t: RShtBefore; Querry: hqFixMonsterSpells), // Fix monsters' Shrapmetal spread
+    (p: $47BB77; newp: @FixSpritesWrapAround; t: RShtBefore; size: 7), // Don't show sprites from another side of the map with increased FOV
     ()
   );
 {$ELSE}
-  Hooks: array[1..66] of TRSHookInfo = (
+  FogRange: int;
+  FogRangeFloat, FogRangeMul, FogRangeMul2: Single;
+
+  Hooks: array[1..106] of TRSHookInfo = (
     (p: $47AB35; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Monsters not visible on the sides of the screen
     (p: $47A55E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Items not visible on the sides of the screen
     (p: $48B37E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Effects not visible on the sides of the screen
@@ -2412,6 +3501,7 @@ var
     (p: $41C25D; newp: @KeyControl; t: RShtAfter; size: 6), // Control certain dialogs with keyboard
     (p: $461F41; size: 2), // Control certain dialogs with keyboard (allow keyboard everywhere)
     (p: HookWindowProc; newp: @KeyControlCheckUnblock; t: RShtBefore), // Control certain dialogs with keyboard
+    (p: $41C419; newp: @KeyControlCheckInvis; t: RShtBefore; size: 6), // Don't allow using invisible topics with keyboard
     (p: $4163EA; newp: @EnchantItemRightClick; t: RShtAfter), // Allow right click in item spell dialogs
     (p: $41F433; newp: @ChestVerticalHook; t: RShtCall; size: 6; Querry: hqPlaceChestItemsVertically), // Place items in chests vertically
     (p: $4371A0; newp: @FixGMAxeHook1; t: RShtBefore), // Fix GM Axe
@@ -2427,6 +3517,7 @@ var
     (p: $43E967; newp: @DrawDoneHook; t: RShtAfter; Querry: hqClickThruEffects), // Click through effects SW (indoor)
     (p: $4799FF; old: $47ADC2; newp: @DrawEffectsHook; t: RShtCallStore; Querry: hqClickThruEffects), // Click through effects SW (outdoor)
     (p: $43E999; newp: @DrawDoneHook; t: RShtAfter; Querry: hqClickThruEffects), // Click through effects SW (outdoor)
+    (p: $4BE327; newp: @CheckSpriteD3D; t: RShtBefore; Querry: hqClickThruEffectsD3D), // Click through effects D3D
     (p: $49D6C6; newp: @D3DErrorMessageHook; t: RShtAfter), // Proper D3DRend->Init error messages
     (p: $49DD01; newp: @D3DErrorMessageHook; t: RShtAfter), // Proper D3DRend->Init error messages
     (p: $48D3F2; old: 8; new: 7; t: RSht1), // Poison2 and Poison3 swapped
@@ -2449,14 +3540,54 @@ var
     (p: $497C3A; old: $4D96B0; newp: @FixReadFacetBit; t: RShtCall), // Restore AnimatedTFT bit from Blv rather than Dlv to avoid crash
     (p: $47DCAD; old: $4D96B0; newp: @FixReadFacetBit; t: RShtCall), // Restore AnimatedTFT bit from Odm rather than Ddm to avoid crash
     (p: $47024C; newp: @FixMonsterBlockShots; t: RShtJmp; size: 7; Querry: hqFixMonsterBlockShots), // Fix monsters blocking shots of other monsters
+    (p: $436EF2; newp: @FixFarMonstersAppearGreen; t: RShtBefore; size: 12), // Fix monsters shot at from a distance appearing green on minimap
     (p: $48D396; newp: @FixMonStealDisplay; t: RShtAfter; size: 6), // Don't show stealing animation if nothing's stolen
     //(p: $425182; size: 12), // Demonstrate recovered stolen items
     (p: $425185; newp: @FixStolenLootHint; t: RShtCallStore), // Show that stolen item was found
     (p: $42519D; size: 7), // Stolen items enabling multi-loot
     (p: $4251D1; size: 7), // Stolen items enabling multi-loot
-    (p: $43EA7C; newp: @MinimapBkgHook; t: RShtCall; Querry: hqMinimapBkg), // Draw bitmap as internal minimap background
+    (p: $43EA7C; newp: @MinimapBkgHook; t: RShtCall; Querry: hqMinimapBkg), // Draw bitmap as dungeon minimap background
     (p: $4CA240; newp: @ASpellHintMM8; t: RShtAfter; Querry: hqAttackSpell), // Attack spell
+    (p: $48CE11; old: $74; new: $7E; t: RSht1), // Negative resistance may lead to devision by zero
 //    (p: $4E9BA4; newp: @SpellBookHoverItem; t: RShtCodePtrStore), // Quick Spell buttons hints
+    (p: $4BB6EA; newp: @FixDeadDisplayInventory; t: RShtCallStore), // Display Inventory screen didn't work with unconscious players
+    (p: $4379A0; old: $437AE8; newp: @FixItemsAssassinsBarbarians; t: RShtJmp6), // Fix Assassins' and Barbarians' enchantments
+    (p: $4535E2; old: $4DA920; newp: @FixMonstersSpellGM; t: RShtCall), // Fix 'GM' not being read in Monsters.txt
+    (p: $4536FC; old: $4DA920; newp: @FixMonstersSpellGM; t: RShtCall), // Fix 'GM' not being read in Monsters.txt
+    (p: $4522F6; newp: @IceBoltBlastFix; t: RShtBefore; Querry: hqFixIceBoltBlast), // Monsters.txt - Fix 'Ice Bolt' turning into 'Ice Blast'
+    (p: $41DBC8; newp: @MonSpritesSizeHW; t: RShtBefore; size: 6), // Monster sprites size multiplier D3D
+    (p: $41DC30; newp: @MonSpritesSizeSW2; t: RShtBefore; size: 6), // Monster sprites size multiplier D3D
+    (p: $4E3C8B; newp: @CreateFileHook; t: RShtCall; size: 6), // Keep temporary files in memory
+    (p: $4DB1E8; newp: @DeleteFileHook; t: RShtCall; size: 6), // Keep temporary files in memory
+    (p: $45BF4A; newp: @SetTempFile; t: RShtCallStore), // Keep temporary files in memory (lloyd)
+    (p: $412976; newp: @SetReadTempFile; t: RShtCallStore), // Keep temporary files in memory (lloyd)
+    (p: $45D44F; newp: @SetReadTempFile; t: RShtCallStore), // Keep temporary files in memory (lloyd)
+    (p: $432233; size: $432250 - $432233), // Don't save gamma.pcx
+    (p: $432255; old: $40F835; newp: @NoGammaPcxHook; t: RShtCall), // Don't save gamma.pcx
+    (p: $43225B; size: 5), // Don't save gamma.pcx
+    (p: $45D46E; old: $4F91C0; new: $4F36D4; t: RSht4), // Fix Llloyd names mismatch
+    (p: $45D439; old: $4F917C; new: $4F36E4; t: RSht4), // Fix Llloyd names mismatch
+    (p: $45C93A; old: $4F917C; new: $4F36E4; t: RSht4), // Fix Llloyd names mismatch
+    (p: $461167; old: $4F917C; new: $4F36E4; t: RSht4), // Fix Llloyd names mismatch
+    (p: $4642CB; old: $4F917C; new: $4F36E4; t: RSht4), // Fix Llloyd names mismatch
+    (p: $45C937; old: $57; new: $50; t: RSht1), // Fix Llloyd names mismatch
+    //(p: $4BD173; newp: ptr($4BD1DC); t: RShtJmp; size: 10; Querry: hqFixHouseAnimationRestart), // Buffer house animations, don't restart
+    (p: $4BD19C; newp: ptr($4BD1DC); t: RShtJmp; size: 6; Querry: hqFixHouseAnimationRestart), // Buffer house animations, don't restart
+    (p: $4BCF5F; newp: @SmackToBufferHook; t: RShtBefore; size: 6; Querry: hqFixHouseAnimationRestart), // Buffer house animations, don't restart
+    (p: $4BCCA1; newp: @SmackDoFrameHook; t: RShtAfter; size: 6; Querry: hqFixHouseAnimationRestart), // Buffer house animations, don't restart
+    (p: $4BCC36; old: $4BC4D8; new: $4BCC62; t: RShtJmp; Querry: hqFixHouseAnimationRestart), // Buffer house animations, don't restart
+    (p: $45251F; newp: @FixMonEnergyDamage; t: RShtAfter; Querry: hqFixMonsterAttackTypes), // Fix monsters dealing Ener damage type
+    (p: $452670; newp: @FixMonMissiles; t: RShtCall; Querry: hqFixMonsterAttackTypes), // Fix FireAr and Rock missiles
+    //(p: $4648D5; old: $2000; new: 10500; t: RSht4), // Default dist_mist
+    (p: $47B7AB; old: 14192; newp: @FogRange; newref: true; t: RSht4; Querry: hqViewDistance), // Extend view distance
+    (p: $4E87AC; newp: @FogRangeFloat; newref: true; t: RSht4; Querry: hqViewDistance), // Extend view distance
+    (p: $4E87A8; newp: @FogRangeMul; newref: true; t: RSht4; Querry: hqViewDistance), // Extend view distance
+    (p: $4E87A4; newp: @FogRangeMul2; newref: true; t: RSht4; Querry: hqViewDistance), // Extend view distance
+    (p: $404D8C; newp: @FixMonsterSpells; t: RShtBefore; Querry: hqFixMonsterSpells), // Monster spells were broken
+    (p: $404E45; t: RShtNop; size: 4; Querry: hqFixMonsterSpells), // Monster spells were broken
+    (p: $405895; t: RShtNop; size: 4; Querry: hqFixMonsterSpells), // Monster spells were broken
+    (p: $40531F; newp: @FixShrapmetal; t: RShtBefore; size: 8; Querry: hqFixMonsterSpells), // Fix Shrapmetal spread
+    (p: $47AE66; newp: @FixSpritesWrapAround; t: RShtBefore; size: 7), // Don't show sprites from another side of the map with increased FOV
     ()
   );
 {$IFEND}
@@ -2486,6 +3617,24 @@ begin
     ApplyHooks(hqFixStayingHints);
   if Options.FixMonstersBlockingShots then
     ApplyHooks(hqFixMonsterBlockShots);
+  if FixInactivePlayersActing then
+    ApplyHooks(hqInactivePlayersFix);
+  if Options.ShooterMode <> 0 then
+    ApplyHooks(hqShooterMode);
+  if FixHitDistantMonstersIndoor then
+    ApplyHooks(hqFixHitDistantMonstersIndoor);
+  if GreenItemsWhileRightClick then
+    ApplyHooks(hqGreenItemsWhileRightClick);
+  if ClickThroughEffects then
+    ApplyHooks(hqClickThruEffectsD3D);
+  if FixDeadPlayerIdentifyItem then
+    ApplyHooks(hqFixDeadIdentifyItem);
+  if DeadPlayerShowItemInfo then
+    ApplyHooks(hqDeadShowItemInfo);
+  if FixHouseAnimationRestart then
+    ApplyHooks(hqFixHouseAnimationRestart);
+  if NeedFreeSpaceCheck then
+    ApplyHooks(hqCheckFreeSpace);
 end;
 
 procedure ApplyMMDeferredHooks;
@@ -2502,12 +3651,43 @@ begin
     ApplyHooks(19);
   if Options.EnableAttackSpell then
     ApplyHooks(hqAttackSpell);
+  if Options.FixIceBoltBlast then
+    ApplyHooks(hqFixIceBoltBlast);
+  if Options.FixMonsterAttackTypes then
+    ApplyHooks(hqFixMonsterAttackTypes);
+  if Options.FixMonsterSpells then
+    ApplyHooks(hqFixMonsterSpells);
 end;
 
 procedure ApplyMMHooksSW;
 begin
   if ClickThroughEffects then
     ApplyHooks(hqClickThruEffects);
+end;
+
+procedure ApplyMMHooksLodsLoaded;
+begin
+  if not _IsD3D^ then
+    ApplyMMHooksSW;
+end;
+
+procedure OnLoaded;
+begin
+{$IFNDEF MM6}
+  if dist_mist > 0 then
+    _dist_mist^:= dist_mist;
+  OnLoadedD3D;
+{$ENDIF}
+{$IFDEF MM8}
+  if _dist_mist^ > $2000 then
+  begin
+    FogRange:= min(_dist_mist^ + 6000, $7fff);
+    FogRangeFloat:= _dist_mist^ + 6000;
+    FogRangeMul:= 1/(FogRangeFloat - 1024);
+    FogRangeMul2:= 216/(FogRangeFloat - 1024);
+    ApplyHooks(hqViewDistance);
+  end;
+{$ENDIF}
 end;
 
 procedure NeedWindowSize;
@@ -2531,6 +3711,8 @@ begin
 end;
 
 procedure LoadInterface;
+var
+  i: int;
 begin
 {  c:= MinimapColor;
   i:= _GreenColorBits^;
@@ -2550,11 +3732,16 @@ begin
     end;
   if Options.EnableAttackSpell and (m6 = 1) then
   begin
-    ASpellIcon:= _LoadLodBitmap(0,0, _IconsLod, 2, 'TabASpell');
+    ASpellIcon:= LoadIcon('GF-ASpell');
     ASpellIconDn:= ASpellIcon;
   end;
   if Options.EnableAttackSpell and (m7 = 1) then
-    ASpellIconDn:= _LoadLodBitmap(0,0, _IconsLod, 2, 'IB-ASpellD');
+    ASpellIconDn:= LoadIcon('GF-ASpellD');
+  if Options.ShooterMode <> 0 then
+    for i := 0 to high(ShooterSwordIcons) do
+      ShooterSwordIcons[i]:= LoadIcon(ShooterSwordIconNames[i]);
+
+  OnLoaded;
 end;
 
 procedure InterfaceColorChanged(_: Bool; Replace: Boolean; Align: int);
@@ -2574,11 +3761,31 @@ const
     if Replace then
       ReplaceBmp(0,0, _IconsLod, 2, PChar(s + Letter), _IconsLodLoaded.Items[i])
     else
-      i:= _LoadLodBitmap(0,0, _IconsLod, 2, PChar(s + Letter));
+      i:= LoadIcon(s + Letter);
   end;
 begin
   if Options.EnableAttackSpell then
-    Bmp(ASpellIcon, 'IB-ASpell-');
+    Bmp(ASpellIcon, 'GF-ASpell-');
+end;
+
+var
+  ScreenDirty, TurnBased: Boolean;
+
+procedure DrawMyInterface;
+begin
+  if _CurrentScreen^ = 0 then
+  begin
+    if Options.ShooterMode = fpsOn then
+      ScreenDirty:= DrawShooter or ScreenDirty
+    else if ScreenDirty and (m6 = 0) then
+      _NeedRedraw^:= 1;
+    if (m7 = 1) and TurnBased and not _TurnBased^ then
+      _NeedRedraw^:= 1;  // fix hand staying sometimes
+    if m7 = 1 then
+      TurnBased:= _TurnBased^;
+  end;
+  if _NeedRedraw^ <> 0 then
+    ScreenDirty:= false;
 end;
 
 initialization
