@@ -8,6 +8,8 @@
 #define OldWaterMD5() GetMD5OfFile(AddBackslash(SourcePath) + "OptData\old\00 patch.bitmaps.lod")
 #define HDWaterMD5() GetMD5OfFile(AddBackslash(SourcePath) + "OptData\01 water.bitmaps.lwd")
 #define IconsMD5() GetMD5OfFile(AddBackslash(SourcePath) + "OptData\00 patch.icons.lod")
+#define PalMD5() GetMD5OfFile(AddBackslash(SourcePath) + "OptData\01 mon pal.bitmaps.lod")
+#define RocMD5() GetMD5OfFile(AddBackslash(SourcePath) + "OptData\01 roc.sprites.lod")
 
 [Setup]
 VersionInfoVersion={#AppVersion}
@@ -43,6 +45,8 @@ ru.InfoBeforeLabel=Ниже приведён файл {#MM}Patch ReadMe_rus.txt, описывающий изм
 [CustomMessages]
 NoFakeMouseLook=Disable default MM8 pseudo mouse look triggered by right mouse button
 ru.NoFakeMouseLook=Отключить встроенное в MM8 недо- управление мышью, активируемое нажатием правой кнопки мыши
+ObeliskTast=Fix Unicorn King appearing before all obelisks are visited
+ru.ObeliskTast=Исправить появление Короля единорогов до посещения всех обелисков
 RussianGameVersion=Russian version of the game
 ru.RussianGameVersion=Русская версия игры
 LodsTask=Install LOD archives with fixes for particular maps and game progression%nUncheck this task if you are installing the patch over a big mod like MM6+7+8 merge.
@@ -53,6 +57,10 @@ IconsTask=Install LOD archive with one interface fix%nUncheck this task if you a
 ru.IconsTask=LOD-архив с одним исправлением для интерфейса%nОтключите эту задачу, если Вы устанавливаете патч поверх мода, перекрашивающего интерфейс.
 UITask=Use widescreen-friendly flexible interface
 ru.UITask=Включить гибкий интерфейс, адаптированный для широкоэкранников
+PalTask=Improved Monsters - Fix monsters that look the same in all 3 variations, as well as thunderbirds and plane guardians.
+ru.PalTask=Улучшенные монстры - Исправить монстров, которые во всех 3 вариациях выглядят одинаково, а также громовых птиц и защитников измерения.
+MergeCleanTask=Remove patch archives that The World of Enroth is incompatible with
+ru.MergeCleanTask=Удалить архивы патча, с которыми The World of Enroth не совместим
 
 [Tasks]
 Name: RusFiles1; Description: {cm:RussianGameVersion}; Check: RussianTaskCheck(true);
@@ -67,6 +75,9 @@ Name: water1; Description: {cm:WaterTask}; Check: WaterTaskCheck(true);
 Name: water2; Description: {cm:WaterTask}; Flags: unchecked; Check: WaterTaskCheck(false);
 Name: icons1; Description: {cm:IconsTask}; Check: IconsTaskCheck(true);
 Name: icons2; Description: {cm:IconsTask}; Flags: unchecked; Check: IconsTaskCheck(false);
+Name: pal1; Description: {cm:PalTask}; Check: PalTaskCheck(true);
+Name: pal2; Description: {cm:PalTask}; Flags: unchecked; Check: PalTaskCheck(false);
+Name: MergeClean; Description: {cm:MergeCleanTask}; Check: MergeCleanCheck;
 
 ; Delete SafeDisk files
 [InstallDelete]
@@ -84,6 +95,8 @@ Source: "Files\*.*"; Excludes: "*.bak"; DestDir: "{app}"; Flags: promptifolder i
 Source: "Data\*"; Excludes: "*.bak"; DestDir: "{app}\Data\"; Tasks: lods1 lods2;
 Source: "OptData\01 water.bitmaps.lwd"; DestDir: "{app}\Data\"; Tasks: water1 water2;
 Source: "OptData\00 patch.icons.lod"; DestDir: "{app}\Data\"; Tasks: icons1 icons2;
+Source: "OptData\01 mon pal.bitmaps.lod"; DestDir: "{app}\Data\"; Tasks: pal1 pal2;
+Source: "OptData\01 roc.sprites.lod"; DestDir: "{app}\Data\"; Tasks: pal1 pal2;
 Source: "OptFiles\*"; Excludes: "*.bak"; DestDir: "{app}"; Flags: onlyifdoesntexist recursesubdirs; AfterInstall: AfterInst;
 
 Source: "rus\*.*"; DestDir: "{app}"; Flags: promptifolder; Tasks: RusFiles1 RusFiles2;
@@ -150,12 +163,11 @@ var
   md: string;
 begin
   md:= GetMD5(path);
-  vis:= (md <> md5);
-  Result:= vis and not t.Checked;
-  if Result then
+  Result:= (md <> md5);
+  if Result and not t.Checked then
     t.On:= (md <> '') or not CheckVer(ver);
-  t.Checked:= t.Checked or vis;
-  vis:= vis and (t.On = checked);
+  t.Checked:= t.Checked or Result;
+  vis:= Result and (t.On = checked);
 end;
 
 
@@ -175,8 +187,20 @@ var
 
 function IconsTaskCheck(checked: Boolean): Boolean;
 begin
-  CheckOptLod(Icons, Result, '{app}\Data\00 patch.icons.lod', '{#IconsMD5}', checked, $20002);
+  CheckOptLod(Icons, Result, '{app}\OptData\00 patch.icons.lod', '{#IconsMD5}', checked, $20002);
 end;
+
+
+var
+  Pals: TTask;
+
+function PalTaskCheck(checked: Boolean): Boolean;
+begin
+  if not CheckOptLod(Pals, Result, '{app}\OptData\01 mon pal.bitmaps.lod', '{#PalMD5}', checked, $20005) then
+    CheckOptLod(Pals, Result, '{app}\OptData\01 roc.sprites.lod', '{#RocMD5}', checked, $20005);
+  Result:= Result and CheckNoMerge;
+end;
+
 
 
 var
@@ -239,6 +263,22 @@ begin
   Result:= not IsTaskSelected('water1 water2') and CheckNoMerge;
 end;
 
+const
+  CleanFiles: array[1..5] of string = ('00 patch.bitmaps.lod', '00 patch.games.lod',
+    '00 patch.T.lod', '01 mon pal.bitmaps.lod', '01 roc.sprites.lod');
+var
+  CleanFiles: array[1..5] of string;
+
+function MergeCleanCheck: Boolean;
+var
+  i: Integer;
+begin
+  Result:= false;
+  if CheckNoMerge then  exit;
+  for i:= 1 to high(CleanFiles) do
+    Result:= Result or Exists('{app}\Data\' + CleanFiles[i]);
+end;
+
 
 var
   UI: TTask;
@@ -298,7 +338,12 @@ begin
 end;
 
 procedure AfterInst;
+var
+  i: int;
 begin
   if BaseWaterCheck then
     DeleteFile(ExpandConstant('{app}\Data\01 water.bitmaps.lwd'));
+  if IsTaskSelected('MergeClean') then
+    for i:= 1 to high(CleanFiles) do
+      DeleteFile(ExpandConstant('{app}\Data\' + CleanFiles[i]));
 end;
