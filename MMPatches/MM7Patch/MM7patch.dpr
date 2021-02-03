@@ -300,9 +300,8 @@ Version 2.4.1:
 Version 2.5:
 (MM6-MM8)
 [+] WinScreenDelay hidden option controls Win screen delay during which all input is ignored. Default is 500 (half a second instead of game's original 5 seconds). 
-[+] Direct unaccelerated mouse input supported through hidden MouseSensitivityDirectMul option, but not enabled by default due to low accuracy. Set it to something like 1.5 to try.
+[+] Direct unaccelerated mouse input supported through MouseSensitivityDirectMul option.
 [+] FixConditionPriorities
-[+] HintStayTime
 [+] EnableAttackSpell
 [+] ShowHintWithRMB
 [+] ShooterMode
@@ -312,8 +311,9 @@ Version 2.5:
 [+] dist_mist, ViewDistanceD3D
 [+] MonSpritesSizeMul
 [+] FixHouseAnimationRestart
-[+] Support dgVoodoo option
 [+] CheckFreeSpace - Free space check when saving a game
+[+] ExitDialogsWithRightButton
+[-] HintStayTime
 [-] Casting stronger buffs did nothing if a weaker, but longer one is in place
 [-] Item spells were causing bugs when cast onto the very 1st item in the inventory
 [-] Now you can pick up stolen items from corpses of thieves (in MM7 and MM8 this was originally the case, but there was no indication)
@@ -323,14 +323,13 @@ Version 2.5:
 [-] Monster spell attacks were broken (esp. Poison Spray, Shrapmetal) (thanks cthscr)
     MM6: All spells were doing Fire damage
 [-] KeepCurrentDirectory
+[-] FixDeadPlayerIdentifyItem
 [-] Fixed another crash due to facets without vertexes
+[-] New Day wasn't triggered on beginning of a month when resting until down and pressing Esc
 [-] My bug: You were able to learn unavailable magic skills with keyboard navigation
 [*] My inactive players acting fix wasn't perfect
 [*] Now spell skills that don't fit are drawn over buttons. Still better than making them inaccessible.
-[!!] Names.txt and Global.txt in MM6 - cmp with 7, "Minotuars" in MM8 Promotion Quest NPC
-[!!] Spells.txt Acid Splash element
-[!!] FPS don't do std action?
-[!!] MM8 obelisk in setup
+[*] 3DO and other logos in postponed intro, unless NoIntoLogos
 (MM6, MM7)
 [-] Snow X speed was effected by strafing too much
 (MM7, MM8)
@@ -338,9 +337,8 @@ Version 2.5:
 [+] The game doesn't crash on exit if d3dsprite.hwl and d3dbitmap.hwl are missing
 [+] Minimap background picture (mainly for color blind)
 [+] ClickThroughEffects now works in Hardware mode
-[+] SystemDDraw
+[+] SystemDDraw / support dgVoodoo
 [+] IndoorFovMul (0.813)
-[-] Another crash caused by vertexless facets
 [-] Restore AnimatedTFT bit from Blv rather than Dlv to avoid crash
 [-] FixMonstersBlockingShots
 [-] Duration string for items wasn't localized
@@ -351,6 +349,10 @@ Version 2.5:
 [-] FixIceBoltBlast
 [-] FixEnergyDamageType - Ener damage type was being turned into Earth
 [-] No more gamma.pcx
+[-] Souldrinker was hitting monsters beyond party range
+[-] Acid Burst was doing physical damage
+[-] Inability to equip sword or dagger when non-master spear is equipped
+[-] Arcomage hanging in some circumstances 
 [-] My bug: Crash in full screen if BorderlessFullscreen=0
 [-] My bug: Mipmaps were always on in full screen if BorderlessFullscreen=0 and MipmapsCount>1
 [-] My bug: Empty icons were causing division by zero in UI Layout code
@@ -358,7 +360,7 @@ Version 2.5:
 (MM6)
 [-] End game movies were unskippable, as well as the intro on first launch
 [-] Game wasn't paused in Enchant Item screen
-[-] FixParalize
+[-] FixParalyze
 [-] Party was attacking enemies during their dying animation
 [-] My bug: Keyboard control in spell book was causing spells to be cast accidentally with arrow keys
 (MM7)
@@ -373,16 +375,15 @@ Version 2.5:
 [-] lloyd pcx broken
 
 
-[!!!] Show 3DO/NWC intros
 
-[!!!] Acid burst - fire damage
-
-[!!] Smooth video sides
+[!!] Smooth video sides?
+[!!] Show videos from MM6 without black bars, support HD videos
 [!!] Prioritize geometry near the center
 [!!] Night sky, better day/night cycle, sun?
 [!!] Different configs for mouse look/no mouse look? No HKLM
-[!!] What about adding a right-click option that lets you exit conversations and houses?
 [!!] Configurable (Caps Lock) key for mouse look
+[!!] "Minotuars" in MM8 Promotion Quest NPC
+[!!] FPS don't do std action?
 
 (Figo:) Is there still the limit of how many we can acquire with one party (~13)?
 I've read that in the Merge there is none, so how about a vanilla game?

@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Classes, RSSysUtils, Math, Common, IniFiles,
-  RSCodeHook, RSStrUtils, RSQ, Direct3D, Graphics, RSGraphics;
+  RSCodeHook, RSStrUtils, RSQ, Direct3D, Graphics, RSGraphics, RSIni;
 
 {$I MMPatchVer.inc}
 
@@ -62,6 +62,7 @@ const
   hqFixMonsterAttackTypes = 75;
   hqFixMonsterSpells = 76;
   hqCheckFreeSpace = 77;
+  hqFixSouldrinker = 78;
 
 {$IFDEF mm6}
   m6 = 1;
@@ -159,6 +160,7 @@ type
     MonSpritesSizeMul: int;                   //
     FixMonsterAttackTypes: LongBool;          // (unused in MM6)
     FixMonsterSpells: LongBool;               //
+    FixSouldrinker: LongBool;                 //
   end;
 
 var
@@ -184,7 +186,8 @@ var
 var
   QuickSavesCount, QuickSaveKey, TurnBasedSpeed, TurnBasedPartySpeed,
   WindowWidth, WindowHeight, RenderMaxWidth, RenderMaxHeight, MipmapsCount,
-  WinScreenDelay, HintStayTime, dist_mist, ViewDistanceD3D, IndoorAntiFov: int;
+  WinScreenDelay, HintStayTime, dist_mist, ViewDistanceD3D, IndoorAntiFov,
+  AddDescriptions: int;
 
   MLookSpeed, MLookSpeed2: TPoint;
   MouseLookRememberTime, ShooterDelay: uint;
@@ -211,7 +214,7 @@ var
   ShowHintWithRMB, WasInDialog, FixHitDistantMonstersIndoor,
   GreenItemsWhileRightClick, FixDeadPlayerIdentifyItem,
   DeadPlayerShowItemInfo, SystemDDraw, UseVoodoo, NeedFreeSpaceCheck,
-  FixHouseAnimationRestart, ExitTalkingWithRightButton: Boolean;
+  FixHouseAnimationRestart, ExitTalkingWithRightButton, NoIntoLogos: Boolean;
   DoubleSpeed: BOOL;
   {$IFNDEF mm6}
   NoVideoDelays, DisableAsyncMouse, ShowTreeHints: Boolean;
@@ -234,6 +237,7 @@ var
   MappedKeys, MappedKeysBack: array[0..255] of Byte;
 {$ELSEIF defined(mm7)}
   UseMM7text, SupportMM7ResTool: Boolean;
+  FlyNPCScreen: int = 4;
 {$ELSEIF defined(mm8)}
   NoWaterShoreBumpsSW, FixQuickSpell, FixIndoorFOV: Boolean;
   MouseBorder, StartupCopyrightDelay: int;
@@ -518,6 +522,7 @@ const
   _DialogsHigh = pint(m6*$4D46BC + m7*$5074B0 + m8*$518CE8);
   _Dialogs: ^TVisibleDlgArray = ptr(m6*$4CB5F8 + m7*$507460 + m8*$5185B4);
   _DlgArray: ^TDlgArray = ptr(m6*$4D48F8 + m7*$506DE8 + m8*$518608);
+  _DlgSimpleMessage = ppchar(m6*$4D50E4 + m7*$507A64 + m8*$519348);
   _HouseScreen = pint(m6*$9DDD8C + m7*$F8B01C + m8*$FFD408);
   _HouseExitMap = pint(m6*$55BDA4 + m7*$5C3450 + m8*$5DB8FC);
   _HouseNPCCount = pint(m6*$53CB60 + m7*$5912A4 + m8*$5A5714);
@@ -582,8 +587,11 @@ const
   _FreePcx: procedure(_,_1: int; var pcx: TLoadedPcx) = ptr(m6*$4091F0 + m7*$40E52B + m8*$40F7F6);
   _DrawPcx: procedure(_,__, screen: int; var pcx: TLoadedPcx; y, x: int) = ptr(m7*$4A5B73 + m8*$4A3A04);
   _FaceAnim: procedure(_,__: int; pl: ptr; _3, action: int) = ptr(m6*$488CA0 + m7*$4948A9 + m8*$492BCD);
-  _Mon_IsAgainstMon: function(_: int; against, who: ptr): int = ptr(m7*$40104C + m8*$401051);
   _DrawItemInfoBox: procedure(n1, n2: int; it: ptr) = ptr(m6*$41C440 + m7*$41D83E + m8*$41CDC2);
+  _Mon_IsAgainstMon: function(_: int; against, who: ptr): int = ptr(m7*$40104C + m8*$401051);
+  _GetDistance: function(_, x, y, z: int): int = ptr(m6*$445420 + m7*$462217 + m8*$46003B);
+
+  _Character_GetSkillWithBonuses: function(n1,n2:int; this: ptr; skill: int):int = ptr(m7*$48F87A + m8*$48EF4F);
 
 {$IFNDEF mm6}
 var
@@ -597,6 +605,8 @@ procedure LoadExeMods;
 function GetMipmapsCountProc(var a: THwlBitmap; p: PChar): int;
 procedure AddMipmapBase(p: PChar; v: int);
 {$ENDIF}
+procedure AddIniInfo(ini: TCustomIniFile; const sect, key, info, fullIni: string); overload;
+procedure AddIniInfos(ini: TRSMemIniStrings; const section: string; list: TRSKeyValueList; del: TStrings = nil);
 function GetMapExtra: PMapExtra;
 
 // make semi-transparent borders not black when scaling
@@ -605,6 +615,7 @@ procedure Wnd_PaintBorders(wnd: HWND; wp: int);
 procedure Wnd_Sizing_GetWH(wnd: HWND; const r: TRect; var w, h: int);
 procedure Wnd_Sizing(wnd: HWND; side: int; var r: TRect);
 procedure Wnd_Sizing_SetWH(wnd: HWND; side: int; var r: TRect; dw, dh: int);
+procedure CheckHook(var hk: TRSHookInfo);
 procedure CheckHooks(var Hooks);
 procedure ClipCursorRel(r: TRect);
 function PtInView(x, y: int): Boolean;
@@ -650,37 +661,89 @@ begin
     DisabledHooks.Add(Trim(RSGetToken(ps, i)));
 end;
 
+procedure AddIniInfo(ini: TCustomIniFile; const sect, key, info, fullIni: string); overload;
+var
+  s: string;
+  c, c1: char;
+begin
+  s:= ini.ReadString(sect, key, #13#10);
+  if (s = #13#10) or (length(s) >= 2047) or (pos(info, fullIni) > 0) then
+    exit;
+  if s <> '' then
+  begin
+    c:= s[1];
+    c1:= s[length(s)];
+    if (c in ['"', '''']) and (c1 = c) or (ord(c) <= 32) or (ord(c1) <= 32) then
+      s:= '"' + s + '"';
+  end;
+  ini.WriteString(sect, key, s + info);
+end;
+
+procedure DelIniInfo(ini: TRSMemIniStrings; i: int; const info: string);
+begin
+  while (i < ini.Count) and not ini.IsSectionHeader(i) do
+    if ini[i] = info then
+    begin
+      ini.Delete(i);
+      if (i < ini.Count) and (ini[i] = '') then
+        ini.Delete(i);
+    end else
+      inc(i);
+end;
+
+procedure AddIniInfo(ini: TRSMemIniStrings; sect: int; const key, info: string); overload;
+var
+  k: int;
+begin
+  if not ini.FindKey(sect, key, k) then  exit;
+  ini.Insert(k + 1, info);
+  if (k + 2 = ini.Count) or (ini[k + 2] <> '') then
+    ini.Insert(k + 2, '');
+end;
+
+procedure AddIniInfos(ini: TRSMemIniStrings; const section: string; list: TRSKeyValueList; del: TStrings = nil);
+var
+  s: string;
+  i, sect, k: int;
+begin
+  sect:= ini.FindSection(section) + 1;
+  if sect < 0 then  exit;
+  for i := 0 to List.Count - 1 do
+  begin
+    s:= ' ; ' + list.Values[i];
+    if s[length(s)] <> '.' then
+      s:= s + '.';
+    if (AddDescriptions < 0) or not ini.FindKey(sect, list[i], k) or
+       (k + 1 = ini.Count) or (ini[k + 1] <> s) then
+    begin
+      DelIniInfo(ini, sect, s);
+      if AddDescriptions > 0 then
+        AddIniInfo(ini, sect, list[i], s);
+    end;
+  end;
+  if del <> nil then
+    for i := 0 to del.Count - 1 do
+      DelIniInfo(ini, sect, del[i]);
+end;
+
 procedure LoadIni;
 var
-  ini, iniOverride: TIniFile;
-  sect, info, curInfo, fullIni: string;
-  NoInfo: Boolean;
+  ini, iniOverride: TRSMemIni;
+  sect, info: string;
+  InfoList: TRSKeyValueList;
+  DelList: TStringList;
+  Rebuild: Boolean;
 
-  procedure CheckInfo(const key: string);
-  var
-    s: string;
-    c, c1: char;
+  procedure AddInfo(const key: string);
   begin
-    if NoInfo or (curInfo = '') or (pos('; ' + curInfo + ':', fullIni) > 0) then
-      exit;
-    s:= ini.ReadString(sect, key, #13#10);
-    if (s = '#13#10') or (length(s) >= 2047) then
-      exit;
-    if s <> '' then
-    begin
-      c:= s[1];
-      c1:= s[length(s)];
-      if (c in ['"', '''']) and (c1 = c) or (ord(c) <= 32) or (ord(c1) <= 32) then
-        s:= '"' + s + '"';
-    end;
-    ini.WriteString(sect, key, '-'#13#10'; ' + curInfo + ':'#13#10 + key + '=' + s);
-    ini.DeleteKey(sect, key);
+    if info <> '' then
+      InfoList.Add(key, info);
+    info:= '';
   end;
 
   function ReadString(const key, default: string; write: Boolean = true): string;
   begin
-    curInfo:= info;
-    info:= '';
+    AddInfo(key);
     if iniOverride <> nil then
     begin
       Result:= iniOverride.ReadString(sect, key, #13#10);
@@ -690,17 +753,16 @@ var
     Result:= ini.ReadString(sect, key, #13#10);
     if Result = #13#10 then
     begin
+      Rebuild:= Rebuild or write;
       if write then
         ini.WriteString(sect, key, default);
       Result:= default;
     end;
-    CheckInfo(key);
   end;
 
   function ReadInteger(const key: string; default: int; write: Boolean = true): int;
   begin
-    curInfo:= info;
-    info:= '';
+    AddInfo(key);
     if iniOverride <> nil then
     begin
       Result:= iniOverride.ReadInteger(sect, key, 0);
@@ -710,11 +772,11 @@ var
     Result:= ini.ReadInteger(sect, key, 0);
     if (Result = 0) and (ini.ReadInteger(sect, key, 1) <> 0) then
     begin
+      Rebuild:= Rebuild or write;
       if write then
         ini.WriteInteger(sect, key, default);
       Result:= default;
     end;
-    CheckInfo(key);
   end;
 
   function ReadBool(const key: string; default: Boolean; write: Boolean = true): Boolean;
@@ -727,19 +789,14 @@ var
     s: string;
   begin
     Assert(iniOverride = nil);
-    curInfo:= info;
-    info:= '';
+    AddInfo(key);
     s:= ini.ReadString(sect, key, #13#10);
     if RSVal(s, Result) then
-    begin
-      CheckInfo(key);
       exit;
-    end;
+    Rebuild:= Rebuild or write;
     if write then
       ini.WriteString(sect, key, FloatToStr(default, FormatSettingsEN));
     Result:= default;
-    if write or (s <> #13#10) then
-      CheckInfo(key);
   end;
 
   function HasKey(const Key: string): Boolean;
@@ -761,22 +818,28 @@ const
    + 'Would you like to use the replacement ddraw.dll?';
 
 var
+  x: ext;
   i: int; {$IFDEF mm6}j: int;{$ENDIF}
 begin
   GetLocaleFormatSettings($409, FormatSettingsEN);
   iniOverride:= nil;
-  ini:= TIniFile.Create(AppPath + SIni);
+  ini:= TRSMemIni.Create(AppPath + SIni);
+  DelList:= TStringList.Create;
+  InfoList:= TRSKeyValueList.Create(false, false);
   with Options do
     try
       sect:= 'Settings';
       if not ini.ReadBool(sect, 'KeepCurrentDirectory', false) then
         SetCurrentDir(AppPath);
-      NoInfo:= not ini.ReadBool(sect, 'AddDescriptions', false);
-      if not NoInfo and FileExists(AppPath + SIni) then
-        fullIni:= RSLoadTextFile(AppPath + SIni);
+      AddDescriptions:= ini.ReadInteger(sect, 'AddDescriptions', 1);
+      Rebuild:= AddDescriptions < 0;
+      if AddDescriptions < 0 then
+        ini.WriteInteger(sect, 'AddDescriptions', 0);
+      info:= 'Set to 1 to add descriptions to INI entries, set to -1 to remove previously added descriptions, set to 0 to do nothing';
+      ReadInteger('AddDescriptions', 1);
 {$IFDEF mm6}
       _FlipOnExit^:= ReadInteger('FlipOnExit', 0, false);
-      info:= 'Makes the maximum volume of in-game CD Music the same as maximum of the normal Windows CD Audio Volume slider (set to 1 to enable)';
+      info:= 'Makes maximum volume of in-game CD Music the same as maximum of the normal Windows CD Audio Volume slider (set to 1 to enable)';
       _LoudMusic^:= ReadInteger('LoudMusic', 0);
       AlwaysRun:= ReadBool('AlwaysRun', true, false);
       FixWalk:= ReadBool('FixWalkSound', true, false);
@@ -792,9 +855,9 @@ begin
       DisableAsyncMouse:= ReadBool('DisableAsyncMouse', true, false);
 {$ENDIF}
       info:= 'Caps Lock key will toggle running/walking if this is set to 1';
-      CapsLockToggleRun:= ReadBool('CapsLockToggleRun', false);
+      CapsLockToggleRun:= ReadBool('CapsLockToggleRun', false, false);
 
-      info:= 'A history of this many quick saves would be kept';
+      info:= 'This many recent quick saves would be kept';
       QuickSavesCount:= ReadInteger('QuickSavesCount', 3);
       info:= 'Quick Save key code (F11 by default. Use MM6 Controls program to find out the code of a key)';
 {$IFNDEF mm8}
@@ -815,7 +878,7 @@ begin
       info:= 'Quick Load key code (use MM6 Controls program to find out the code of a key)';
       QuickLoadKey:= ReadInteger('QuickLoadKey', 0);
 
-      info:= 'Set to 1 disable the death movie';
+      info:= 'Set to 1 to disable the death movie';
       NoDeathMovie:= ReadBool('NoDeathMovie', false, false);
       info:= 'Skips intro and makes it appear when you press the New Game button instead (unless "PostponeIntro" is set to 0)';
       if ReadBool('NoIntro', false) then
@@ -837,7 +900,7 @@ begin
       MusicLoopsCount:= ReadInteger('MusicLoopsCount', 1);
 
       ReputationNumber:= ReadBool('ReputationNumber', true, false);
-      info:= 'Key that double game speed (F2 by default. Use MM6 Controls program to find out the code of a key)';
+      info:= 'Key that doubles game speed (F2 by default. Use MM6 Controls program to find out the code of a key)';
       DoubleSpeedKey:= ReadInteger('DoubleSpeedKey', VK_F2);
       info:= 'Smooth turn speed when not in double speed mode';
       TurnSpeedNormal:= ReadInteger('TurnSpeedNormal', 100)/100;
@@ -846,25 +909,23 @@ begin
       ProgressiveDaggerTrippleDamage:= ReadBool('ProgressiveDaggerTrippleDamage', true, false);
       info:= 'Set to -1 to disable MM8 original implementation of mouse look. Set to a value above 0 to perform rotation when mouse is this close to view border';
       {$IFDEF mm8}MouseBorder:= ReadInteger('MouseLookBorder', 100);{$ENDIF}
-      info:= '';
+      info:= 'If set to 1, items that didn''t fit into a chest would appear next time you open it';
       FixChests:= ReadBool('FixChests', false, false);
-      info:= 'Minimal recovery value of blasters and bows (use to be 0 in original game)';
+      info:= 'Minimal recovery value of blasters and bows (used to be 0 in original game)';
       {$IFNDEF mm8}BlasterRecovery:= ReadInteger('BlasterRecovery', 4);{$ENDIF}
       info:= '';
       DataFiles:= ReadBool('DataFiles', true, false);
-      info:= 'Enable mouse look mode, which lets you look around by moving mouse';
+      info:= 'Enables mouse look mode, which lets you look around by moving mouse';
       MouseLook:= ReadBool('MouseLook', false);
       info:= 'Mouse sensitivity';
-      MLookSpeed.X:= ReadInteger('MouseSensitivityX', 35);
-      MLookSpeed.Y:= ReadInteger('MouseSensitivityY', MLookSpeed.X, false);
+      x:= ReadFloat('MouseSensitivityX', 35);
+      MLookSpeed.X:= Round(x*32);
+      MLookSpeed.Y:= Round(ReadFloat('MouseSensitivityY', x, false)*32);
       info:= 'Mouse sensitivity when "MouseLookUseAltMode" setting is enabled';
-      MLookSpeed2.X:= ReadInteger('MouseSensitivityAltModeX', 75);
-      MLookSpeed2.Y:= ReadInteger('MouseSensitivityAltModeY', MLookSpeed2.X, false);
-      MLookSpeed.X:= MLookSpeed.X*32;
-      MLookSpeed.Y:= MLookSpeed.Y*32;
-      MLookSpeed2.X:= MLookSpeed2.X*32;
-      MLookSpeed2.Y:= MLookSpeed2.Y*32;
-      info:= 'Set to a positive value to use raw mouse input (a value can be non-integer). Mouse sensitivity is multiplied by this number';
+      x:= ReadFloat('MouseSensitivityAltModeX', 75);
+      MLookSpeed2.X:= Round(x*32);
+      MLookSpeed2.Y:= Round(ReadFloat('MouseSensitivityAltModeY', x, false)*32);
+      info:= 'Set to a positive value to use raw mouse input (a value can be non-integer). Mouse sensitivity is then multiplied by this number';
       MLookRawMul:= ReadFloat('MouseSensitivityDirectMul', 0);
       MLookRaw:= (MLookRawMul > 0);
       info:= 'Key used to toggle mouse look (middle mouse button by default)';
@@ -878,25 +939,29 @@ begin
       info:= 'Set to 1 to enable looking around while the game is paused by right mouse button press';
       if ReadBool('MouseLookWhileRightClick', false) then
         MLookRightPressed:= @DummyFalse;
+      info:= 'Enables flying up/down by looking in that direction in MouseLook mode';
       MouseFly:= ReadBool('MouseLookFly', true, false);
       info:= 'Enables flying up/down by turning mouse wheel';
       MouseWheelFly:= ReadBool('MouseWheelFly', true);
       MouseLookRememberTime:= max(1, ReadInteger('MouseLookRememberTime', 10*1000, false));
+      info:= 'Makes direction keys always perform strafing when Ctrl isn''t pressed';
       AlwaysStrafe:= ReadBool('AlwaysStrafe', false, false);
       StandardStrafe:= ReadBool('StandardStrafe', false, false);
       {$IFDEF mm8}StartupCopyrightDelay:= ReadInteger('StartupCopyrightDelay', 0, false);{$ENDIF}
-      info:= 'Pressing this key will make you move forward until you do something other than turning (F3 by default. Use MM6 Controls program to find out the code of a key)';
+      info:= 'Press this key once to continuously move forward until you do something other than turning (F3 by default. Use MM6 Controls program to find out the code of a key)';
       AutorunKey:= ReadInteger('AutorunKey', VK_F3);
+{$IFNDEF mm6}
       {$IFDEF mm7}info:= 'Saturation multiplier for all graphics (0.65 by default)';{$ENDIF}
       {$IFDEF mm8}info:= 'Saturation multiplier for all graphics (1.0 by default)';{$ENDIF}
-{$IFNDEF mm6}
       PaletteSMul:= ReadFloat('PaletteSMul', m7*0.65 + m8*1);
       info:= 'Lightness aka Value multiplier for all graphics (1.1 by default, 1.04 for no change)';
       PaletteVMul:= ReadFloat('PaletteVMul', 1.1);
       NoBitmapsHwl:= not FileExists('data\d3dbitmap.hwl') or ReadBool('NoD3DBitmapHwl', true, false);
       if NoBitmapsHwl then
       begin
+        info:= 'Number of HDWTR* bitmaps, automatically assigned during patch installation';
         HDWTRCount:= max(1, min(15, ReadInteger('HDWTRCount', 7 + m8, false)));
+        info:= 'Time each HDWTR* bitmap is shown in Hardware 3D water animation';
         HDWTRDelay:= max(1, ReadInteger('HDWTRDelay', 20, false));
       end else
       begin
@@ -988,8 +1053,8 @@ begin
       info:= '';
       {$IFDEF mm7}FixLichImmune:= ReadBool('FixLichImmune', true, false);{$ENDIF}
       {$IFDEF mm6}FixParalyze:= ReadBool('FixParalyze', true, false);{$ENDIF}
-      info:= 'When enabled, lets you choose a spell that would be used by a player instead of regular attack';
-      EnableAttackSpell:= ReadBool('EnableAttackSpell', true);
+      info:= 'When enabled, you can choose a spell that would be used by a player instead of regular attack';
+      EnableAttackSpell:= ReadBool('EnableAttackSpell', true, false);
       info:= 'Set this to 1 to enable shooter mode (see patch readme for more info)';
       ShooterMode:= BoolToInt[ReadBool('ShooterMode', false)];
       ShowHintWithRMB:= ReadBool('ShowHintWithRMB', true, false);
@@ -1013,17 +1078,19 @@ begin
       dist_mist:= ReadInteger('dist_mist', m6*$2000, false);
       MonSpritesSizeMul:= Round($10000*ReadFloat('MonSpritesSizeMul', 0, false));
       {$IFNDEF mm6}
-      //info:= 'View distance in Direct 3D mode. Causes minor graphical glitches. Set to 0 to disable.';
+      info:= 'View distance in Direct 3D mode. Causes minor graphical glitches. Set to 0 to disable';
       ViewDistanceD3D:= ReadInteger('ViewDistanceD3D', 12000);
       FixIceBoltBlast:= ReadBool('FixIceBoltBlast', true, false);
       FixMonsterAttackTypes:= ReadBool('FixMonsterAttackTypes', true, false);
       IndoorAntiFov:= Round(300/ReadFloat('IndoorFovMul', 300/369, false));
+      FixSouldrinker:= ReadBool('FixSouldrinker', true, false);
       {$ENDIF}
       FixHouseAnimationRestart:= ReadBool('FixHouseAnimationRestart', true, false);
-      info:= 'Makes right mouse button act as Esc in houses, NPC, map entrance and message dialogs.';
+      info:= 'Makes right mouse button act as Esc in houses, NPC, map entrance and message dialogs';
       ExitTalkingWithRightButton:= ReadBool('ExitDialogsWithRightButton', false, false);
       FixMonsterSpells:= ReadBool('FixMonsterSpells', true, false);
       NeedFreeSpaceCheck:= ReadBool('CheckFreeSpace', true, false);
+      NoIntoLogos:= ReadBool('NoIntoLogos', false, false);
 
 {$IFDEF mm6}
       info:= 'Set this to 0 to disable loading of mm6text.dll';
@@ -1076,8 +1143,28 @@ begin
       info:= '';
       ReadDisabledHooks(ReadString('DisableHooks', '', false));
 
+      // Add info
+      if AddDescriptions <> 0 then
+        AddIniInfos(ini.Lines, sect, InfoList, DelList);
+{      ini.Flush;
+      if (DelList.Count > 0) or Rebuild then
+      begin
+        fullIni:= RSLoadTextFile(AppPath + SIni);
+        for i := 0 to DelList.Count - 1 do
+          fullIni:= RSStringReplace(fullIni, DelList[i], '');
+        if Rebuild then
+          for i := 0 to InfoList.Count div 2 - 1 do
+            fullIni:= RSStringReplace(fullIni, InfoList[i*2 + 1], '');
+        RSSaveTextFile(AppPath + SIni, fullIni);
+        ini.Reload;
+      end;
+
+      if AddDescriptions > 0 then
+        for i := 0 to InfoList.Count div 2 - 1 do
+          AddIniInfo(ini, sect, InfoList[i*2], InfoList[i*2 + 1], fullIni);}
+
       iniOverride:= ini;
-      ini:= TIniFile.Create(AppPath + SIni2);
+      ini:= TRSMemIni.Create(AppPath + SIni2);
 
       QuickSaveName:= ReadString('QuickSavesName', {$IFNDEF mm8}'Quicksave'{$ELSE}''{$ENDIF});
       if ReadBool('SpaceBeforeQuicksaveDigit', false) then
@@ -1114,6 +1201,8 @@ begin
     finally
       ini.Free;
       iniOverride.Free;
+      DelList.Free;
+      InfoList.Free;
     end;
 end;
 
@@ -1341,19 +1430,23 @@ begin
     inc(r.Bottom, dh);
 end;
 
+procedure CheckHook(var hk: TRSHookInfo);
+begin
+  if not RSCheckHook(hk) then
+    raise Exception.CreateFmt(SWrong, [hk.p]);
+  if DisabledHooks.IndexOf(IntToHex(hk.p, 0)) >= 0 then
+    hk.Querry:= -100;
+end;
+
 procedure CheckHooks(var Hooks);
 var
   hk: array[0..1] of TRSHookInfo absolute Hooks;
   i: int;
 begin
-  i:= RSCheckHooks(Hooks);
-  if i >= 0 then
-    raise Exception.CreateFmt(SWrong, [hk[i].p]);
   i:= 0;
   while hk[i].p <> 0 do
   begin
-    if DisabledHooks.IndexOf(IntToHex(hk[i].p, 0)) >= 0 then
-      hk[i].Querry:= -100;
+    CheckHook(hk[i]);
     inc(i);
   end;
 end;

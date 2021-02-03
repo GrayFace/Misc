@@ -36,7 +36,7 @@ function FindSprite(var sp3d: TSpriteD3D): PSprite; overload;
 var
   AllowMovieQuickLoad: Boolean;
   ArrowCur: HCURSOR;
-  MouseLookOn, MLookIsTemp, SkipMouseLook: Boolean;
+  MouseLookOn, WasMouseLookOn, MLookIsTemp, SkipMouseLook: Boolean;
 
 implementation
 
@@ -416,6 +416,7 @@ const
 var
   cur: HCURSOR;
 begin
+  WasMouseLookOn:= MouseLookOn;
   if SkipMouseLook then  // a hack for right-then-left click combo
   begin
     SkipMouseLook:= false;
@@ -536,12 +537,13 @@ var
 begin
   sz:= SizeOf(a);
   GetRawInputData(h, RID_INPUT, a, sz, SizeOf(RAWINPUTHEADER));
-  if a.header.dwType <> RIM_TYPEMOUSE then  exit;
-  if (a.usFlags and 1 = 0) and MouseLookOn and (_MainMenuCode^ < 0) and (GetForegroundWindow = _MainWindow^) then
+  if (a.header.dwType <> RIM_TYPEMOUSE) or (a.usFlags and 1 <> 0) then  exit;
+  MouseLookOn:= MouseLookOn and (_MainMenuCode^ < 0) and (GetForegroundWindow = _MainWindow^);
+  if MouseLookOn and WasMouseLookOn then
   begin
     inc(MLookDX, a.lLastX);
     inc(MLookDY, a.lLastY);
-  end; // else absolute position is given
+  end;
 end;
 
 procedure MouseLookHook(p: TPoint); stdcall;
@@ -1806,11 +1808,54 @@ const
   Stoned      = 15;
   Eradicated  = 16;
   Zombie      = 17;
-  CondOrder: array[0..17] of int = (Eradicated, Dead, Stoned, Unconscious,
+  CondOrder: array[0..17 - m6] of int = (Eradicated, Dead, Stoned, Unconscious,
      Paralyzed, Asleep, Weak, Cursed, Disease3, Poison3, Disease2, Poison2,
-     Disease1, Poison1, Insane, Drunk, Afraid, Zombie);
+     Disease1, Poison1, Insane, Drunk, Afraid{$IFNDEF mm6}, Zombie{$ENDIF});
+  OldCond = m6*$4C276C + m7*$4EDDA0 + m8*$4FDFA8;
+  CodeStart = m6*$482D30 + m7*$48E9EC + m8*$48E127;
+  CodeSize = m6*$482D74 + m7*$48EA13 + m8*$48E14E - CodeStart;
+{$IFDEF mm6}
+  ArrRef: array[0..7] of int = ($4133EF, $41365C, $4849B0, $4849D4, $484A34, $482D36, $482D5A, $482D6C);
+  CodeRef: array[0..3] of int = ($4145C0, $417124, $41AB1D, $42D410);
+{$ELSEIF defined(mm7)}
+  ArrRef: array[0..2] of int = ($418126, $48E9F2, $48EA0D);
+  CodeRef: array[0..4] of int = ($418A04, $41AA48, $41D583, $434E18, $490A1D);
+{$ELSE}
+  ArrRef: array[0..2] of int = ($417849, $48E12D, $48E148);
+  CodeRef: array[0..7] of int = ($4181A3, $41AAA5, $41CAD7, $4304E2, $43260A, $43278B, $48FB88, $4C915A);
+{$IFEND}
+  HookCode: TRSHookInfo = (old: CodeStart; t: RShtCall);
+  HookArr: TRSHookInfo = (old: OldCond; newp: @CondOrder; t: RSht4);
+var
+  hk: TRSHookInfo;
+  i, p: int;
 begin
-  CopyMemory(ptr(m6*$4C276C + m7*$4EDDA0 + m8*$4FDFA8), @CondOrder, SizeOf(CondOrder) - m6*4);
+  //CopyMemory(ptr(OldCond), @CondOrder, SizeOf(CondOrder));
+  p:= RSAllocCode(CodeSize);
+  CopyMemory(ptr(p), ptr(CodeStart), CodeSize);
+  hk:= HookCode;
+  hk.new:= p;
+  for i := 0 to high(CodeRef) do
+  begin
+    hk.p:= CodeRef[i];
+    CheckHook(hk);
+    RSApplyHook(hk);
+  end;
+
+  for i := 0 to high(ArrRef) do
+  begin
+    hk:= HookArr;
+    hk.p:= ArrRef[i];
+    if uint(hk.p - CodeStart) < CodeSize then
+      inc(hk.p, p - CodeStart);
+    if pint(hk.p)^ <> OldCond then
+    begin
+      inc(hk.old, SizeOf(CondOrder));
+      inc(PChar(hk.newp), SizeOf(CondOrder));
+    end;
+    CheckHook(hk);
+    RSApplyHook(hk);
+  end;
 end;
 
 //----- Fix element hints staying active in some dialogs
@@ -2518,11 +2563,6 @@ end;
 
 function DrawShooter: Boolean;
 const
-{  DrawX = (1-m8)*394 + m8*574 + 16;
-  DrawY = (1-m8)*288 + m8*298 + 18 + 43;
-  MinW = 12;
-  MinH = 14;
-  DeltaW = 40 - 12;}
   DrawX = (1-m8)*(394 + 18) + m8*(574 + 16) + 42;
   DrawY = (1-m8)*(288 + 10) + m8*(298 + 18);
   DeltaW = 40 - 12;
@@ -2661,12 +2701,12 @@ procedure HookHitDistantMonster;
 const
   IndoorOrOutdoor = int(_IndoorOrOutdoor);
 asm
-  jz @no
+{  jz @no
   cmp dword ptr [IndoorOrOutdoor], 2
   jnz @no
   cmp dword ptr [ebp - $14 - m8*4], 5120 + 250
   jl @ok
-@no:
+@no:}
   mov [esp], m7*$439E0F + m8*$4378C6
 @ok:
 end;
@@ -2718,43 +2758,6 @@ asm
   mov ecx, 1
 @ok:
 end;
-
-//----- Hint - ignore disappearing hint if RMB is pressed (attempt)
-
-//procedure SetHintHook;
-//const
-//  RightButtonPressed = int(_RightButtonPressed);
-//asm
-//  jz @std
-//  cmp dword ptr [RightButtonPressed], 1
-//{$IFNDEF mm6}
-//  jnz @std
-//  xor eax, eax
-//  cmp eax, 1
-//{$ENDIF}
-//@std:
-//end;
-//
-//procedure DrawHintHook;
-//const
-//  RightButtonPressed = int(_RightButtonPressed);
-//  p = int(_StatusText) + 200;
-//asm
-//{$IFNDEF mm6}
-//  jz @std
-//{$ENDIF}
-//  cmp dword ptr [RightButtonPressed], 1
-//  jnz @std
-//{$IFDEF mm7}
-//  cmp byte ptr [p], 0
-//  setz al
-//  test al, al
-//{$ELSE}
-//  xor eax, eax
-//  cmp al, 1
-//{$ENDIF}
-//@std:
-//end;
 
 //----- Display Inventory screen didn't work with unconscious players
 
@@ -3215,10 +3218,72 @@ asm
 @ok:
 end;
 
+//----- Souldrinker was hitting monsters beyond party range
+
+procedure FixSouldrinkerHook;
+const
+  range: Single = 5120;
+asm
+  fld range
+end;
+
+//----- Acid Burst doing physical damage
+
+procedure FixAcidBurst;
+asm
+  cmp dword ptr [esp + $24 - 8], 29
+  jnz @std
+  mov byte ptr [edi], 2
+@std:
+end;
+
+//----- Unable to equip sword or dagger when non-master spear is equipped
+
+procedure EquipOnSpearHook;
+const
+  ItemType = m7*$468FDC + m8*$467460 - 5;
+asm
+  add eax, [ItemType]
+  cmp byte ptr [eax + 1], 4
+  jnz @std
+  push edx
+  push ecx
+  push 4
+  mov ecx, ebx
+  call _Character_GetSkillWithBonuses
+  cmp ax, $80
+  pop ecx
+  pop edx
+  jnb @std
+{$IFDEF mm7}
+  mov [ebp - $10], ecx
+{$ELSE}
+  mov [ebp - $C], edi
+{$ENDIF}
+@std:
+end;
+
+//----- Fix Arcomage hanging
+
+procedure FixArcomage;
+const
+  MouseEvent = m7*$505720 + m8*$516D78;
+asm
+  cmp dword ptr [MouseEvent], 0
+  jnz @ok
+{$IFDEF mm7}
+  mov edx, ebp
+{$ELSE}
+  mov edx, [ebp - 4]
+{$ENDIF}
+  mov [esp], m7*$40DC42 + m8*$40EF85
+@ok:
+end;
+
 //----- HooksList
 
 var
-  HooksCommon: array[1..39] of TRSHookInfo = (
+  HooksCommon: array[1..40] of TRSHookInfo = (
     (p: m6*$453ACE + m7*$463341 + m8*$461316; newp: @UpdateHintHook;
        t: RShtCallStore; Querry: hqFixStayingHints), // Fix element hints staying active in some dialogs
     (p: m6*$4226F8 + m7*$427E71 + m8*$4260A8; newp: @FixItemSpells;
@@ -3274,12 +3339,6 @@ var
        t: RShtAfter; size: 7; Querry: hqGreenItemsWhileRightClick), // Show items in green while right mouse buttom is pressed
     (p: m6*$42B197 + m7*$4300AF + m8*$42E855; newp: @FixQSpellPointsCheck;
        t: RShtBefore; size: 6 + m6), // Fix wrong Quick Spell spell points check
-//    (p: m6*$418F93 + m7*$41C095 + m8*$41B745; newp: @SetHintHook;
-//       t: RShtAfter; size: 5 + m6; Querry: hqShowHintWithRMB), // Hint - ignore disappearing hint if RMB is pressed
-//    (p: m7*$41C165 + m8*$41B7EA; newp: @DrawHintHook;
-//       t: RShtBefore; size: 6; Querry: hqShowHintWithRMB - m6*MaxInt), // Hint - ignore disappearing hint if RMB is pressed
-//    (p: m6*$418E66 + m7*$41C008; newp: @DrawHintHook;
-//       t: RShtAfter; size: 6 - m6; Querry: hqShowHintWithRMB - m8*MaxInt), // Hint - ignore disappearing hint if RMB is pressed
     (p: m6*$41C58E + m7*$41D96A + m8*$41CEF0; newp: @FixDeadIdentifyItemProc;
        t: RShtCall; Querry: hqFixDeadIdentifyItem), // Unconscious players identifying items in shop screens and on map
     (p: m6*$411049 + m7*$4169FD + m8*$4162A5; newp: @DeadShowItemInfoProc;
@@ -3297,6 +3356,8 @@ var
     (p: m6*$4919B6 + m7*$423B32 + m8*$421F9C; newp: @NoVertexHook;
        t: RShtBefore; size: m6*7 + m7*5 + m8*6), // Another crash due to facets without vertexes
     (p: m6*$4155D2 + m7*$4194F2 + m8*$419141; size: 2 + m8*4), // Don't hide skills that overflow
+    (p: m6*$4881DF + m7*$494139 + m8*$49236F; old: $86; new: $84;
+      t: RSht1), // New Day wasn't triggered on beginning of a month when resting until down and pressing Esc
     ()
   );
 {$IFDEF MM6}
@@ -3362,7 +3423,7 @@ var
     ()
   );
 {$ELSEIF defined(MM7)}
-  Hooks: array[1..107] of TRSHookInfo = (
+  Hooks: array[1..112] of TRSHookInfo = (
     (p: $47B84E; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (monsters)
     (p: $47B296; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (items)
     (p: $47AD40; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (sprites)
@@ -3472,13 +3533,18 @@ var
     (p: $404F99; t: RShtNop; size: 4; Querry: hqFixMonsterSpells), // Monster spells were broken
     (p: $40570B; newp: @FixShrapmetal; t: RShtBefore; Querry: hqFixMonsterSpells), // Fix monsters' Shrapmetal spread
     (p: $47BB77; newp: @FixSpritesWrapAround; t: RShtBefore; size: 7), // Don't show sprites from another side of the map with increased FOV
+    (p: $42E4F0; old: $43642D; newp: @FixSouldrinkerHook; t: RShtCall; Querry: hqFixSouldrinker), // Souldrinker was hitting monsters beyond party range
+    (p: $453A31; old: $453AE6; newp: @FixAcidBurst; t: RShtBeforeJmp6), // Acid Burst doing physical damage
+    (p: $468FCF; newp: @EquipOnSpearHook; t: RShtAfter; size: 6), // Unable to equip sword or dagger when non-master spear is equipped
+    (p: $469037; size: $469041 - $469037), // Unable to equip sword or dagger when non-master spear is equipped
+    (p: $40DC7F; newp: @FixArcomage; t: RShtAfter; size: 6), // Fix Arcomage hanging
     ()
   );
 {$ELSE}
   FogRange: int;
   FogRangeFloat, FogRangeMul, FogRangeMul2: Single;
 
-  Hooks: array[1..106] of TRSHookInfo = (
+  Hooks: array[1..111] of TRSHookInfo = (
     (p: $47AB35; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Monsters not visible on the sides of the screen
     (p: $47A55E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Items not visible on the sides of the screen
     (p: $48B37E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Effects not visible on the sides of the screen
@@ -3588,6 +3654,11 @@ var
     (p: $405895; t: RShtNop; size: 4; Querry: hqFixMonsterSpells), // Monster spells were broken
     (p: $40531F; newp: @FixShrapmetal; t: RShtBefore; size: 8; Querry: hqFixMonsterSpells), // Fix Shrapmetal spread
     (p: $47AE66; newp: @FixSpritesWrapAround; t: RShtBefore; size: 7), // Don't show sprites from another side of the map with increased FOV
+    (p: $42C730; old: $433D70; newp: @FixSouldrinkerHook; t: RShtCall; Querry: hqFixSouldrinker), // Souldrinker was hitting monsters beyond party range
+    (p: $45119B; old: $451250; newp: @FixAcidBurst; t: RShtBeforeJmp6), // Acid Burst doing physical damage
+    (p: $467453; newp: @EquipOnSpearHook; t: RShtAfter; size: 6), // Unable to equip sword or dagger when non-master spear is equipped
+    (p: $4674BB; size: $4674C5 - $4674BB), // Unable to equip sword or dagger when non-master spear is equipped
+    (p: $40EFC3; newp: @FixArcomage; t: RShtAfter; size: 6), // Fix Arcomage hanging
     ()
   );
 {$IFEND}
@@ -3657,6 +3728,8 @@ begin
     ApplyHooks(hqFixMonsterAttackTypes);
   if Options.FixMonsterSpells then
     ApplyHooks(hqFixMonsterSpells);
+  if Options.FixSouldrinker then
+    ApplyHooks(hqFixSouldrinker);
 end;
 
 procedure ApplyMMHooksSW;
@@ -3714,15 +3787,6 @@ procedure LoadInterface;
 var
   i: int;
 begin
-{  c:= MinimapColor;
-  i:= _GreenColorBits^;
-  MinimapColor:= c shr (24-5) shl (i + 5) + Word(c) shr (16 - i) + byte(c) shr 3;}
-  //  Count < 1000) and (_DoLoadLodBitmap(0,0, _IconsLod, 2, 'mapbkg', Items[Count]) <> -1) then
-{  if (m6 = 0) and (_LodFind(0,0, _IconsLod, 0, 'mapbkg.pcx') <> nil) then
-  begin
-    _LoadPcx(0,0, MinimapBkgPcx, 0, 'mapbkg.pcx');
-    RSApplyHooks(Hooks, hqMinimapBkg);
-  end;}
   with _IconsLodLoaded^ do
     if (m6 = 0) and (Count < 1000) and (_DoLoadLodBitmap(0,0, _IconsLod, 2, 'mapbkg', Items[Count]) <> -1) then
     begin

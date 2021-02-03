@@ -15,10 +15,6 @@ function DXProxyScaleRect(const r: TRect): TRect;
 procedure DXProxyOnResize;
 procedure DXProxyDraw(SrcBuf: ptr; info: PDDSurfaceDesc2);
 procedure DXProxyDrawCursor(SrcBuf: ptr; info: PDDSurfaceDesc2);
-// very dirty experimental delayed interface drawing:
-function DXProxyLockInterfaceSurface(out info: TDDSurfaceDesc2): Boolean;
-procedure DXProxyUnlockInterfaceSurface;
-procedure DXProxyDrawLastInterface;
 
 var
   DXProxyRenderW, DXProxyRenderH, DXProxyMipmapCount, DXProxyMipmapCountRes: int;
@@ -664,55 +660,6 @@ begin
     RSFillDWord(p, desc.dwWidth, TransColor32);
     inc(p, desc.lPitch);
   end;
-end;
-
-function CreateDrawSurface(const DDraw: IDirectDraw4; var surf: IDirectDrawSurface4;
-   var desc: TDDSurfaceDesc2; w, h: int): Boolean;
-begin
-  with desc.ddpfPixelFormat do
-  begin
-    dwRGBBitCount:= 32;
-    dwRBitMask:= $FF0000;
-    dwGBitMask:= $FF00;
-    dwBBitMask:= $FF;
-    dwRGBAlphaBitMask:= $FF000000;
-  end;
-  desc.ddckCKSrcBlt.dwColorSpaceLowValue:= TransColor32;
-  desc.ddckCKSrcBlt.dwColorSpaceHighValue:= TransColor32;
-  desc.dwWidth:= w;
-  desc.dwHeight:= h;
-  desc.dwFlags:= DDSD_CKSRCBLT + DDSD_CAPS + DDSD_WIDTH + DDSD_HEIGHT;
-  Result:= DDraw.CreateSurface(desc, surf, nil) <> DD_OK;
-end;
-
-function DXProxyLockInterfaceSurface(out info: TDDSurfaceDesc2): Boolean;
-var
-  first: Boolean;
-begin
-  zSwap(DrawSurf, DrawSurfNext);
-  FillChar(info, SizeOf(info), 0);
-  info.dwSize:= SizeOf(info);
-  first:= (DrawSurfNext = nil);
-  Result:= first and CreateDrawSurface(IDirectDraw4(_DDraw^), DrawSurfNext, info, RenderLimX, RenderLimY);
-  Result:= Result or (DrawSurfNext.Lock(nil, info, DDLOCK_NOSYSLOCK or DDLOCK_WAIT, 0) <> DD_OK);
-  if not Result then
-    FillTrans(info);
-end;
-
-procedure DXProxyUnlockInterfaceSurface;
-begin
-  DrawSurfNext.Unlock(nil);
-end;
-
-procedure DXProxyDrawLastInterface;
-var
-  r: TRect;
-begin
-  r:= Rect(0, 0, RenderW, RenderH);
-  if DrawSurf <> nil then
-    BackBuffer.BltFast(0, 0, DrawSurf, @r, DDBLTFAST_WAIT + DDBLTFAST_SRCCOLORKEY)
-  else if DrawSurfNext <> nil then
-    BackBuffer.BltFast(0, 0, DrawSurfNext, @r, DDBLTFAST_WAIT + DDBLTFAST_SRCCOLORKEY);
 end;
 
 { THookedObject }

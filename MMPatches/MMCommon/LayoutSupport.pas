@@ -5,7 +5,8 @@ interface
 uses
   Windows, Messages, SysUtils, Classes, RSSysUtils, RSQ, Common, RSCodeHook,
   Math, MP3, RSDebug, IniFiles, Direct3D, Graphics, MMSystem, RSStrUtils,
-  DirectDraw, DXProxy, RSResample, RSGraphics, MMCommon, MMLayout, Types;
+  DirectDraw, DXProxy, RSResample, RSGraphics, MMCommon, MMLayout, Types,
+  RSIni;
 
 {$I MMPatchVer.inc}
 
@@ -47,8 +48,11 @@ type
     MLookPos: TPoint;
     LastContextMenu: TRect;
     LastContextMenuAlign: Boolean;
-    Ini: TIniFile;
+    Ini: TRSMemIni;
     IniSect: string;
+    InfoList: TRSKeyValueList;
+    InfoCount: int;
+    RebuildInfo: Boolean;
     WasActive, Activated: Boolean;
     LastScreen: int;
     HintAreaTop, HintAreaRight: int;
@@ -61,22 +65,26 @@ type
     procedure CanAdd(var it: TLayoutItem; var add: Boolean);
     procedure BeforeDraw(var Item: TLayoutItem; OnlyVirtual: Boolean);
     procedure DefaultValue(const Name: string; v: ext);
+    procedure VarInfo(const Name, info: string);
     procedure UnsetVar(const Name: string; write: Boolean);
     procedure LoadIni;
     procedure UpdateClipCursor;
     procedure UpdateRenderRect(const r: TRect);
     procedure UpdateGameStatus;
+    procedure UpdateIniInfo;
     procedure Deactivate;
     procedure ReloadLayout;
     procedure UpdateMinMax;
     procedure HintSuppression;
     procedure SetClockHeight(h: int);
+    function IsQuestion: Boolean;
   public
     RenderRect: TRect;
     RenderCenterX, RenderCenterY: ext;
     Updating, ScreenHasRightSide: Boolean;
     CanvasSwapUsed: array[TLayoutContextSwap] of Boolean;
     constructor Create;
+    destructor Destroy; override;
     procedure Draw(src, dest: ptr; stride: int);
     procedure MapMouse(var x1, y1: int; x, y, fw, fh: int);
     procedure MouseMessage(msg, wp: int);
@@ -147,6 +155,7 @@ begin
   L:= DL.Layout;
   L.OnCanAdd:= CanAdd;
   L.OnDefaultValue:= DefaultValue;
+  L.OnVarInfo:= VarInfo;
   L.OnUnsetVar:= UnsetVar;
   DL.OnLoadIcon:= LoadIcon;
   DL.OnDrawArea:= DrawArea;
@@ -166,6 +175,7 @@ begin
   L.Vars[lvRenderCenterY]:= 0.5;
   L.Vars[lvDebug]:= NaN;
   L.Vars[lvFOVMul]:= 1;
+  InfoList:= TRSKeyValueList.Create;
 end;
 
 procedure TLayoutSupport.Deactivate;
@@ -185,6 +195,7 @@ begin
     _UITextShadowColor^:= TextShColor[Alignment];
   end;
   SetClockHeight(67);
+  FlyNPCScreen:= 4;
 {$ENDIF}
 end;
 
@@ -192,8 +203,17 @@ procedure TLayoutSupport.DefaultValue(const Name: string; v: ext);
 var
   i: int;
 begin
-  if RSStartsStr('Options.', Name, @i) then
-    Ini.WriteString(IniSect, Copy(Name, i, MaxInt), FloatToStr(v, FormatSettingsEN));
+  if not RSStartsStr('Options.', Name, @i) then  exit;
+  Ini.WriteString(IniSect, Copy(Name, i, MaxInt), FloatToStr(v, FormatSettingsEN));
+  RebuildInfo:= (AddDescriptions > 0);
+end;
+
+destructor TLayoutSupport.Destroy;
+begin
+  DL.Free;
+  Ini.Free;
+  InfoList.Free;
+  inherited;
 end;
 
 procedure TLayoutSupport.Draw(src, dest: ptr; stride: int);
@@ -450,7 +470,7 @@ var
   i, k: int;
 begin
   if Ini = nil then
-    Ini:= TIniFile.Create(AppPath + SIni);
+    Ini:= TRSMemIni.Create(AppPath + SIni);
   sl:= TStringList.Create;
   with Ini do
     try
@@ -606,6 +626,11 @@ begin
   end;
 end;
 
+function TLayoutSupport.IsQuestion: Boolean;
+begin
+  Result:= (_DlgSimpleMessage^ <> nil) and (pint(_DlgSimpleMessage^ + $1C)^ = $1A);
+end;
+
 function TLayoutSupport.SwapCanvas(item: TLayoutContextSwap): Boolean;
 var
   p: pptr;
@@ -685,6 +710,7 @@ begin
   L.Vars[lvTreeHints]:= TreeHintsVal;
   L.Vars[lvEnableAttackSpell]:= BoolToInt[Options.EnableAttackSpell];
   L.Vars[lvShooterMode]:= Options.ShooterMode;
+  l.Vars[lvQuestion]:= BoolToInt[IsQuestion];
 {$IFDEF MM7}
   if _UITextColor^ and $10000 = 0 then
   begin
@@ -705,9 +731,8 @@ begin
   if Rendering then
     L.Vars[lvCustomRightSide]:= BoolToInt[_IsScreenWithCustomRightSide];
   Updating:= false;
-  i:= pint($507A64)^;
-  L.Vars[lvQuestion]:= BoolToInt[(_CurrentScreen^ = 19) and (i <> 0) and (pint(i + $1C)^ = 26)];
   L.Vars[lvClockHeight]:= 67;
+  L.Vars[lvNPCScreenFlyIcon]:= 1;
 {$ELSE}
   L.Vars[lvPlayers]:= _Party_MemberCount^;
 {$ENDIF}
@@ -751,8 +776,10 @@ begin
   _UITextShadowColor^:= Round(L.Locals[lvTextShadowColor]);
   ScreenHasRightSide:= L.Locals[lvCustomRightSide] <> 0;
   SetClockHeight(Round(L.Locals[lvClockHeight]));
+  FlyNPCScreen:= IfThen(L.Locals[lvNPCScreenFlyIcon] <> 0, 4, 0);
 {$ENDIF}
   HintSuppression;
+  UpdateIniInfo;
   if L.Locals[lvReloadLayout] <> 0 then
     ReloadLayout;
 end;
@@ -775,10 +802,40 @@ var
   i: int;
 begin
   with _StatusText^ do
-    Status[0]:= bc[Text[TmpTime = 0][0] <> #0];
+    Status[0]:= bc[(Text[TmpTime = 0][0] <> #0) or IsQuestion];
   if CanvasUsed[CanvasPartyBuffs] then
     for i:= 0 to high(PartyBuffs) do
       PartyBuffs[i]:= bc[_PartyBuffs[i].Expires > 0];
+end;
+
+procedure TLayoutSupport.UpdateIniInfo;
+{var
+  full: string;
+  i: int;}
+var
+  reload: Boolean;
+begin
+  reload:= Ini.Lines.Modified;
+  Ini.Flush;
+  if (InfoList.Count = 0) or not RebuildInfo and (InfoCount = InfoList.Count) then
+    exit;
+  InfoCount:= InfoList.Count;
+  if reload then
+    Ini.Reload;
+  AddIniInfos(Ini.Lines, IniSect, InfoList);
+{  full:= RSLoadTextFile(Ini.FileName);
+  with InfoList do
+  begin
+    if RebuildInfo or (AddDescriptions < 0) then
+    begin
+      for i := 0 to Count - 1 do
+        full:= RSStringReplace(full, InfoVal[int(Objects[i])], '');
+      RSSaveTextFile(Ini.FileName, full);
+    end;
+    if AddDescriptions > 0 then
+      for i := 0 to Count - 1 do
+        AddIniInfo(Ini, IniSect, Strings[i], InfoVal[int(Objects[i])], full);
+  end;}
 end;
 
 procedure TLayoutSupport.UpdateMinMax;
@@ -822,6 +879,15 @@ begin
   ViewMulFactor:= 1/L.Locals[lvFOVMul];
   with r do
     _ViewMulOutdoor^:= Round(300*ViewMulFactor*DynamicFovFactor(Right - Left, Bottom - Top)/DXProxyMul);
+end;
+
+procedure TLayoutSupport.VarInfo(const Name, info: string);
+var
+  i: int;
+begin
+  if (info = '') or (AddDescriptions = 0) or not RSStartsStr('Options.', Name, @i) then
+    exit;
+  InfoList.Add(Copy(Name, i, MaxInt), info);
 end;
 
 procedure UILayoutSetVar(Name: PChar; var v: Double); stdcall;

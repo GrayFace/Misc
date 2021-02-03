@@ -372,7 +372,7 @@ procedure QuickSaveDrawHook;
 asm
   push ecx
   push edx
-  add eax, $6C9B40
+  add eax, [__PSaveSlotsHeaders]
   call QuickSaveDrawProc
   pop edx
   pop ecx
@@ -380,7 +380,7 @@ end;
 
 procedure QuickSaveDrawHook2;
 asm
-  add eax, $6C9B40
+  add eax, [__PSaveSlotsHeaders]
   call QuickSaveDrawProc
   mov edx, eax
 end;
@@ -389,7 +389,7 @@ procedure QuickSaveDrawHook3;
 asm
   push eax
   push ecx
-  add edx, $6C9B40
+  add edx, [__PSaveSlotsHeaders]
   mov eax, edx
   call QuickSaveDrawProc
   mov edx, eax
@@ -3049,11 +3049,15 @@ end;
 //----- Postpone intro
 
 procedure PostponeIntroHook;
-asm
-  push 0
-  push 5
-  mov eax, $4A7B7D
-  call eax
+const
+  movs: array[0..3] of int = (5, 3, 2, 1);
+var
+  i: int;
+begin
+  _AbortMovie^:= false;
+  for i:= 3 downto 0 do
+    if (i = 0) or not NoIntoLogos and not _AbortMovie^ then
+      _ShowStdMovie(movs[i], false);
 end;
 
 //----- Hints for non-interactive sprites

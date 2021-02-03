@@ -1182,28 +1182,6 @@ begin
   _LoadBitmap(0, 0, _BitmapsLod, 0, 'WtrTyl');
 end;
 
-//----- Delay interface by 1 frame to improve FPS
-
-procedure DelayedRenderProc;
-var
-  info: TDDSurfaceDesc2;
-begin
-  if DXProxyLockInterfaceSurface(info) then  exit;
-  DrawD3D(_ScreenBuffer^, @info);
-  DXProxyUnlockInterfaceSurface;
-  DXProxyDrawLastInterface;
-end;
-
-procedure DelayedRenderHook;
-asm
-  jz @exit
-  cmp DXProxyActive, true
-  jnz @exit
-  call DelayedRenderProc
-  xor eax, eax
-@exit:
-end;
-
 //----- Extend view distance
 
 procedure GroundBoundsHook;
@@ -1237,7 +1215,7 @@ asm
 	rep stosd
 
   neg ebx
-  add ebx, m7*$76DA48 + m8*$7ABA10 + 4  // beginx
+  add ebx, m7*$76DA48 + m8*$7ABA10  // beginx
 	mov ecx, 128
 @loop:
 	dec ecx
@@ -1386,17 +1364,7 @@ var
     (p: $4A4D98; newp: @GetMipmapsCountHook; t: RShtAfter; size: 6; Querry: hqMipmaps), // Calculate mipmaps count depending on the texture in question
     (p: $4649B7; newp: @WatrTylFix; t: RShtBefore), // Fix water in maps without a building with WtrTyl texture and textures with water bit turning into water
     (p: $479A0D; old: $4D8770; newp: @SkyExtra; t: RSht4; Querry: hqViewDistanceLimits), // Extended view distance - draw bigger bottom part
-//    (p: $4A5927; newp: @DelayedRenderHook; t: RShtAfter; size: 6; Querry: hqDelayedInterface), // Delay interface by 1 frame to improve FPS
-{    (p: $47968C; old: $F8BAA4; newp: @Options.RenderRect.Left; t: RSht4; Querry: hqLayout), // Sky rendering in UILayout mode
-    (p: $4796AB; old: $F8BAA8; newp: @Options.RenderRect.Top; t: RSht4; Querry: hqLayout), // Sky rendering in UILayout mode
-    (p: $4796D7; old: $F8BAAC; newp: @Options.RenderRect.Right; t: RSht4; Querry: hqLayout), // Sky rendering in UILayout mode
-    (p: $4796DC; old: $F8BAAC; newp: @Options.RenderRect.Right; t: RSht4; Querry: hqLayout), // Sky rendering in UILayout mode
-    (p: $4796E3; old: $F8BAA4; newp: @Options.RenderRect.Left; t: RSht4; Querry: hqLayout), // Sky rendering in UILayout mode
-    (p: $479869; old: $F8BAA8; newp: @Options.RenderRect.Bottom; t: RSht4; Querry: hqLayout), // Sky rendering in UILayout mode
-    (p: $479559; old: int(_ViewMulOutdoor); newp: @SkyViewMul; t: RSht4; Querry: hqLayout), // Sky rendering in UILayout mode
-    (p: $479565; old: int(_ViewMulOutdoor); newp: @SkyViewMul; t: RSht4; Querry: hqLayout), // Sky rendering in UILayout mode
-    (p: $4795D7; old: int(_ViewMulOutdoor); newp: @SkyViewMul; t: RSht4; Querry: hqLayout), // Sky rendering in UILayout mode
-}    ()
+    ()
   );
 {$ELSE}
   Hooks: array[1..69] of TRSHookInfo = (
@@ -1468,7 +1436,6 @@ var
     (p: $4A2D21; old: $49E9C0; newp: @CopyTexture32Bit; t: RShtCall; Querry: hqTex32Bit2), // 32 bit textures
     (p: $4A2DEF; old: $49E9C0; newp: @CopyTexture32Bit; t: RShtCall; Querry: hqTex32Bit2), // 32 bit textures
     (p: $4A2C4B; newp: @GetMipmapsCountHook; t: RShtAfter; size: 6; Querry: hqMipmaps), // Calculate mipmaps count depending on the texture in question
-//    (p: $4A37BE; newp: @DelayedRenderHook; t: RShtAfter; size: 6; Querry: hqDelayedInterface), // Delay interface by 1 frame to improve FPS
     ()
   );
 {$ENDIF}

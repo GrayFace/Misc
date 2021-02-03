@@ -51,6 +51,7 @@ const
   _SaveSlotsFiles = PPSaveSlotFiles($45C5D5);
   _SaveSlotsFilesLim = PPChar($45C674);
   _SaveSlotsCount = pint($6CACFC);
+  __PSaveSlotsHeaders = $45C5CE;
   __ItemsTxt = $41CE60;
   _ItemsTxt = pint(__ItemsTxt);
   _MainWindow = puint($6F3934);
@@ -100,6 +101,8 @@ const
   _ExitScreen: procedure(n1: int = 0; n2: int = 0; a1: int = $1006148; a6: int = 0; a5: int = 0; a4: int = 0; a3: int = 1; a2: int = 27) = ptr($4D1D6A);
   _IsScreenOpaque: function: BOOL = ptr($421886);
   _IsMoviePlaying: function: Boolean = ptr($4BCFA0);
+  _ShowMovie: procedure(_, y: int; name: PChar; DoubleSize: LongBool; ExitScreen: int = 1) = ptr($4BC1F1);
+  _ShowStdMovie: procedure(id: int; ResumeMouse: LongBool) stdcall = ptr($4A7B7D);
   _PlaySound = $4A87DC;
   _PlaySoundStruct = $FEB360;
   _StopSounds: procedure(_: int = 0; __: int = 0; this: int = $FEB360; a1: int = -1; a2: int = -1) = ptr($4A9BF7);
@@ -137,7 +140,6 @@ const
   _Character_IsAlive: function(a1,a2, member:ptr):Bool = ptr($491514);
   _Character_WearsItem: function(_,__, pl, slot, item: int): LongBool = ptr($48CFC3);
   _Character_WearsItemWithEnchantSpec: function(n1,n2:int; this:ptr; slot, id:int):BOOL = ptr($48CF8A);
-  _Character_GetSkillWithBonuses: function(n1,n2:int; this: ptr; skill: int):int = ptr($48EF4F);
   _Character_SetDelay: procedure(n1, n2: int; this: ptr; delay: int) = ptr($48DFF8);
   _TurnBased_CharacterActed: procedure(n1: int = 0; n2: int = 0; this: int = $509C98) = ptr($4049BA);
 

@@ -99,6 +99,7 @@ const
   _PlaySoundStruct = $9CF598;
   _HasNPCProf: function(n1,n2, prof: int): LongBool = ptr($467F30);
   _DrawInventory: procedure(n1,n2, member: int) = ptr($4165E0);
+  _ShowMovie: procedure(_, y: int; name: PChar; DoubleSize: LongBool) = ptr($4A59A0);
   _ExitMovie: procedure(_1: int = 0; _2: int = 0; _3: int = $9DE330) = ptr($4A5D10);
   _StopSounds: procedure(_: int = 0; __: int = 0; _3: int = $9CF598; _4: int = -1; _5: int = -1) = ptr($48FB40);
   _strcmpi: function(const s1, s2: PChar): int cdecl = ptr($4AF370);

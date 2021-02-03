@@ -9,7 +9,7 @@ uses
 type
   TLayoutParam = (lpCond, lpX, lpY, lpW, lpH, lpNX, lpNY, lpNW, lpNH, lpCmdFmt);
   TLayoutCmd = (lcArea, lcScreen, lcVar, lcDefault, lcPersist, lcIf, lcFor, lcLoop,
-     lcRecover, lcCheckVer, lcErase, lcStage, lcTimer, lcAction);
+     lcRecover, lcCheckVer, lcErase, lcStage, lcTimer, lcAction, lcInfo);
   TDrawKind = (ldkTransparent, ldkNone, ldkOpaque, ldkBehind, ldkErase, ldkAnd, ldkOverlay, ldkNot);
   TClickKind = (lckTransparent, lckNone, lckOpaque);
   TIfOp = (lioNone, lioElse, lioAnd, lioOr, lioXor);
@@ -75,6 +75,7 @@ type
     procedure Error(const str: string; line: int);
     function CustomOp(const s: string; var k: int; var op: TRSOperator; kind: TRSCustomOpKind): Boolean;
     procedure ReadExpr(const s: string; var a: TRSOperatorArray; row, col: int);
+    procedure StringExpr(const s: string; var a: TRSOperatorArray);
     procedure SetVar(const Name: string; idx: int; v: ext);
     function GetVar(const Name: string; idx: int): ext;
     function GetQVar(const s: string; var v: ext): Boolean;
@@ -93,6 +94,7 @@ type
     Actions: array of TLayoutAction;
     OnLoadIcon: procedure(const Name: string; var Loaded: Integer; out w, h: Extended) of object;
     OnDefaultValue: procedure(const Name: string; v: Extended) of object;
+    OnVarInfo: procedure(const Name, info: string) of object;
     OnCanAdd: procedure(var it: TLayoutItem; var add: Boolean) of object;
     OnUnsetVar: procedure(const Name: string; write: Boolean) of object;
     constructor Create;
@@ -195,6 +197,7 @@ const
   lvEnableAttackSpell = 'Game.EnableAttackSpell';
   lvClockHeight = 'Game.ClockHeight';
   lvShooterMode = 'Game.ShooterMode';
+  lvNPCScreenFlyIcon = 'Game.NPCScreenFlyIcon';
   CanvasScreen = -1;
   CanvasTimer = -2;
   CanvasBase = 0;       lvcBase = 'Game.BaseUI';
@@ -215,7 +218,7 @@ const
   ParamNames: array[TLayoutParam] of string =
      ('Condition', 'X', 'Y', 'Width', 'Height', 'NewX', 'NewY', 'NewWidth', 'NewHeight', 'Format');
   CmdName: array[TLayoutCmd] of string = ('icon', 'screen', 'var', 'default',
-     'persist', 'if', 'for', 'loop', 'recover', 'version', 'erase', 'stage', 'timer', 'action');
+     'persist', 'if', 'for', 'loop', 'recover', 'version', 'erase', 'stage', 'timer', 'action', 'info');
   DrawName: array[TDrawKind] of string = ('', '-', '+', 'behind', 'erase', 'and', 'overlay', 'not');
   ClickName: array[TClickKind] of string = ('', '-', '+');
   IfOpName: array[TIfOp] of string = ('', 'else', 'and', 'or', 'xor');
@@ -620,6 +623,13 @@ begin
             if CmdParam2 <> '' then
               SetVarEx(Fmt(CmdParam2), y, Cmd = lcDefault);
           end;
+        lcInfo:
+          if Assigned(OnVarInfo) and CheckCond then
+          begin
+            OnVarInfo(CmdParam, Params[lpX][0].Name);
+            if CmdParam2 <> '' then
+              OnVarInfo(CmdParam2, Params[lpY][0].Name);
+          end;
         lcPersist:
           if not JustLimits and CheckCond then
             Vars[Fmt(CmdParam)]:= Locals[Fmt(CmdParam)];
@@ -830,6 +840,12 @@ begin
        [ParseError[i > length(s)], row, col, Copy(s, (i-1) mod length(s) + 1, MaxInt)]);
 end;
 
+procedure TLayout.StringExpr(const s: string; var a: TRSOperatorArray);
+begin
+  SetLength(a, 1);
+  a[0].Name:= s;
+end;
+
 function FindCaption(const ps: TRSParsedString; const s: string): int;
 begin
   Result:= RSGetTokensCount(ps, true);
@@ -903,7 +919,10 @@ begin
           continue;
         // Params
         for lp:= low(TLayoutParam) to high(TLayoutParam) do
-          ReadExpr(Get(ParamPos[lp]), Params[lp], i+1, ParamPos[lp]+1);
+          if (Cmd = lcInfo) and (lp in [lpX, lpY]) then
+            StringExpr(Get(ParamPos[lp]), Params[lp])
+          else
+            ReadExpr(Get(ParamPos[lp]), Params[lp], i+1, ParamPos[lp]+1);
         // Other params
         Canvas:= Canv(Get(CanvasPos), DefaultCanvas);
         NewCanvas:= Canv(Get(NewCanvasPos), CanvasScreen);

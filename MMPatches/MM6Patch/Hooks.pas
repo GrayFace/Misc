@@ -2907,13 +2907,14 @@ end;
 
 procedure PostponeIntroHook;
 const
-  intro: PChar = 'mm6Intro';
-asm
-  push 1
-  xor edx, edx
-  mov ecx, intro
-  mov eax, $4A59A0
-  call eax
+  movs: array[0..2] of PChar = ('mm6Intro', 'jvc', '3dologo');
+var
+  i: int;
+begin
+  _AbortMovie^:= false;
+  for i:= 2 downto 0 do
+    if (i = 0) or not NoIntoLogos and not _AbortMovie^ then
+      _ShowMovie(0, 0, movs[i], i = 0);
 end;
 
 //----- Fix Static Charge cost, sync spells cost

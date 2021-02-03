@@ -19,7 +19,7 @@ uses
 type
   TRSHookType = (RShtNop, RSht1, RSht2, RSht4, RShtCall, RShtJmp, RShtJmp6,
     RShtJmp2, RShtBStr, RShtStr, RShtCallStore, RShtBefore, RShtAfter,
-    RShtFunctionStart, RShtCodePtrStore);
+    RShtFunctionStart, RShtCodePtrStore, RShtBeforeJmp6);
 {
   RShtBefore, RShtAfter - seemlessly "insert" new code before/after using JMP
    (note that RShtAfter can't be stacked)
@@ -100,7 +100,7 @@ begin
     RSht4, RShtCodePtrStore:  Result:= pint(p)^;
     RShtCall, RShtJmp, RShtCallStore:
       Result:= pint(p+1)^ + p + 5;
-    RShtJmp6:
+    RShtJmp6, RShtBeforeJmp6:
       Result:= pint(p+2)^ + p + 6;
     RShtJmp2:
       Result:= pint1(p+1)^ + p + 2;
@@ -130,7 +130,7 @@ begin
     RSht2:     sz0:= 2;
     RSht4, RShtCodePtrStore:  sz0:= 4;
     RShtJmp2:  sz0:= 2;
-    RShtJmp6:  sz0:= 6;
+    RShtJmp6, RShtBeforeJmp6:  sz0:= 6;
     RShtBStr:  sz0:= length(Hook.oldstr);
     RShtStr:   sz0:= length(Hook.oldstr) + 1;
     else       sz0:= 5;
@@ -175,6 +175,13 @@ begin
       Jmp(p1, new, true);        // call @hook
       Jmp(p1 + 5 + sz, p + sz);  // std...jmp @after
       if Hook.backup <> nil then  pint(Hook.backup)^:= p1 + 5;
+    end;
+    RShtBeforeJmp6:
+    begin
+      p1:= RSAllocCode(10);               // p: jnz p1
+      Jmp(p1, new, true);                 // call @hook
+      Jmp(p1 + 5, RSGetHookValue(Hook));  // jmp @std
+      pint(p+2)^:= p1 - p - 6;
     end;
     RShtAfter:
     begin

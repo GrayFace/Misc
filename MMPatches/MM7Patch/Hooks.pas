@@ -396,7 +396,7 @@ end;
 procedure QuickSaveDrawHook2;
 asm
   push ecx
-  lea eax, $69BBE8[eax]
+  add eax, [__PSaveSlotsHeaders]
   call QuickSaveDrawProc
   mov edx, eax
   pop ecx
@@ -3020,13 +3020,14 @@ asm
   push eax
 end;
 
-//----- Fly and Water Walk icon not drawn in simple message screen
+//----- Fly and Water Walk icon not drawn in simple message screen (+ support FlyNPCScreen)
 
 procedure FixSimpleMessageSpells;
 asm
+  jz @std
   cmp eax, 19
-  jnz @std
-  xor eax, eax
+  jz @std
+  cmp eax, FlyNPCScreen
 @std:
 end;
 
@@ -3044,11 +3045,15 @@ end;
 //----- Postpone intro
 
 procedure PostponeIntroHook;
-asm
-  push 1
-  push 5
-  mov eax, $4A94BD
-  call eax
+const
+  movs: array[0..3] of int = (5, 3, 2, 1);
+var
+  i: int;
+begin
+  _AbortMovie^:= false;
+  for i:= 3 downto 0 do
+    if (i = 0) or not NoIntoLogos and not _AbortMovie^ then
+      _ShowStdMovie(movs[i], i = 0);
 end;
 
 //----- No hints for non-interactive sprites
@@ -3412,7 +3417,7 @@ var
     (p: $441839; old: $4A5E42; newp: @DrawIconAuto; t: RShtCall), // Transparent spell icons (Bless etc.)
     (p: $441877; old: $4A5E42; newp: @DrawIconAuto; t: RShtCall), // Transparent spell icons (Bless etc.)
     (p: $4418B5; old: $4A5E42; newp: @DrawIconAuto; t: RShtCall), // Transparent spell icons (Bless etc.)
-    (p: $4416E3; newp: @FixSimpleMessageSpells; t: RShtAfter), // Fly and Water Walk icon not drawn in simple message screen
+    (p: $4416EA; newp: @FixSimpleMessageSpells; t: RShtCall), // Fly and Water Walk icon not drawn in simple message screen (+ support FlyNPCScreen)
     (p: $4E2A98; old: $16; new: $17; t: RSht2; Querry: hqFixInterfaceBugs), // Fix health bars position
     (p: $4E2A9C; old: $89; new: $8A; t: RSht2; Querry: hqFixInterfaceBugs), // Fix health bars position
     (p: $4924FA; add: -1; t: RSht4; Querry: hqFixInterfaceBugs), // Fix danger indicators position
