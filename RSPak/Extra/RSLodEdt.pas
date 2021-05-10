@@ -80,8 +80,16 @@ Version 1.3:
 [-] When creating new archive default file type was misleading  
 
 Version 1.3.1:
-[+] When importing a texture or a sprite that isn't 8 bit, previous palette is used if the file exists in the archive.
-[-] Mipmaps for transp textures
+[+] When importing a texture or a sprite that isn't 8 bit, previous palette is used if the file exists in the archive
+[-] Mipmaps for transparent textures were generated with a blue border
+
+Version 1.3.2:
+[-] Empty bitmaps in icons.lod were treated as palettes
+[-] Rename when access denied
+[-] Bits in icons.lod for spell icons weren't set correctly
+[-] "Compare To" wasn't able to detect changes between repacked files in MM lods
+[!!!] Compare was bad
+[!!!] Choose custom transparent color?
 
 Генерация палитры для всех дропнутых кадров?
 Возможность выбора номера анимации дефа для показа
@@ -1647,7 +1655,7 @@ begin
       end else
       begin
         FileBitmap:= Archive.ExtractArrayOrBmp(Index, FileBuffer);
-        if (ft = aBmp) and (FileBitmap = nil) then
+        if (ft = aBmp) and (FileBitmap = nil) and (Archive is TRSLod) and (TRSLod(Archive).Version = RSLodBitmaps) then
           ft:= aPal;
       end;
     except
@@ -1997,69 +2005,13 @@ end;
 
 function TRSLodEdit.CompareArchivesItem(new, old: TRSMMArchive; i: int): Boolean;
 var
-  mem1, mem2: TMemoryStream;
-  r: TStream;
   j: int;
 begin
   j:= i;
   Result:= (i < old.Count) and SameText(new.Names[i], old.Names[i]) or
     old.RawFiles.FindFile(new.Names[i], j);
 
-  Result:= Result and (new.RawFiles.UnpackedSize[i] = old.RawFiles.UnpackedSize[j]);
-  if not Result then
-    exit;
-
-  mem1:= TMemoryStream.Create;
-  mem2:= TMemoryStream.Create;
-  try
-    // raw compare
-    Result:= new.RawFiles.Size[i] = old.RawFiles.Size[j];
-    if Result then
-    begin
-      mem1.SetSize(new.RawFiles.Size[i]);
-      r:= new.RawFiles.GetAsIsFileStream(i);
-      try
-        r.ReadBuffer(mem1.Memory^, mem1.Size);
-      finally
-        new.RawFiles.FreeAsIsFileStream(i, r);
-      end;
-
-      mem2.SetSize(new.RawFiles.Size[i]);
-      r:= old.RawFiles.GetAsIsFileStream(j);
-      try
-        r.ReadBuffer(mem2.Memory^, mem2.Size);
-      finally
-        old.RawFiles.FreeAsIsFileStream(j, r);
-      end;
-
-      Result:= CompareMem(mem1.Memory, mem2.Memory, mem1.Size);
-    end;
-
-    if Result or not new.RawFiles.IsPacked[i] and not old.RawFiles.IsPacked[j] then
-      exit;
-
-    // compare unpacked
-    try
-      if new.RawFiles.IsPacked[i] then
-      begin
-        mem1.SetSize(new.RawFiles.UnpackedSize[i]);
-        mem1.Position:= 0;
-        new.RawFiles.RawExtract(i, mem1);
-      end;
-      if old.RawFiles.IsPacked[j] then
-      begin
-        mem2.SetSize(old.RawFiles.UnpackedSize[j]);
-        mem2.Position:= 0;
-        old.RawFiles.RawExtract(j, mem2);
-      end;
-      Result:= (mem1.Size = mem2.Size) and CompareMem(mem1.Memory, mem2.Memory, mem1.Size);
-    except
-      Result:= false;
-    end;
-  finally
-    mem1.Free;
-    mem2.Free;
-  end;
+  Result:= Result and new.CompareFiles(old, i, j);
 end;
 
 procedure TRSLodEdit.CompareTo1Click(Sender: TObject);
@@ -4414,9 +4366,13 @@ begin
   Result:= HPal;
   GetPaletteEntries(HPal, 0, 256, pal[0]);
   if NotBest(0, 0) and NotBest(0, h) and NotBest(w, h) and NotBest(w, 0) then
-    for i:= 1 to 255 do
-      if (pal[i] = $FFFF00) or
-         (best = 0) and ((pal[i] = $FF00FF) or (pal[i] = $FC00FC) or (pal[i] = $FCFC00)) then
+    for i:= 0 to 255 do
+      if pal[i] = $FFFF00 then
+      begin
+        best:= i;
+        break;
+      end
+      else if (pal[i] = $FF00FF) or (pal[i] = $FC00FC) or (pal[i] = $FCFC00) then
         best:= i;
   if best = 0 then  exit;
   zSwap(pal[0], pal[best]);

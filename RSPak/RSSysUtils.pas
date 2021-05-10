@@ -185,6 +185,31 @@ type
     property Bit[i:DWord]: Boolean read GetBit write SetBit; default;
   end;
 
+  TRSKeyValueStringList = class(TStringList)
+  private
+    function GetValue(Index: Integer): string;
+    procedure PutValue(Index: Integer; const Value: string);
+    function GetKeyValue(const Key: string): string;
+    procedure PutKeyValue(const Key, Value: string);
+  protected
+    function GetObject(Index: Integer): TObject; override;
+    procedure PutObject(Index: Integer; AObject: TObject); override;
+    procedure DerefValues(n1: int = 0; n2: int = -1);
+    procedure InsertKeyValue(Index: Integer; const Key: string; Value: string);
+  public
+    constructor Create(CaseSensitive: Boolean = false; Sorted: Boolean = true; Duplicates: TDuplicates = dupIgnore);
+    destructor Destroy; override;
+    function AddObject(const S: string; AObject: TObject): Integer; override;
+{$WARNINGS OFF}
+    function Add(const Key, Value: string): int; overload;
+    procedure Delete(Index: Integer); override;
+{$WARNINGS ON}
+    procedure AddStrings(Strings: TStrings); override;
+    procedure Clear; override;
+    property Values[Index: Integer]: string read GetValue write PutValue;
+    property KeyValue[const Key: string]: string read GetKeyValue write PutKeyValue;
+  end;
+
    // No adding overhead at the cost of 4 bytes per block
   TRSCustomStack = class(TObject)
   private
@@ -582,8 +607,9 @@ var
   RSOSVersionInfo: OSVERSIONINFO;
 
 resourcestring
-  sRSCantLoadProc = 'Can''t load the "%s" procedure from "%s"';
-  sRSCantLoadIndexProc = 'Can''t load the procedure number %d from "%s"';
+  sRSCantLoadProc = 'Unable to load the "%s" procedure from "%s"';
+  sRSCantLoadIndexProc = 'Unable to load the procedure number %d from "%s"';
+  sRSObjectsNotSupported = 'Objects[] manipulation is not supported';
 
 implementation
 
@@ -1400,7 +1426,184 @@ begin
 end;
 
 {
-******************************** TRSCustomStack *********************************
+******************************* TRSKeyValueList ********************************
+}
+{ TRSKeyValueList }
+
+function TRSKeyValueStringList.Add(const Key, Value: string): int;
+begin
+  if not Sorted then
+    Result := Count
+  else
+    if Find(Key, Result) then
+      case Duplicates of
+        dupIgnore: Exit;
+        dupError: Error(@SDuplicateString, 0);
+      end;
+  InsertKeyValue(Result, Key, Value);
+end;
+
+function TRSKeyValueStringList.AddObject(const S: string; AObject: TObject): Integer;
+begin
+  if AObject <> nil then
+    Error(@sRSObjectsNotSupported, 0);
+  Result:= inherited AddObject(S, AObject);
+end;
+
+procedure TRSKeyValueStringList.AddStrings(Strings: TStrings);
+var
+  i: Integer;
+begin
+  BeginUpdate;
+  try
+    if Strings is TRSKeyValueStringList then
+      for i := 0 to Strings.Count - 1 do
+        Add(Strings[i], TRSKeyValueStringList(Strings).Values[i])
+    else
+      for i := 0 to Strings.Count - 1 do
+        Add(Strings[i]);
+  finally
+    EndUpdate;
+  end;
+end;
+
+procedure TRSKeyValueStringList.Clear;
+begin
+  if Count = 0 then  exit;
+  Changing;
+  BeginUpdate;
+  DerefValues;
+  inherited;
+  EndUpdate;
+  Changed;
+end;
+
+constructor TRSKeyValueStringList.Create(CaseSensitive, Sorted: Boolean;
+  Duplicates: TDuplicates);
+begin
+  self.CaseSensitive:= CaseSensitive;
+  self.Duplicates:= Duplicates;
+  self.Sorted:= Sorted;
+end;
+
+procedure TRSKeyValueStringList.Delete(Index: Integer);
+begin
+  if (Index >= 0) and (Index < Count) then
+  begin
+    Changing;
+    BeginUpdate;
+    DerefValues(Index, Index);
+    inherited;
+    EndUpdate;
+    Changed;
+  end else
+    inherited;
+end;
+
+procedure TRSKeyValueStringList.DerefValues(n1, n2: int);
+var
+  s: string;
+  ps: ptr absolute s;
+  i: int;
+begin
+  if n2 < 0 then
+    n2:= Count + n2;
+  for i := n1 to n2 do
+  begin
+    ps:= inherited GetObject(i);
+    s:= '';
+  end;
+end;
+
+destructor TRSKeyValueStringList.Destroy;
+begin
+  DerefValues;
+  inherited;
+end;
+
+function TRSKeyValueStringList.GetKeyValue(const Key: string): string;
+var
+  i: int;
+begin
+  i:= IndexOf(Key);
+  if i >= 0 then
+    Result:= Values[i]
+  else
+    Result:= '';
+end;
+
+function TRSKeyValueStringList.GetObject(Index: Integer): TObject;
+begin
+  Result:= nil;
+end;
+
+function TRSKeyValueStringList.GetValue(Index: Integer): string;
+var
+  p: ptr;
+begin
+  p:= inherited GetObject(Index);
+  Result:= pstring(@p)^;
+end;
+
+procedure TRSKeyValueStringList.InsertKeyValue(Index: Integer;
+   const Key: string; Value: string);
+var
+  ps: ptr absolute Value;
+begin
+  Changing;
+  BeginUpdate;
+  InsertItem(Index, Key, ptr(Value));
+  ps:= nil;
+  EndUpdate;
+  Changed;
+end;
+
+procedure TRSKeyValueStringList.PutKeyValue(const Key, Value: string);
+var
+  i: int;
+begin
+  if not Sorted then
+  begin
+    i:= IndexOf(Key);
+    if i >= 0 then
+      Values[i]:= Value
+    else
+      InsertKeyValue(Count, Key, Value);
+  end else
+    if Find(Key, i) then
+      Values[i]:= Value
+    else
+      InsertKeyValue(i, Key, Value);
+end;
+
+procedure TRSKeyValueStringList.PutObject(Index: Integer; AObject: TObject);
+begin
+  if AObject <> nil then
+    Error(@sRSObjectsNotSupported, 0);
+end;
+
+procedure TRSKeyValueStringList.PutValue(Index: Integer; const Value: string);
+var
+  s: string;
+  ps: ptr absolute s;
+begin
+  if (Index < 0) or (Index >= Count) then
+  begin
+    inherited;
+    exit;
+  end;
+  Changing;
+  BeginUpdate;
+  s:= Value;
+  ps:= inherited GetObject(Index);
+  inherited PutObject(Index, ptr(Value));
+  s:= '';
+  EndUpdate;
+  Changed;
+end;
+
+{
+******************************* TRSCustomStack *********************************
 }
 
 constructor TRSCustomStack.Create(BlockSize:int);
@@ -2439,9 +2642,9 @@ begin
 end;
 
 function RSMoveFile(const OldName, NewName: string; FailIfExists: Boolean): Bool;
-var
-  er: DWORD;
-  tmp: string;
+//var
+//  er: DWORD;
+//  tmp: string;
 begin
   if not FailIfExists and FileExists(OldName) then
   begin
@@ -2500,9 +2703,9 @@ var
   ReplaceFile: function(Replaced, Replacement, Backup: PChar; Flags: int; u1: ptr = nil; u2: ptr = nil): Bool; stdcall;
 
 function RSReplaceFile(const Replaced, Replacement: string; const Backup: string = ''; Flags: int = REPLACEFILE_IGNORE_MERGE_ERRORS): Boolean;
-var
-  tmp, tmp2: string;
-  er: DWORD;
+//var
+//  tmp, tmp2: string;
+//  er: DWORD;
 begin
   if not ReplaceFileLoaded then
     RSLoadProc(@ReplaceFile, kernel32, 'ReplaceFileA', false, false);

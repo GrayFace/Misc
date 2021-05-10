@@ -39,7 +39,6 @@ object RSLodEdit: TRSLodEdit
     Align = alLeft
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitHeight = 673
     object Splitter2: TSplitter
       Left = 0
       Top = 335
@@ -60,7 +59,6 @@ object RSLodEdit: TRSLodEdit
       TabOrder = 0
       OnDblClick = Image1DblClick
       OnPaint = Panel1Paint
-      ExplicitTop = 316
       DesignSize = (
         348
         357)
@@ -232,7 +230,6 @@ object RSLodEdit: TRSLodEdit
         00094600610076006F0072006900740065007300}
       OnCancelEdit = TreeView1CancelEdit
       OnWndProc = TreeView1WndProc
-      ExplicitHeight = 310
     end
   end
   object Panel3: TRSPanel
@@ -285,7 +282,6 @@ object RSLodEdit: TRSLodEdit
     OnMouseDown = ListView1MouseDown
     TotalCmdNovigation = True
     OnWndProc = ListView1WndProc
-    ExplicitHeight = 673
   end
   object Panel4: TRSPanel
     Left = 0
@@ -295,7 +291,6 @@ object RSLodEdit: TRSLodEdit
     Align = alBottom
     TabOrder = 3
     Visible = False
-    ExplicitTop = 704
     DesignSize = (
       985
       36)
@@ -342,7 +337,6 @@ object RSLodEdit: TRSLodEdit
     ParentFont = False
     TabOrder = 4
     Visible = False
-    ExplicitTop = 337
   end
   object OpenDialog1: TRSOpenSaveDialog
     DefaultExt = '.lod'

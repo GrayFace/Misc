@@ -91,6 +91,11 @@ begin
     Result:=Rect(0,0,0,0);
     exit;
   end;
+  if b.PixelFormat <> pf8bit then
+  begin
+    Result:= b.Canvas.ClipRect;
+    exit;
+  end;
   p:=b.ScanLine[0];
   dy:= (-w) and not 3 - w; // scanline length + width that's been travelled
   with Result do

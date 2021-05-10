@@ -244,6 +244,8 @@ type
     procedure DoBackupFile(Index: int; Overwrite:Boolean); virtual;
     procedure BeforeReplaceFile(Sender: TRSMMFiles; Index: int);
     procedure BeforeDeleteFile(Sender: TRSMMFiles; Index: int);
+    function DoCompareFiles(r, r2: TStream; Size, UnpSize, Size2, UnpSize2: int;
+       IgnoreUnzipErrors: Boolean): Boolean;
   public
     constructor Create; override;
     destructor Destroy; override;
@@ -260,6 +262,8 @@ type
     function ExtractString(Index: int): string;
     function GetExtractName(Index: int): string; virtual;
     function BackupFile(Index: int; Overwrite:Boolean): Boolean;
+    function CompareFiles(Archive2: TRSMMArchive; const Name: string): Boolean; overload;
+    function CompareFiles(Archive2: TRSMMArchive; Index, Index2: int): Boolean; overload; virtual;
     function CloneForProcessing(const NewFile: string; FilesCount: int = 0): TRSMMArchive; virtual;
     procedure Load(const FileName: string); override;
     procedure SaveAs(const FileName: string); override;
@@ -286,13 +290,16 @@ type
     constructor CreateInternal(Files: TRSMMFiles); override;
     procedure InitOptions(var Options: TRSMMFilesOptions);
     procedure ReadHeader(Sender: TRSMMFiles; Stream: TStream;
-       var Options: TRSMMFilesOptions; var FilesCount: int); override;
+      var Options: TRSMMFilesOptions; var FilesCount: int); override;
     procedure WriteHeader(Sender: TRSMMFiles; Stream: TStream); override;
     procedure WriteGamesLod7Sig(Sender: TRSMMFiles; Stream: TStream);
     procedure AfterRenameFile(Sender: TRSMMFiles; Index: int);
+    function PrepareToCompare(idx: int; mem: TMemoryStream;
+      r: TStream; var info; out szBefore, szAfter: int; CmpBits: Boolean): Boolean;
   public
     function GetExtractName(Index: int): string; override;
     function CloneForProcessing(const NewFile: string; FilesCount: int): TRSMMArchive; override;
+    function CompareFiles(Archive2: TRSMMArchive; Index, Index2: int): Boolean; overload; override;
     procedure New(const FileName: string; AVersion: TRSLodVersion);
     procedure Load(const FileName: string); override;
 
@@ -524,7 +531,8 @@ type
     Palette: int2;
     _unk: int2;  // runtime palette index 
     UnpSize: int;
-    Bits: int;  // Bits:  2 - multitexture, $10 - something important too, $400 - don't free buffers 
+    Bits: int;  // Bits:  2 - mipmaps, $10 - something important too,
+    //                    $400 - don't free buffers, $200 - transparent icon
     // Data...
     // Palette...
   end;
@@ -1302,12 +1310,11 @@ begin
   with FOptions do
     if PackedSizeOffset >= 0 then
       Result:= (pint(@FData[i*ItemSize + PackedSizeOffset])^ <> 0)
+    else if (SizeOffset >= 0) and (UnpackedSizeOffset >= 0) then
+      Result:= (pint(@FData[i*ItemSize + SizeOffset])^ <>
+                  pint(@FData[i*ItemSize + UnpackedSizeOffset])^)
     else
-      if (SizeOffset >= 0) and (UnpackedSizeOffset >= 0) then
-        Result:= (pint(@FData[i*ItemSize + SizeOffset])^ <>
-                    pint(@FData[i*ItemSize + UnpackedSizeOffset])^)
-      else
-        Result:= false;
+      Result:= false;
 end;
 
 function TRSMMFiles.GetName(i: int): PChar;
@@ -1342,7 +1349,7 @@ function TRSMMFiles.GetUnpackedSize(i: int): int;
 begin
   if FOptions.UnpackedSizeOffset < 0 then
   begin
-    Assert(FOptions.PackedSizeOffset < 0); // !!! ??
+    Assert(FOptions.PackedSizeOffset < 0);
     Result:= GetSize(i);
   end else
     Result:= pint(@FData[i*FOptions.ItemSize + FOptions.UnpackedSizeOffset])^;
@@ -1552,10 +1559,15 @@ begin
 end;
 
 function TRSMMFiles.Rename(Index: int; const NewName: string): int;
+var
+  locked: Boolean;
 begin
   CheckName(NewName);
+  locked:= not FWriteOnDemand;
+  if locked then
+    BeginWrite; // make sure file isn't blocked before changing internal state
   with FOptions do
-  begin
+  try
     if FindFile(NewName, Result) then
       if Result = Index then
         exit
@@ -1588,11 +1600,14 @@ begin
     ZeroMemory(@FData[Result*ItemSize], NameSize);
     if NewName <> '' then
       Move(NewName[1], FData[Result*ItemSize], length(NewName));
+
+    if not FWriteOnDemand then
+      WriteHeader;
+  finally
+    if locked then
+      EndWrite;
   end;
 
-  if not FWriteOnDemand then
-    WriteHeader;
-  
   if Assigned(OnAfterRenameFile) then
     OnAfterRenameFile(self, Result);
 end;
@@ -1630,6 +1645,7 @@ begin
   Move(FData[0], oldData[0], length(FData));
   //DeleteFile(FileName);
   //BeginWrite;
+  RSCreateDir(ExtractFilePath(FOutFile));
   FWriteStream:= TFileStream.Create(FOutFile, fmCreate);
   inc(FWritesCount);
   ok:= false;
@@ -1800,6 +1816,59 @@ begin
   Result.CreateInternal(FFiles.CloneForProcessing(NewFile, FilesCount));
 end;
 
+function TRSMMArchive.CompareFiles(Archive2: TRSMMArchive;
+  const Name: string): Boolean;
+var
+  i, i2: int;
+begin
+  Result:= FFiles.FindFile(Name, i) and Archive2.RawFiles.FindFile(Name, i2) and
+     CompareFiles(Archive2, i, i2);
+end;
+
+function SameSize(Size, UnpSize, Size2, UnpSize2: int): Boolean;
+begin
+  if UnpSize <> 0 then
+    Size:= UnpSize;
+  if UnpSize2 <> 0 then
+    Size2:= UnpSize2;
+  Result:= Size = Size2;
+end;
+
+function TRSMMArchive.CompareFiles(Archive2: TRSMMArchive; Index,
+  Index2: int): Boolean;
+var
+  f2: TRSMMFiles;
+  r, r2: TStream;
+  Size, UnpSize, Size2, UnpSize2: int;
+begin
+  f2:= Archive2.RawFiles;
+
+  Size:= FFiles.Size[Index];
+  UnpSize:= 0;
+  if FFiles.IsPacked[Index] then
+    UnpSize:= FFiles.UnpackedSize[Index];
+
+  Size2:= f2.Size[Index2];
+  UnpSize2:= 0;
+  if f2.IsPacked[Index2] then
+    UnpSize2:= f2.UnpackedSize[Index2];
+
+  Result:= SameSize(Size, UnpSize, Size2, UnpSize2);
+  if not Result then
+    exit;
+
+  r:= FFiles.GetAsIsFileStream(Index);
+  r2:= nil;
+  try
+    r2:= f2.GetAsIsFileStream(Index2);
+    Result:= DoCompareFiles(r, r2, Size, UnpSize, Size2, UnpSize2,
+       FFiles.IgnoreUnzipErrors or f2.IgnoreUnzipErrors);
+  finally
+    FFiles.FreeAsIsFileStream(Index, r);
+    f2.FreeAsIsFileStream(Index, r2);
+  end;
+end;
+
 constructor TRSMMArchive.Create;
 begin
   CreateInternal(TRSMMFiles.Create);
@@ -1824,6 +1893,124 @@ end;
 procedure TRSMMArchive.DoBackupFile(Index: int; Overwrite: Boolean);
 begin
   Extract(Index, MakeBackupDir, Overwrite);
+end;
+
+function CompareStreams(r, r2: TStream; Size: int; var Done, Done2: int;
+   n: int = MaxInt; BufSize: int = MaxInt): Boolean;
+const
+  MaxBufSize = $8000;
+var
+  buf, buf2: array[1..MaxBufSize] of byte;
+begin
+  BufSize:= min(BufSize, MaxBufSize);
+  n:= min(n, MaxBufSize);
+  Done:= 0;
+  Done2:= 0;
+  Result:= true;
+  while (Size > 0) and Result do
+  begin
+    n:= min(Size, n);
+    r.ReadBuffer(buf, n);
+    inc(Done, n);
+    r2.ReadBuffer(buf2, n);
+    inc(Done2, n);
+    Result:= CompareMem(@buf, @buf2, n);
+    dec(Size, n);
+    n:= BufSize;
+  end;
+end;
+
+function CompareZero(r: TStream; Size: int): Boolean;
+var
+  v: byte;
+  i: int;
+begin
+  Result:= true;
+  for i:= Size downto 1 do
+  begin
+    if r.Read(v, 1) = 0 then
+      exit;
+    Result:= v = 0;
+    if not Result then
+      exit;
+  end;
+end;
+
+procedure GetStream(var a: TStream; r: TStream; UnpSize, done: int);
+begin
+  if UnpSize <> 0 then
+  begin
+    FreeAndNil(a);
+    a:= TDecompressionStream.Create(r);
+  end else
+    a:= r;
+  if done <> 0 then
+    a.Seek(done, soCurrent);
+end;
+
+function TRSMMArchive.DoCompareFiles(r, r2: TStream; Size, UnpSize, Size2,
+  UnpSize2: int; IgnoreUnzipErrors: Boolean): Boolean;
+var
+  a, a2: TStream;
+  pos, pos2: int64;
+  done, done2: int;
+begin
+  // raw compare
+  Result:= (Size = Size2) and (UnpSize = UnpSize2);
+  if Result then
+  begin
+    Result:= CompareStreams(r, r2, Size, done, done2, 512);
+    if Result or (UnpSize = 0) then
+      exit;
+    r.Seek(-done, soCurrent);
+    r2.Seek(-done, soCurrent);
+  end;
+
+  // compare unpacked
+  a:= nil;
+  a2:= nil;
+  try
+    GetStream(a, r, UnpSize, 0);
+    GetStream(a2, r2, UnpSize2, 0);
+    if UnpSize <> 0 then
+      Size:= UnpSize; // now only the extracted file size is important
+    if IgnoreUnzipErrors then
+    begin
+      pos:= r.Position;
+      pos2:= r2.Position;
+      try
+        Result:= CompareStreams(a, a2, Size, done, done2, 512);
+        exit;
+      except
+      end;
+      r.Position:= pos;
+      r2.Position:= pos2;
+      GetStream(a, r, UnpSize, done2);
+      GetStream(a2, r2, UnpSize2, done2);
+      try
+        Result:= CompareStreams(a, a2, Size - done, done, done2, 1, 1);
+        exit;
+      except
+      end;
+      Result:= true;
+      try
+        if done <> done2 then
+        begin
+          r.Position:= pos;
+          GetStream(a, r, UnpSize, done2);
+          Result:= CompareZero(a, Size - done2);
+        end else
+          Result:= CompareZero(a2, Size - done2);
+      except
+      end;
+    end else
+      Result:= CompareStreams(a, a2, Size, done, done2, 512);
+  finally
+    if a <> r then
+      a.Free;
+    if a2 <> r2 then
+      a2.Free;
+  end;
 end;
 
 function TRSMMArchive.DoExtract(Index: int; const FileName: string; Overwrite: Boolean): string;
@@ -1996,6 +2183,197 @@ begin
       RawFiles.FSorted:= self.RawFiles.FSorted;
   end;
 end;
+
+function TRSLodBase.PrepareToCompare(idx: int; mem: TMemoryStream; r: TStream;
+   var info; out szBefore, szAfter: int; CmpBits: Boolean): Boolean;
+var
+  FullSize: int;
+  ok: Boolean absolute Result;
+  inf: TMM6GamesFile absolute info;
+
+  procedure Skip(n: int);
+  begin
+    dec(FullSize, n);
+    ok:= FullSize >= 0;
+    r.Seek(n, soCurrent);
+  end;
+  procedure Read(var buf; n: int);
+  begin
+    dec(FullSize, n);
+    ok:= FullSize >= 0;
+    if ok then
+      r.ReadBuffer(buf, n);
+  end;
+  procedure ReadStream(n: int);
+  begin
+    mem.Size:= n;
+    Read(mem.Memory^, n);
+  end;
+
+begin
+  Result:= true;
+  szBefore:= 0;
+  szAfter:= 0;
+  inf.DataSize:= 0;
+  inf.UnpackedSize:= 0;
+  FullSize:= RawFiles.Size[idx];
+  case FVersion of
+    RSLodGames, RSLodChapter:
+      Read(info, 8);
+    RSLodGames7, RSLodChapter7:
+    begin
+      Skip(8);
+      Read(info, 8);
+    end;
+    RSLodBitmaps, RSLodIcons, RSLodMM8:
+    begin
+      Skip(RawFiles.Options.NameSize);
+      ReadStream(SizeOf(TMMLodFile));
+      if ok then
+        with TMMLodFile(mem.Memory^) do
+        begin
+          zSwap(inf.DataSize, DataSize);
+          zSwap(inf.UnpackedSize, UnpSize);
+          if (BmpSize <> 0) or (DataSize = 0) and
+             (FFiles.Size[idx] >= 768 + SizeOf(TMMLodFile) + FFiles.Options.NameSize) then
+            szAfter:= 768;
+          if CmpBits and (FVersion <> RSLodBitmaps) then
+            Bits:= Bits and 512  // compare 'transparent' bit
+          else
+            Bits:= 0; // ignore bits
+        end;
+    end;
+    RSLodSprites:
+    begin
+      Skip(12);
+      ReadStream(SizeOf(TSprite));
+      if ok then
+        with TSprite(mem.Memory^) do
+        begin
+          zSwap(inf.DataSize, Size);
+          zSwap(inf.UnpackedSize, UnpSize);
+          szBefore:= h*SizeOf(TSpriteLine);
+          unk_2:= 0;  // ignore
+        end;
+    end;
+  end;
+  ok:= (FullSize >= szBefore + szAfter + inf.DataSize) and (inf.DataSize >= 0);
+  ok:= ok and (szBefore >= 0) and (szAfter >= 0) and (inf.UnpackedSize >= 0);
+end;
+
+function TRSLodBase.CompareFiles(Archive2: TRSMMArchive; Index,
+  Index2: int): Boolean;
+var
+  Lod2: TRSLodBase absolute Archive2;
+  mem, mem2: TMemoryStream;
+  r, r2: TStream;
+  info, info2: TMM6GamesFile;
+  CmpBits: Boolean;
+  _, szBefore, szAfter, szBefore2, szAfter2: int;
+begin
+  if FVersion = RSLodHeroes then
+  begin
+    Result:= inherited CompareFiles(Archive2, Index, Index2);
+    exit;
+  end;
+  Result:= (Archive2 is TRSLodBase) and (Lod2.Version <> RSLodHeroes);
+  if not Result then  exit;
+  
+  r:= nil;
+  r2:= nil;
+  mem:= TMemoryStream.Create;
+  mem2:= TMemoryStream.Create;
+  try
+    r:= FFiles.GetAsIsFileStream(Index);
+    r2:= Lod2.RawFiles.GetAsIsFileStream(Index2);
+    CmpBits:= (FVersion = RSLodIcons) and SameText(Copy(Names[Index], 1, 2), 'sb');
+    if not PrepareToCompare(Index, mem, r, info, szBefore, szAfter, CmpBits) or
+       not Lod2.PrepareToCompare(Index2, mem2, r2, info2, szBefore2, szAfter2, CmpBits) then
+    begin
+      Result:= inherited CompareFiles(Archive2, Index, Index2);
+      exit;
+    end;
+
+    Result:= false;
+    if (mem.Size <> mem2.Size) or (szBefore <> szBefore2) or (szAfter <> szAfter2)
+       or not SameSize(info.DataSize, info.UnpackedSize, info2.DataSize, info2.UnpackedSize)
+       or not CompareMem(mem.Memory, mem2.Memory, mem.Size) then
+      exit;
+    if not CompareStreams(r, r2, szBefore, _, _) then
+      exit;
+    if szAfter <> 0 then
+    begin
+      r.Seek(info.DataSize, soCurrent);
+      r2.Seek(info2.DataSize, soCurrent);
+      if not CompareStreams(r, r2, szAfter, _, _) then
+        exit;
+      r.Seek(-info.DataSize - szAfter, soCurrent);
+      r2.Seek(-info2.DataSize - szAfter2, soCurrent);
+    end;
+    // compare the data
+    Result:= DoCompareFiles(r, r2, info.DataSize, info.UnpackedSize,
+       info2.DataSize, info2.UnpackedSize,
+       FFiles.IgnoreUnzipErrors or Lod2.RawFiles.IgnoreUnzipErrors);
+  finally
+    mem.Free;
+    mem2.Free;
+    FFiles.FreeAsIsFileStream(Index, r);
+    Lod2.RawFiles.FreeAsIsFileStream(Index2, r2);
+  end;
+end;
+{
+  PMMLodFile = ^TMMLodFile;
+  TMMLodFile = packed record
+    BmpSize: int;
+    DataSize: int;
+    BmpWidth: int2;
+    BmpHeight: int2;
+    BmpWidthLn2: int2;  // textures: log2(BmpWidth)
+    BmpHeightLn2: int2;  // textures: log2(BmpHeight)
+    BmpWidthMinus1: int2;  // textures: BmpWidth - 1
+    BmpHeightMinus1: int2;  // textures: BmpHeight - 1
+    Palette: int2;
+    _unk: int2;  // runtime palette index
+    UnpSize: int;
+    Bits: int;  // Bits:  2 - mipmaps, $10 - something important too,
+    // $100 - not an image, $200 - transparent icon, $400 - don't free buffers, 
+    // Data...
+    // Palette...
+  end;
+
+  TSpriteLine = packed record
+    a1: int2;
+    a2: int2;
+    pos: int4;
+  end;
+  TSprite = packed record
+    Size: int;
+    w: int2;
+    h: int2;
+    Palette: int2;
+    unk_1: int2;
+    yskip: int2; // number of clear lines at the bottom
+    unk_2: int2; // used in runtime only, for bits
+    UnpSize: int;
+  end;
+  TSpriteEx = packed record
+    Sprite: TSprite;
+    Lines: array[0..(MaxInt div SizeOf(TSpriteLine) div 2)] of TSpriteLine;
+    // Data...
+  end;
+
+  TMM6GamesFile = packed record
+    DataSize: int;
+    UnpackedSize: int;
+  end;
+
+  TMM7GamesFile = packed record
+    Sig1: int; // $16741
+    Sig2: int; // $6969766D (mvii)
+    DataSize: int;
+    UnpackedSize: int;
+  end;
+}
 
 constructor TRSLodBase.CreateInternal(Files: TRSMMFiles);
 begin
@@ -2267,6 +2645,7 @@ begin
         ZeroMemory(m.Memory, sz + SizeOf(TMMLodFile));
         if s <> '' then
           Move(s[1], m.Memory^, length(s));
+        PMMLodFile(PChar(m.Memory) + length(s)).Bits:= 256;
 
         if act then
           Zip(m, Data, Size, -1, int(@PMMLodFile(sz).UnpSize))
@@ -2564,7 +2943,7 @@ begin
   with TMMLodFile(hdr) do
   begin
     UnpSize:= BmpSize;
-    zoom:= (Bits and 2 <> 0);
+    zoom:= (Bits <> -1) and (Bits and 2 <> 0);
     if zoom then
       inc(UnpSize, ((BmpSize div 4 + BmpSize) div 4 + BmpSize) div 4);
     buf.SetSize(UnpSize);
@@ -2598,12 +2977,23 @@ begin
       FillBitmapZooms(b2, buf.Memory, b1.Palette);
   end;
 
+  b1.IgnorePalette:= false;
   with TMMLodFile(hdr) do
+  begin
+    if Bits = -1 then
+    begin
+      GetPaletteEntries(b1.Palette, 0, 1, i);
+      i:= i and $ffffff;
+      if (i = $FFFF00) or (i = $FF00FF) or (i = $FC00FC) or (i = $FCFC00) then
+        Bits:= 512
+      else
+        Bits:= 0;
+    end;
     Zip(m, buf, UnpSize, @DataSize, @UnpSize);
+  end;
 
   i:= m.Seek(0, soEnd);
   m.SetSize(i + 256*3);
-  b1.IgnorePalette:= false;
   RSWritePalette(PChar(m.Memory) + i, b1.Palette);
 end;
 
@@ -2619,8 +3009,10 @@ begin
       Result:= ''
     else
       if a is TBitmap then
-        TBitmap(a).SaveToFile(Result)
-      else
+      begin
+        RSCreateDir(ExtractFilePath(Result));
+        TBitmap(a).SaveToFile(Result);
+      end else
         RSSaveFile(Result, a as TMemoryStream);
   finally
     a.Free;
@@ -2872,9 +3264,7 @@ begin
       RSLodBitmaps, RSLodIcons, RSLodMM8:
       begin
         if FVersion = RSLodBitmaps then
-          FindBitmapPalette(nam, b, pal, Bits)
-        else if Bits = -1 then
-          Bits:= 0;
+          FindBitmapPalette(nam, b, pal, Bits);
 
         PackBitmap(b, m, pal, Bits, Keep);
       end;
@@ -3001,7 +3391,7 @@ begin
     begin
       Palette:= pal;
       Bits:= ABits;
-      if ABits and 2 <> 0 then
+      if (ABits <> -1) and (ABits and 2 <> 0) then
       begin
         BmpWidthLn2:= GetLn2(BmpWidth);
         if BmpWidthLn2 < 2 then
@@ -3012,7 +3402,8 @@ begin
         BmpWidthMinus1:= BmpWidth - 1;
         BmpHeightMinus1:= BmpHeight - 1;
       end;
-    end;
+    end else
+      Bits:= ABits;
   end;
   b1:= b;
   b2:= nil;
@@ -3035,10 +3426,10 @@ var
   scan0, p: PChar; dscan, sz0: int;
   oldht: TBitmapHandleType;
 begin
-  b1:= nil;
   if pal <= 0 then
     raise ERSLodBitmapException.Create(SRSLodSpriteMustPal);
   oldht:= b.HandleType;
+  b1:= nil;
   buf:= TMemoryStream.Create;
   try
     if b.PixelFormat <> pf8bit then

@@ -37,6 +37,8 @@ type
     FOnRowResize: TRSGridRowResizeEvent;
   protected
     FSizingIndex: int;
+    FTimerSupressed: Boolean;  // Fix for problem: if clicking a cell results
+    FTimerSupressedPos: TPoint;  // in scrolling, multiple cells are selected
     procedure CreateParams(var Params:TCreateParams); override;
     procedure TranslateWndProc(var Msg:TMessage);
     procedure WndProc(var Msg:TMessage); override;
@@ -49,6 +51,9 @@ type
     procedure CalcSizingState(X, Y: Integer; var State: TGridState;
       var Index: Longint; var SizingPos, SizingOfs: Integer;
       var FixedInfo: TGridDrawInfo); override;
+    procedure MouseDown(Button: TMouseButton; Shift: TShiftState;
+      X, Y: Integer); override;
+    procedure MouseMove(Shift: TShiftState; AX, AY: Integer); override;
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
   public
     constructor Create(AOwner:TComponent); override;
@@ -99,6 +104,44 @@ begin
   if Assigned(FOnCreateParams) then FOnCreateParams(self, Params);
 end;
 
+procedure TRSStringGrid.MouseDown(Button: TMouseButton; Shift: TShiftState; X,
+  Y: Integer);
+var
+  state: TGridState;
+begin
+  state:= FGridState;
+  inherited;
+  if (state = gsNormal) and (FGridState = gsSelecting) and not (ssShift in Shift) then
+  begin
+    with MouseCoord(X, Y) do
+      if (X = Col) and (Y = Row) then
+        exit;
+    FTimerSupressed:= true;
+    FTimerSupressedPos:= Point(X, Y);
+    KillTimer(Handle, 1);
+  end;
+end;
+
+procedure TRSStringGrid.MouseMove(Shift: TShiftState; AX, AY: Integer);
+const
+  dist2 = 26;
+begin
+  with FTimerSupressedPos do
+    if FTimerSupressed and (FGridState = gsSelecting) then
+      if (sqr(X - AX) + sqr(Y - AY) > dist2) then
+      begin
+        FTimerSupressed:= false;
+        SetTimer(Handle, 1, 60, nil);
+      end else
+      begin
+        FGridState:= gsNormal;
+        inherited;
+        FGridState:= gsSelecting;
+        exit;
+      end;
+  inherited;
+end;
+
 procedure TRSStringGrid.MouseUp(Button: TMouseButton; Shift: TShiftState; X,
   Y: Integer);
 var
@@ -121,6 +164,7 @@ begin
     end;
   end;
   inherited;
+  FTimerSupressed:= false;
   if Assigned(sizing) then
     sizing(self, index, size);
 end;
