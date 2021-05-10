@@ -3,7 +3,7 @@ unit DXProxy;
 interface
 
 uses
-  Forms, Windows, Messages, SysUtils, Classes, IniFiles, RSSysUtils, RSQ, Math,
+  MultiMon, Windows, Messages, SysUtils, Classes, IniFiles, RSSysUtils, RSQ, Math,
   RSCodeHook, DirectDraw, Direct3D, TypInfo, Common, MMCommon, RSResample,
   Graphics, Types;
 
@@ -476,35 +476,61 @@ begin
   RenderH:= min(RenderH, RenderLimY);
 end;
 
-procedure CalcRenderLim;
+// Direct3D 7 fails with an error if any surface dimention is over 2048.
+// It's a bug intentionally introduced by MS.
+// fix is from https://github.com/UCyborg/LegacyD3DResolutionHack
 var
-  i: int;
+  Direct3DFixed: Boolean;
+
+procedure FixDirect3D;
+const
+  code = #$B8#0#8#0#0#$39;
+  hk0: TRSHookInfo = (new: $7fffffff; t: RSht4);
+var
+  hk: TRSHookInfo;
+  p, sz: uint;
 begin
-  if _IsD3D^ and not UseVoodoo then
+  p:= RSWin32Check(GetModuleHandle('d3dim.dll'));
+  with PImageNtHeaders(p + uint(PImageDosHeader(p)._lfanew))^ do
   begin
-    RenderLimX:= 2048;
-    RenderLimY:= 2048;
-  end else
-  begin
-    RenderLimX:= Screen.Width;
-    RenderLimY:= Screen.Height;
-    for i:= 0 to Screen.MonitorCount - 1 do
-      with Screen.Monitors[i] do
-      begin
-        RenderLimX:= max(RenderLimX, Width);
-        RenderLimY:= max(RenderLimY, Height);
-      end;
+    sz:= OptionalHeader.SizeOfCode - SizeOf(code);
+    inc(p, OptionalHeader.BaseOfCode);
   end;
+  hk:= hk0;
+  for p:= p to p + sz do
+    if (pint(p)^ = pint(@code[1])^) and (pword(p + 4)^ = pword(@code[5])^) then
+    begin
+      hk.p:= p + 1;
+      RSApplyHook(hk);
+    end;
+  Direct3DFixed:= true;
+end;
+
+function EnumMonProc(hm: HMONITOR; dc: HDC; r: PRect; Data: Pointer): Boolean; stdcall;
+var
+  a: TMonitorInfo;
+begin
+  FillChar(a, SizeOf(a), 0);
+  a.cbSize:= SizeOf(a);
+  GetMonitorInfo(hm, @a);
+  inc(RenderLimX, RectW(a.rcMonitor));
+  inc(RenderLimY, RectH(a.rcMonitor));
+  Result:= true;
+end;
+
+procedure CalcRenderLim;
+begin
+  RenderLimX:= 0;
+  RenderLimY:= 0;
+  EnumDisplayMonitors(0, nil, @EnumMonProc, 0);
+  RenderLimX:= max(RenderLimX, GetSystemMetrics(SM_CXSCREEN));
+  RenderLimY:= max(RenderLimY, GetSystemMetrics(SM_CYSCREEN));
   if RenderMaxWidth >= 640 then
     RenderLimX:= RenderMaxWidth;
   if RenderMaxHeight >= 480 then
     RenderLimY:= RenderMaxHeight;
-  // old DirectX doesn't support anything bigger than 2048
-  if _IsD3D^ and not UseVoodoo then
-  begin
-    RenderLimX:= min(RenderLimX, 2048);
-    RenderLimY:= min(RenderLimY, 2048);
-  end;
+  if _IsD3D^ and (max(RenderLimX, RenderLimY) > 2048) and not Direct3DFixed and not UseVoodoo then
+    FixDirect3D;
   CalcRenderSize;
 end;
 

@@ -50,7 +50,7 @@ type
     LastContextMenuAlign: Boolean;
     Ini: TRSMemIni;
     IniSect: string;
-    InfoList: TRSKeyValueList;
+    InfoList: TRSKeyValueStringList;
     InfoCount: int;
     RebuildInfo: Boolean;
     WasActive, Activated: Boolean;
@@ -175,7 +175,7 @@ begin
   L.Vars[lvRenderCenterY]:= 0.5;
   L.Vars[lvDebug]:= NaN;
   L.Vars[lvFOVMul]:= 1;
-  InfoList:= TRSKeyValueList.Create;
+  InfoList:= TRSKeyValueStringList.Create;
 end;
 
 procedure TLayoutSupport.Deactivate;
@@ -809,33 +809,20 @@ begin
 end;
 
 procedure TLayoutSupport.UpdateIniInfo;
-{var
-  full: string;
-  i: int;}
 var
-  reload: Boolean;
+  actual: Boolean;
 begin
-  reload:= Ini.Lines.Modified;
+  actual:= Ini.Lines.Modified;
+  if actual then
+    AddIniSectSpace(Ini.Lines);
   Ini.Flush;
   if (InfoList.Count = 0) or not RebuildInfo and (InfoCount = InfoList.Count) then
     exit;
   InfoCount:= InfoList.Count;
-  if reload then
+  if not actual then
     Ini.Reload;
   AddIniInfos(Ini.Lines, IniSect, InfoList);
-{  full:= RSLoadTextFile(Ini.FileName);
-  with InfoList do
-  begin
-    if RebuildInfo or (AddDescriptions < 0) then
-    begin
-      for i := 0 to Count - 1 do
-        full:= RSStringReplace(full, InfoVal[int(Objects[i])], '');
-      RSSaveTextFile(Ini.FileName, full);
-    end;
-    if AddDescriptions > 0 then
-      for i := 0 to Count - 1 do
-        AddIniInfo(Ini, IniSect, Strings[i], InfoVal[int(Objects[i])], full);
-  end;}
+  AddIniSectSpace(Ini.Lines);
 end;
 
 procedure TLayoutSupport.UpdateMinMax;

@@ -63,6 +63,7 @@ const
   hqFixMonsterSpells = 76;
   hqCheckFreeSpace = 77;
   hqFixSouldrinker = 78;
+  hqSmoothMouseLook = 79;
 
 {$IFDEF mm6}
   m6 = 1;
@@ -161,6 +162,7 @@ type
     FixMonsterAttackTypes: LongBool;          // (unused in MM6)
     FixMonsterSpells: LongBool;               //
     FixSouldrinker: LongBool;                 //
+    MouseLookPermKey: int;                    //
   end;
 
 var
@@ -214,7 +216,8 @@ var
   ShowHintWithRMB, WasInDialog, FixHitDistantMonstersIndoor,
   GreenItemsWhileRightClick, FixDeadPlayerIdentifyItem,
   DeadPlayerShowItemInfo, SystemDDraw, UseVoodoo, NeedFreeSpaceCheck,
-  FixHouseAnimationRestart, ExitTalkingWithRightButton, NoIntoLogos: Boolean;
+  FixHouseAnimationRestart, ExitTalkingWithRightButton, NoIntoLogos,
+  MouseLookChanged2: Boolean;
   DoubleSpeed: BOOL;
   {$IFNDEF mm6}
   NoVideoDelays, DisableAsyncMouse, ShowTreeHints: Boolean;
@@ -532,6 +535,18 @@ const
   _SpellInfo = PSpellInfoArray(m6*$4BDD6E + m7*$4E3C46 + m8*$4F486E);
   _DDraw = pptr(m6*$9B10E4 + m7*$E31AF4 + m8*$F01A0C);
   _dist_mist = pint(m6*$6296EC + m7*$6BDEFC + m8*$6F3004);
+  __TimeYear = m6*$908D10 + m7*$ACD544 + m8*$B215AC;
+  __TimeMonth = __TimeYear + 4;
+  __TimeWeek = __TimeMonth + 4;
+  __DayOfMonth = __TimeWeek + 4;
+  __TimeHour = __DayOfMonth + 4;
+  __TimeMinute = __TimeHour + 4;
+  _TimeYear = pint(__TimeYear);
+  _TimeMonth = pint(__TimeMonth);
+  _TimeWeek = pint(__TimeWeek);
+  _DayOfMonth = pint(__DayOfMonth);
+  _TimeHour = pint(__TimeHour);
+  _TimeMinute = pint(__TimeMinute);
 
   _ItemOff_Number = 0;
   _ItemOff_Bonus = 4;
@@ -605,8 +620,8 @@ procedure LoadExeMods;
 function GetMipmapsCountProc(var a: THwlBitmap; p: PChar): int;
 procedure AddMipmapBase(p: PChar; v: int);
 {$ENDIF}
-procedure AddIniInfo(ini: TCustomIniFile; const sect, key, info, fullIni: string); overload;
-procedure AddIniInfos(ini: TRSMemIniStrings; const section: string; list: TRSKeyValueList; del: TStrings = nil);
+procedure AddIniInfos(ini: TRSMemIniStrings; const section: string; list: TRSKeyValueStringList; del: TStrings = nil);
+procedure AddIniSectSpace(ini: TRSMemIniStrings);
 function GetMapExtra: PMapExtra;
 
 // make semi-transparent borders not black when scaling
@@ -661,24 +676,6 @@ begin
     DisabledHooks.Add(Trim(RSGetToken(ps, i)));
 end;
 
-procedure AddIniInfo(ini: TCustomIniFile; const sect, key, info, fullIni: string); overload;
-var
-  s: string;
-  c, c1: char;
-begin
-  s:= ini.ReadString(sect, key, #13#10);
-  if (s = #13#10) or (length(s) >= 2047) or (pos(info, fullIni) > 0) then
-    exit;
-  if s <> '' then
-  begin
-    c:= s[1];
-    c1:= s[length(s)];
-    if (c in ['"', '''']) and (c1 = c) or (ord(c) <= 32) or (ord(c1) <= 32) then
-      s:= '"' + s + '"';
-  end;
-  ini.WriteString(sect, key, s + info);
-end;
-
 procedure DelIniInfo(ini: TRSMemIniStrings; i: int; const info: string);
 begin
   while (i < ini.Count) and not ini.IsSectionHeader(i) do
@@ -691,17 +688,24 @@ begin
       inc(i);
 end;
 
-procedure AddIniInfo(ini: TRSMemIniStrings; sect: int; const key, info: string); overload;
+procedure AddIniInfo(ini: TRSMemIniStrings; sect: int; const key, info: string);
 var
   k: int;
 begin
   if not ini.FindKey(sect, key, k) then  exit;
   ini.Insert(k + 1, info);
-  if (k + 2 = ini.Count) or (ini[k + 2] <> '') then
+  if (k + 2 < ini.Count) and (ini[k + 2] <> '') then
     ini.Insert(k + 2, '');
 end;
 
-procedure AddIniInfos(ini: TRSMemIniStrings; const section: string; list: TRSKeyValueList; del: TStrings = nil);
+function FmtInfo(const s: string): string;
+begin
+  Result:= ' ; ' + s;
+  if Result[length(Result)] <> '.' then
+    Result:= Result + '.';
+end;
+
+procedure AddIniInfos(ini: TRSMemIniStrings; const section: string; list: TRSKeyValueStringList; del: TStrings = nil);
 var
   s: string;
   i, sect, k: int;
@@ -710,11 +714,10 @@ begin
   if sect < 0 then  exit;
   for i := 0 to List.Count - 1 do
   begin
-    s:= ' ; ' + list.Values[i];
-    if s[length(s)] <> '.' then
-      s:= s + '.';
+    s:= FmtInfo(list.Values[i]);
     if (AddDescriptions < 0) or not ini.FindKey(sect, list[i], k) or
-       (k + 1 = ini.Count) or (ini[k + 1] <> s) then
+       (k + 1 = ini.Count) or (ini[k + 1] <> s) or
+       (k + 2 < ini.Count) and (ini[k + 2] <> '') then
     begin
       DelIniInfo(ini, sect, s);
       if AddDescriptions > 0 then
@@ -723,16 +726,28 @@ begin
   end;
   if del <> nil then
     for i := 0 to del.Count - 1 do
-      DelIniInfo(ini, sect, del[i]);
+      DelIniInfo(ini, sect, FmtInfo(del[i]));
+end;
+
+procedure AddIniSectSpace(ini: TRSMemIniStrings);
+var
+  i: int;
+begin
+  i:= ini.FindNextSection(ini.FindNextSection(0) + 1);
+  while i >= 0 do
+  begin
+    if (i > 0) and (ini[i - 1] <> '') then
+      ini.Insert(i, ''); 
+    i:= ini.FindNextSection(i + 1);
+  end;
 end;
 
 procedure LoadIni;
 var
   ini, iniOverride: TRSMemIni;
   sect, info: string;
-  InfoList: TRSKeyValueList;
+  InfoList: TRSKeyValueStringList;
   DelList: TStringList;
-  Rebuild: Boolean;
 
   procedure AddInfo(const key: string);
   begin
@@ -753,7 +768,6 @@ var
     Result:= ini.ReadString(sect, key, #13#10);
     if Result = #13#10 then
     begin
-      Rebuild:= Rebuild or write;
       if write then
         ini.WriteString(sect, key, default);
       Result:= default;
@@ -772,7 +786,6 @@ var
     Result:= ini.ReadInteger(sect, key, 0);
     if (Result = 0) and (ini.ReadInteger(sect, key, 1) <> 0) then
     begin
-      Rebuild:= Rebuild or write;
       if write then
         ini.WriteInteger(sect, key, default);
       Result:= default;
@@ -793,7 +806,6 @@ var
     s:= ini.ReadString(sect, key, #13#10);
     if RSVal(s, Result) then
       exit;
-    Rebuild:= Rebuild or write;
     if write then
       ini.WriteString(sect, key, FloatToStr(default, FormatSettingsEN));
     Result:= default;
@@ -813,9 +825,8 @@ var
 const
   SVoodooMsg = 'A replacement ddraw.dll found in game folder. '
    + 'It''s probably from dgVoodoo2. My patch handles higher resolutions on its '
-   + 'own and dgVoodoo will reduce FPS. However, using dgVoodoo can let you '
-   + 'overcome resolution limit of old DirectX and get other benefits. '#13#10
-   + 'Would you like to use the replacement ddraw.dll?';
+   + 'own and dgVoodoo will reduce FPS.'#13#10
+   + 'Would you like to use the replacement ddraw.dll anyway?';
 
 var
   x: ext;
@@ -825,14 +836,13 @@ begin
   iniOverride:= nil;
   ini:= TRSMemIni.Create(AppPath + SIni);
   DelList:= TStringList.Create;
-  InfoList:= TRSKeyValueList.Create(false, false);
+  InfoList:= TRSKeyValueStringList.Create(false, false);
   with Options do
     try
       sect:= 'Settings';
       if not ini.ReadBool(sect, 'KeepCurrentDirectory', false) then
         SetCurrentDir(AppPath);
       AddDescriptions:= ini.ReadInteger(sect, 'AddDescriptions', 1);
-      Rebuild:= AddDescriptions < 0;
       if AddDescriptions < 0 then
         ini.WriteInteger(sect, 'AddDescriptions', 0);
       info:= 'Set to 1 to add descriptions to INI entries, set to -1 to remove previously added descriptions, set to 0 to do nothing';
@@ -917,7 +927,7 @@ begin
       DataFiles:= ReadBool('DataFiles', true, false);
       info:= 'Enables mouse look mode, which lets you look around by moving mouse';
       MouseLook:= ReadBool('MouseLook', false);
-      info:= 'Mouse sensitivity';
+      info:= 'Mouse sensitivity. To use one from another game, convert it to Valorant sensitivity using an online converter, then multiply the result by 25.486222 and divide by MouseSensitivityDirectMul';
       x:= ReadFloat('MouseSensitivityX', 35);
       MLookSpeed.X:= Round(x*32);
       MLookSpeed.Y:= Round(ReadFloat('MouseSensitivityY', x, false)*32);
@@ -932,6 +942,8 @@ begin
       MouseLookChangeKey:= ReadInteger('MouseLookChangeKey', VK_MBUTTON);
       info:= 'Key used to disable/enable mouse look while it''s being held';
       MouseLookTempKey:= ReadInteger('MouseLookTempKey', 0);
+      info:= 'Key used to toggle mouse look with state persisting across dialogs';
+      MouseLookPermKey:= ReadInteger('MouseLookPermKey', 0);
       info:= 'Pressing Caps Lock would toggle mouse look if this is set to 1';
       CapsLockToggleMouseLook:= ReadBool('CapsLockToggleMouseLook', true);
       info:= 'Set to 1 to enable alternative mouse look mode where mouse look is off by default, but is turned on by the keys that toggle it';
@@ -1004,7 +1016,9 @@ begin
       SupportTrueColor:= ReadBool('SupportTrueColor', true, false);
       RenderMaxWidth:= ReadInteger('RenderMaxWidth', 0, false);
       RenderMaxHeight:= ReadInteger('RenderMaxHeight', 0, false);
+      info:= 'Defines how crisp pixels look when scaled up. Default is 3.';
       ScalingParam1:= ReadFloat('ScalingParam1', 3, false);
+      info:= 'Defines how crisp pixel border looks when scaled up. Default is 0.2, maximum is 1.';
       ScalingParam2:= ReadFloat('ScalingParam2', 0.2, false);
       info:= 'For Hardware 3D mode. Bigger values lead to less flickering at a distance, but more washed-out look';
       {$IFNDEF mm6}MipmapsCount:= ReadInteger('MipmapsCount', 3);{$ENDIF}
@@ -1146,22 +1160,7 @@ begin
       // Add info
       if AddDescriptions <> 0 then
         AddIniInfos(ini.Lines, sect, InfoList, DelList);
-{      ini.Flush;
-      if (DelList.Count > 0) or Rebuild then
-      begin
-        fullIni:= RSLoadTextFile(AppPath + SIni);
-        for i := 0 to DelList.Count - 1 do
-          fullIni:= RSStringReplace(fullIni, DelList[i], '');
-        if Rebuild then
-          for i := 0 to InfoList.Count div 2 - 1 do
-            fullIni:= RSStringReplace(fullIni, InfoList[i*2 + 1], '');
-        RSSaveTextFile(AppPath + SIni, fullIni);
-        ini.Reload;
-      end;
-
-      if AddDescriptions > 0 then
-        for i := 0 to InfoList.Count div 2 - 1 do
-          AddIniInfo(ini, sect, InfoList[i*2], InfoList[i*2 + 1], fullIni);}
+      AddIniSectSpace(ini.Lines);
 
       iniOverride:= ini;
       ini:= TRSMemIni.Create(AppPath + SIni2);
@@ -1247,13 +1246,13 @@ var
 begin
   Result:= false;
   for i:= 1 to length(pat) + 1 do
-    if (s[i] <> pat[i]) and (pat[i] <> '?') then
+    if pat[i] = '*' then
     begin
-      if pat[i] = '*' then
-        Result:= (i = length(pat)) or
-           PatMatch(Copy(pat, i + 1, MaxInt), Copy(s, i + 1 + length(s) - length(pat), MaxInt));
+      Result:= (i = length(pat)) or
+         PatMatch(Copy(pat, i + 1, MaxInt), Copy(s, i + 1 + length(s) - length(pat), MaxInt));
       exit;
-    end;
+    end else if (s[i] <> pat[i]) and (pat[i] <> '?') then
+      exit;
   Result:= true;
 end;
 

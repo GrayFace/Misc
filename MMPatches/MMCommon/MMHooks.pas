@@ -52,7 +52,6 @@ const
 
 // Raw mouse input
 const
-  WM_INPUT = $00FF;
   HID_USAGE_GENERIC_MOUSE = 2;
   RIDEV_INPUTSINK = $100;
   RID_INPUT  = $10000003;
@@ -192,6 +191,10 @@ begin
   else if CheckKey(Options.MouseLookChangeKey) then
     MouseLookChanged:= not MouseLookChanged;
 
+  // MouseLookPermKey
+  if CheckKey(Options.MouseLookPermKey) then
+    MouseLookChanged2:= not MouseLookChanged2;
+
   // MouseLook
   if Options.MouseLook then
     ProcessMouseLook;
@@ -297,7 +300,7 @@ begin
         KeysChecked[wp]:= false;
 {$ENDIF}
     WM_INPUT:
-      if MLookRaw then
+      if (byte(wp) = 0) and MLookRaw then
         ProcessRawMouseLook(lp);
   end;
 
@@ -445,7 +448,7 @@ begin
     MouseLookOn:= MouseLook and (_CurrentScreen^ = 0) and (_MainMenuCode^ < 0) and
        ((cur = EmptyCur) or (cur = ArrowCur)) and not MLookRightPressed^ and
        ( (GetAsyncKeyState(MouseLookTempKey) and $8000 = 0) xor
-          MouseLookChanged xor MouseLookUseAltMode xor
+          MouseLookChanged xor MouseLookChanged2 xor MouseLookUseAltMode xor
           (CapsLockToggleMouseLook and (GetKeyState(VK_CAPSLOCK) and 1 <> 0)));
 
   if MouseLookOn <> (cur = EmptyCur) then
@@ -3237,12 +3240,33 @@ asm
 @std:
 end;
 
+//----- Spells that couldn't be cast by monsters before
+
+procedure FixMonSpellCast;
+asm
+	mov edx, 3
+	cmp ecx, 7   // Fire Spike
+	jz @proj
+	cmp ecx, 32  // Ice Blast
+	jz @proj
+	cmp ecx, 37  // Deadly Swarm
+	jz @proj
+	cmp ecx, 76  // Flying Fist
+	jz @proj
+	cmp ecx, 87  // Sunray
+	jnz @std
+@proj:
+	mov [esp], $40551D
+@std:
+end;
+
 //----- Unable to equip sword or dagger when non-master spear is equipped
 
 procedure EquipOnSpearHook;
 const
   ItemType = m7*$468FDC + m8*$467460 - 5;
 asm
+  push eax
   add eax, [ItemType]
   cmp byte ptr [eax + 1], 4
   jnz @std
@@ -3261,6 +3285,7 @@ asm
   mov [ebp - $C], edi
 {$ENDIF}
 @std:
+  pop eax
 end;
 
 //----- Fix Arcomage hanging
@@ -3280,10 +3305,88 @@ asm
 @ok:
 end;
 
+//----- Fix damage kind from walking on water
+
+procedure FixWaterWalkDamage;
+asm
+  mov edx, 2
+  mov [esp + 8], edx
+  jmp eax
+end;
+
+//----- Fix +Bow skill items not affecting damage on GM
+
+procedure FixBowSkillDamageBonus7;
+asm
+  lea ecx, [edi - $112]
+  push 5
+  call _Character_GetSkillWithBonuses
+end;
+
+procedure FixBowSkillDamageBonus8;
+asm
+  lea ecx, [ebx - $382]
+  push 5
+  call _Character_GetSkillWithBonuses
+end;
+
+procedure FixBowSkillDamageBonusStat;
+asm
+  mov ecx, esi
+  push 5
+  call _Character_GetSkillWithBonuses
+end;
+
+//----- Fix full brightness for a minute at 5:00 AM
+
+procedure FixBright5AM;
+asm
+  mov eax, [__TimeMinute]
+  mov [ecx + m6*$7C264 + m7*$1C288 + m8*$23A7C], eax
+end;
+
+//----- Smooth mouse look
+
+function MyCos(a, part: int): int; inline;
+begin
+  Result:= Round($10000*cos((a*2048 + part - 1024)*pi/1024/2048)); // !!! tmp
+end;
+
+function FastCosX(a: int): int; stdcall;
+begin
+  Result:= MyCos(a, MLookPartX);
+end;
+
+function FastCosY(a: int): int; stdcall;
+begin
+  Result:= MyCos(a, MLookPartY);
+end;
+
+function FastCosSummed(a: int): int; stdcall;
+begin
+  Result:= Round($10000*cos(a*pi/1024/2048)); // !!! tmp
+end;
+
+type
+  TThisCall0 = function(_,__, this: uint): int;
+
+procedure UpdateDirection1(f: TThisCall0; _, p: uint);
+var
+  x, y: int;
+begin
+  x:= pint(p + 20)^;
+  y:= pint(p + 24)^;
+  pint(p + 20)^:= x*2048 + MLookPartX - 1024;
+  pint(p + 24)^:= y*2048 + MLookPartY - 1024;
+  f(0,0, p);
+  pint(p + 20)^:= x;
+  pint(p + 24)^:= y;
+end;
+
 //----- HooksList
 
 var
-  HooksCommon: array[1..40] of TRSHookInfo = (
+  HooksCommon: array[1..41] of TRSHookInfo = (
     (p: m6*$453ACE + m7*$463341 + m8*$461316; newp: @UpdateHintHook;
        t: RShtCallStore; Querry: hqFixStayingHints), // Fix element hints staying active in some dialogs
     (p: m6*$4226F8 + m7*$427E71 + m8*$4260A8; newp: @FixItemSpells;
@@ -3358,6 +3461,8 @@ var
     (p: m6*$4155D2 + m7*$4194F2 + m8*$419141; size: 2 + m8*4), // Don't hide skills that overflow
     (p: m6*$4881DF + m7*$494139 + m8*$49236F; old: $86; new: $84;
       t: RSht1), // New Day wasn't triggered on beginning of a month when resting until down and pressing Esc
+    (p: m6*$47BFE1 + m7*$4892D0 + m8*$488BE7; newp: @FixBright5AM;
+      t: RShtBefore), // Fix full brightness for a minute at 5:00 AM
     ()
   );
 {$IFDEF MM6}
@@ -3423,7 +3528,7 @@ var
     ()
   );
 {$ELSEIF defined(MM7)}
-  Hooks: array[1..112] of TRSHookInfo = (
+  Hooks: array[1..117] of TRSHookInfo = (
     (p: $47B84E; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (monsters)
     (p: $47B296; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (items)
     (p: $47AD40; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (sprites)
@@ -3535,16 +3640,21 @@ var
     (p: $47BB77; newp: @FixSpritesWrapAround; t: RShtBefore; size: 7), // Don't show sprites from another side of the map with increased FOV
     (p: $42E4F0; old: $43642D; newp: @FixSouldrinkerHook; t: RShtCall; Querry: hqFixSouldrinker), // Souldrinker was hitting monsters beyond party range
     (p: $453A31; old: $453AE6; newp: @FixAcidBurst; t: RShtBeforeJmp6), // Acid Burst doing physical damage
+    (p: $404B02; newp: @FixMonSpellCast; t: RShtBefore), // Spells that couldn't be cast by monsters before
     (p: $468FCF; newp: @EquipOnSpearHook; t: RShtAfter; size: 6), // Unable to equip sword or dagger when non-master spear is equipped
     (p: $469037; size: $469041 - $469037), // Unable to equip sword or dagger when non-master spear is equipped
     (p: $40DC7F; newp: @FixArcomage; t: RShtAfter; size: 6), // Fix Arcomage hanging
+    (p: $49431F; newp: @FixWaterWalkDamage; t: RShtCallStore), // Fix kind damage from walking on water
+    (p: $48D2C2; newp: @FixBowSkillDamageBonus7; t: RShtBefore), // Fix +Bow skill items not affecting damage on GM
+    (p: $48D15E; newp: @FixBowSkillDamageBonusStat; t: RShtCall; size: 6), // Fix +Bow skill items not affecting damage on GM
+    (p: $48D1CB; newp: @FixBowSkillDamageBonusStat; t: RShtCall; size: 6), // Fix +Bow skill items not affecting damage on GM
     ()
   );
 {$ELSE}
   FogRange: int;
   FogRangeFloat, FogRangeMul, FogRangeMul2: Single;
 
-  Hooks: array[1..111] of TRSHookInfo = (
+  Hooks: array[1..151] of TRSHookInfo = (
     (p: $47AB35; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Monsters not visible on the sides of the screen
     (p: $47A55E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Items not visible on the sides of the screen
     (p: $48B37E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Effects not visible on the sides of the screen
@@ -3659,6 +3769,51 @@ var
     (p: $467453; newp: @EquipOnSpearHook; t: RShtAfter; size: 6), // Unable to equip sword or dagger when non-master spear is equipped
     (p: $4674BB; size: $4674C5 - $4674BB), // Unable to equip sword or dagger when non-master spear is equipped
     (p: $40EFC3; newp: @FixArcomage; t: RShtAfter; size: 6), // Fix Arcomage hanging
+    (p: $406015+7; old: $13; new: 0; t: RSht1), // Let monsters cast Fire Spike
+    (p: $406015+37; old: $13; new: 0; t: RSht1), // Let monsters cast Deadly Swarm
+    (p: $406015+76; old: $13; new: 0; t: RSht1), // Let monsters cast Flying Fist
+    (p: $49270A; newp: @FixWaterWalkDamage; t: RShtCallStore), // Fix damage kind from walking on water
+    (p: $48CBED; newp: @FixBowSkillDamageBonus8; t: RShtBefore), // Fix +Bow skill items not affecting damage on GM
+    (p: $48CA86; newp: @FixBowSkillDamageBonusStat; t: RShtCall; size: 6), // Fix +Bow skill items not affecting damage on GM
+    (p: $48CAEE; newp: @FixBowSkillDamageBonusStat; t: RShtCall; size: 6), // Fix +Bow skill items not affecting damage on GM
+    (p: $476903; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $476925; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $478019; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $47802F; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $483AF0; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $483B06; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $483EAB; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $483EC1; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $48506E; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $485091; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $48597F; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $48598F; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $48AEB5; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $48AECA; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    // 4C001B!!!
+    (p: $4768C5; old: $402DB7; newp: @FastCosY; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $4768E7; old: $402DB7; newp: @FastCosY; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $47803F; old: $402DB7; newp: @FastCosY; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $478055; old: $402DB7; newp: @FastCosY; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $4859A5; old: $402DB7; newp: @FastCosY; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $4859B5; old: $402DB7; newp: @FastCosY; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $4873F1; old: $402DB7; newp: @FastCosY; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $48740A; old: $402DB7; newp: @FastCosY; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $4874A8; old: $402DB7; newp: @FastCosY; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $4874C6; old: $402DB7; newp: @FastCosY; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $48AE90; old: $402DB7; newp: @FastCosY; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $48AEA5; old: $402DB7; newp: @FastCosY; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+
+    (p: $43E0DF; size: 2; Querry: hqSmoothMouseLook), // !!! tmp
+    // writing 519464, 519468, 51946C: (refs to 4E8538)
+
+    (p: $4E853E; old: $3f40; new: $3e90; t: RSht2; Querry: hqSmoothMouseLook), // Smooth mouse look (1/2048 -> 1/2048^2)
+    (p: $421DDA; newp: @UpdateDirection1; t: RShtFunctionStart; size: 10; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $421EC6; old: $402DB7; newp: @FastCosSummed; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $421ED3; old: $402DB7; newp: @FastCosSummed; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $421EE7; old: $402DB7; newp: @FastCosSummed; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+    (p: $421EF4; old: $402DB7; newp: @FastCosSummed; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
+
     ()
   );
 {$IFEND}
@@ -3706,6 +3861,7 @@ begin
     ApplyHooks(hqFixHouseAnimationRestart);
   if NeedFreeSpaceCheck then
     ApplyHooks(hqCheckFreeSpace);
+  ApplyHooks(hqSmoothMouseLook);
 end;
 
 procedure ApplyMMDeferredHooks;
