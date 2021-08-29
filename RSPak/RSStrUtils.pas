@@ -81,6 +81,9 @@ function RSStrToFloat(s:string):extended;
 function RSCharToInt(c:char; Base:LongInt=36):LongInt;
 //function RSFloatToStr()
 
+// Match patterns with '*','?' symbols. Case-insensitive for English letters
+function RSWildcardMatch(const pat, s: string): Boolean;
+
 implementation
 
 {$R-} // No range checking
@@ -1497,6 +1500,63 @@ function RSStrToFloat(s:string):extended;
 begin
   Result:= StrToFloat(RSStringReplace(s, '.', DecimalSeparator,[rfReplaceAll]));
 end;
+
+
+function SameChar(a, b: char): Boolean; {$IFDEF D2005}inline;{$ENDIF}
+const
+  d0 = ord('a') - ord('A');
+var
+  d: int;
+begin
+  d:= ord(a) - ord(b);
+  Result:= (d = 0) or (d = d0) and (a >= 'a') and (a <= 'z') or
+                      (d = -d0) and (a >= 'A') and (a <= 'Z');
+end;
+
+function DoPatMatch(pat, s, pat2, s2: PChar; d: int): Boolean;
+var
+  c: char;
+begin
+  while pat <> pat2 do
+  begin
+    c:= pat^;
+    Result:= (c = '*');
+    if Result then
+    begin
+      repeat // skip this and subsequent *
+        inc(pat, d);
+        if pat = pat2 then  exit; // trailing * matches the rest of s
+      until pat^ <> '*';
+      if (pat2 - d)^ = '*' then  // *abc* case - need to iterate
+      begin
+        while s <> s2 do
+        begin
+          if DoPatMatch(pat, s, pat2, s2, d) then  exit;
+          inc(s, d);
+        end;
+        Result:= false;
+      end else // keep * for backward match
+        Result:= DoPatMatch(pat2 - d, s2 - d, pat - d*2, s - d, -d);
+      exit;
+    end
+    else if (s = s2) or (c <> '?') and not SameChar(c, s^) then
+      exit;
+    inc(pat, d);
+    inc(s, d);
+  end;
+  Result:= (s = s2);
+end;
+
+function RSWildcardMatch(const pat, s: string): Boolean;
+begin
+  if pat = '' then
+    Result:= (s = '')
+  else if s = '' then
+    Result:= DoPatMatch(@pat[1], nil, @pat[length(pat)+1], nil, 1)
+  else
+    Result:= DoPatMatch(@pat[1], @s[1], @pat[length(pat)+1], @s[length(s)+1], 1);
+end;
+
 
 function InitCharToInt(c:char; Base:LongInt=36):LongInt;
 begin

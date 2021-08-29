@@ -14,8 +14,7 @@ unit RSSimpleExpr;
 interface
 
 uses
-  Forms, Windows, Messages, SysUtils, Classes, IniFiles, RSSysUtils, RSQ, Math,
-  RSStrUtils;
+  RSQ, Math, RSStrUtils;
 
 type
   TRSOpType = (RSotNone = 0, RSotPush, RSotNot, RSotNeg, RSotAdd, RSotMul,
@@ -35,7 +34,7 @@ type
   TRSCustomOpKind = (RSokValue, RSokLeft, RSokBinary, RSokRight);
 
   TRSCustomOpEvent = function(const s: string; var k: int; var op: TRSOperator; kind: TRSCustomOpKind): Boolean of object;
-  TRSGetVarEvent = function(const Name: string; data: ptr): ext of object;
+  TRSGetVarEvent = function(const name: string; data: ptr): ext of object;
 
 // Result = 0:           No error
 // Result <= length(s):  Syntax error
@@ -91,15 +90,20 @@ begin
 end;
 
 function IsThere(p, p2: PChar): Boolean;
+const
+  aset = ['0'..'9','a'..'z','A'..'Z','_'];
+var
+  AlphaNum: Boolean;
 begin
   Result:= false;
+  AlphaNum:= p2^ in aset;
   while p2^ <> #0 do
   begin
     if p^ <> p2^ then  exit;
     inc(p);
     inc(p2);
   end;
-  Result:= true;
+  Result:= not AlphaNum or not (p^ in aset);
 end;
 
 function CheckOps(const s: string; var k: int; const a: array of TRSOperator; var op: TRSOperator): Boolean;

@@ -377,7 +377,14 @@ type
   end;
 
 
+  TRSLwd = class;
+
+  TRSLwdFindDimentionsEvent = procedure(Sender: TRSLwd; Name: PChar;
+     var Width, Height: int2; RealWidth, RealHeight: int) of object;
+
   TRSLwd = class(TRSLod)
+  private
+    FOnFindDimentions: TRSLwdFindDimentionsEvent;
   protected
     constructor CreateInternal(Files: TRSMMFiles); override;
     procedure FindBitmapPalette(const name: string; b: TBitmap; var pal, Bits: int); override;
@@ -388,6 +395,7 @@ type
     procedure UnpackBitmap(data: TStream; b: TBitmap; const FileHeader); override;
   public
     TransparentColor: TColor;
+    property OnFindDimentions: TRSLwdFindDimentionsEvent read FOnFindDimentions write FOnFindDimentions;
   end;
 
 
@@ -3870,6 +3878,9 @@ var
   i, c: int;
 begin
   Result:= FindDimentions(m.Memory);
+  if Assigned(OnFindDimentions) then
+    with PMMLodFile(PChar(m.Memory) + 16)^ do
+      OnFindDimentions(self, PChar(m.Memory), BmpWidth, BmpHeight, w, h);
   if TransparentColor <> Graphics.clDefault then
     Result:= TransparentColor;
   if Result <> Graphics.clDefault then
