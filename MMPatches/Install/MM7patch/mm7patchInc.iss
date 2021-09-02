@@ -12,6 +12,7 @@
 #define BaseWaterMD5() GetMD5OfFile(AddBackslash(SourcePath) + "BaseWater\00 patch.bitmaps.lod")
 #define HDWaterMD5() GetMD5OfFile(AddBackslash(SourcePath) + "OptData\01 water.bitmaps.lwd")
 #define IconsMD5() GetMD5OfFile(AddBackslash(SourcePath) + "OptData\00 patch.icons.lod")
+#define PalMD5() GetMD5OfFile(AddBackslash(SourcePath) + "OptData\01 mon pal.bitmaps.lod")
 
 [Setup]
 VersionInfoVersion={#AppVersion}
@@ -80,8 +81,9 @@ LodsTask=Install LOD archives with fixes for particular maps and game progressio
 TunnelsTask=Fix Thunderfist Mountain entrances mismatch, add videos to exits from it into different dungeons
 DragonTask=Make "Mega-Dragon" in The Dragon Caves in Eeofol a real mega-dragon instead of a weakened regular dragon
 WaterTask=Use improved water animation
-IconsTask=Install LOD archive with interface fixes%nUncheck this task if you are installing the patch over a mod that recolors interface.
+IconsTask=Install LOD archive with interface fixes.%nUncheck this task if you are installing the patch over an old mod that recolors interface
 UITask=Use widescreen-friendly flexible interface
+PalTask=Improved Monsters - Fix monsters that look the same in all 3 variations.%nUncheck this task if you are installing the patch over an old mod that changes monsters
 #endif
 #if ru
 ru.LodGroup=Отключите эти задачи, если Вы устанавливаете патч поверх большого мода, такого как BDJ Rev4 mod:
@@ -89,8 +91,9 @@ ru.LodsTask=LOD-архивы с исправлениями для конкретных карт и по ходу сюжета
 ru.TunnelsTask=Исправить путаницу со входами в Гору Громовой Кулак, добавить видеозаставки при переходе в другие подземелья из неё
 ru.DragonTask=Заменить ослабленного обычного дракона с именем "Мегадракон" в Пещерах драконов в Эофоле на настоящего магадракона
 ru.WaterTask=Использовать улучшенную анимацию воды
-ru.IconsTask=Установить LOD-архив с исправлениями для интерфейса%nОтключите эту задачу, если Вы устанавливаете патч поверх мода, перекрашивающего интерфейс.
+ru.IconsTask=Установить LOD-архив с исправлениями для интерфейса.%nОтключите эту задачу, если Вы устанавливаете патч поверх старого мода, перекрашивающего интерфейс
 ru.UITask=Включить гибкий интерфейс, адаптированный для широкоэкранников
+ru.PalTask=Исправить монстров, которые во всех 3 вариациях выглядят одинаково.%nОтключите эту задачу, если Вы устанавливаете патч поверх старого мода, меняющего монстров
 #endif
 
 [Tasks]
@@ -104,6 +107,8 @@ Name: icons1; Description: {cm:IconsTask}; Check: IconsTaskCheck(true);
 Name: icons2; Description: {cm:IconsTask}; Flags: unchecked; Check: IconsTaskCheck(false);
 Name: water1; Description: {cm:WaterTask}; Check: WaterTaskCheck(true);
 Name: water2; Description: {cm:WaterTask}; Flags: unchecked; Check: WaterTaskCheck(false);
+Name: pal1; Description: {cm:PalTask}; Check: PalTaskCheck(true);
+Name: pal2; Description: {cm:PalTask}; Flags: unchecked; Check: PalTaskCheck(false);
 Name: lods1; Description: {cm:LodsTask}; GroupDescription: {cm:LodGroup}; Check: LodsTaskCheck(true);
 Name: lods2; Description: {cm:LodsTask}; GroupDescription: {cm:LodGroup}; Flags: unchecked; Check: LodsTaskCheck(false);
 Name: tun1; Description: {cm:TunnelsTask}; GroupDescription: {cm:LodGroup}; Check: TunnelTaskCheck(true);
@@ -111,7 +116,7 @@ Name: tun2; Description: {cm:TunnelsTask}; GroupDescription: {cm:LodGroup}; Flag
 Name: dragon1; Description: {cm:DragonTask}; GroupDescription: {cm:LodGroup}; Check: DragonTaskCheck(true);
 Name: dragon2; Description: {cm:DragonTask}; GroupDescription: {cm:LodGroup}; Flags: unchecked; Check: DragonTaskCheck(false);
 
-; Delete SafeDisk files
+; Delete SafeDisk files and Gamma.pcx
 [InstallDelete]
 Type: files; Name: "{app}\00000001.TMP";
 Type: files; Name: "{app}\clcd16.dll";
@@ -121,6 +126,7 @@ Type: files; Name: "{app}\dplayerx.dll";
 Type: files; Name: "{app}\drvmgt.dll";
 Type: files; Name: "{app}\secdrv.sys";
 Type: files; Name: "{app}\{#MM}.ICD";
+Type: files; Name: "{app}\Gamma.pcx";
 
 [Files]
 #define FlagsOlder (loc ? "Flags: promptifolder;" : "")
@@ -132,6 +138,7 @@ Source: "OptData\01 dragon.games.lod"; DestDir: "{app}\Data\"; Flags: promptifol
 Source: "OptData\01 tunnels.events.lod"; DestDir: "{app}\Data\"; {#FlagsOlder} Tasks: tun1 tun2;
 Source: "OptData\01 water.bitmaps.lwd"; DestDir: "{app}\Data\"; Tasks: water1 water2;
 Source: "OptData\00 patch.icons.lod"; DestDir: "{app}\Data\"; Tasks: icons1 icons2;
+Source: "OptData\01 mon pal.bitmaps.lod"; DestDir: "{app}\Data\"; Tasks: pal1 pal2;
 Source: "OptFiles\*"; Excludes: "*.bak"; DestDir: "{app}"; Flags: onlyifdoesntexist recursesubdirs; AfterInstall: AfterInst;
 #if loc
 Source: "tmp\*.*"; DestDir: "{tmp}"; Flags: deleteafterinstall; Tasks: lods1 lods2 tun1 tun2;
@@ -187,16 +194,11 @@ begin
 end;
 
 #if loc
-var
-  RussianGame, RussianGameChecked: Boolean;
-
 function RussianTaskCheck(checked: Boolean): Boolean;
 begin
-  if not RussianGameChecked then
-    RussianGame:= (GetIniString('Install', 'GameLanguage', '', ExpandConstant('{app}\{#m}lang.ini')) = 'rus') or
-     (ExpandConstant('{language}') = 'ru') and not Exists('{app}\{#MM}Patch ReadMe.TXT');
-  RussianGameChecked:= true;
-  Result:= (RussianGame = checked);
+  Result:= (GetIniString('Install', 'GameLanguage', '', ExpandConstant('{app}\{#m}lang.ini')) = 'rus') or
+   (ExpandConstant('{language}') = 'ru') and not Exists('{app}\{#MM}Patch ReadMe.TXT');
+  Result:= (Result = checked);
 end;
 #endif
 
@@ -207,75 +209,53 @@ begin
   Result:= GetVersionNumbers(ExpandConstant('{app}\{#m}patch.dll'), ms, ls) and (ms >= ver);
 end;
 
-type
-  TTask = record
-    On, Checked: Boolean;
-  end;
-
-function CheckTask(var t: TTask; checked: Boolean): Boolean;
-begin
-  t.Checked:= true;
-  Result:= (t.On = checked);
-end;
-
-function CheckOptLod(var t: TTask; var vis: Boolean; path, md5: string; checked: Boolean; ver: Integer): Boolean;
+function CheckOptLod(var vis: Boolean; path, md5: string; checked: Boolean; ver: Integer): Boolean;
 var
   md: string;
+  b: Boolean;
 begin
   md:= GetMD5(path);
-  vis:= (md <> md5);
-  Result:= vis and not t.Checked;
-  if Result then
-    t.On:= (md <> '') or not CheckVer(ver);
-  t.Checked:= t.Checked or vis;
-  vis:= vis and (t.On = checked);
+  Result:= (md <> md5);
+  b:= (md <> '') or not CheckVer(ver);
+  vis:= Result and (b = checked);
 end;
 
-
-var
-  PatchLods, PatchLodsChecked: Boolean;
 
 function LodsTaskCheck(checked: Boolean): Boolean;
 begin
-  if not PatchLodsChecked then
-    if CheckVer($20001) then
-      PatchLods:= Exists('{app}\Data\00 patch.games.lod')
-    else
-      PatchLods:= GetIniBool('Install', 'PatchLods', true, MMIni);
-  PatchLodsChecked:= true;
-  Result:= (PatchLods = checked);
+  if CheckVer($20001) then
+    Result:= Exists('{app}\Data\00 patch.games.lod')
+  else
+    Result:= GetIniBool('Install', 'PatchLods', true, MMIni);
+  Result:= (Result = checked);
 end;
 
-
-var
-  Dragon: TTask;
 
 function DragonTaskCheck(checked: Boolean): Boolean;
 begin
-  CheckOptLod(Dragon, Result, '{app}\Data\01 dragon.games.lod', '{#DragonMD5}', checked, $20001);
+  CheckOptLod(Result, '{app}\Data\01 dragon.games.lod', '{#DragonMD5}', checked, $20001);
 end;
 
-
-var
-  Tunnel: TTask;
 
 function TunnelTaskCheck(checked: Boolean): Boolean;
 begin
-  CheckOptLod(Tunnel, Result, '{app}\Data\01 tunnels.events.lod', '{#TunnelsMD5}', checked, $20001);
+  CheckOptLod(Result, '{app}\Data\01 tunnels.events.lod', '{#TunnelsMD5}', checked, $20001);
 end;
 
-
-var
-  Icons: TTask;
 
 function IconsTaskCheck(checked: Boolean): Boolean;
 begin
-  CheckOptLod(Icons, Result, '{app}\Data\00 patch.icons.lod', '{#IconsMD5}', checked, $20002);
+  CheckOptLod(Result, '{app}\Data\00 patch.icons.lod', '{#IconsMD5}', checked, $20002);
+end;
+
+
+function PalTaskCheck(checked: Boolean): Boolean;
+begin
+  CheckOptLod(Result, '{app}\Data\01 mon pal.bitmaps.lod', '{#PalMD5}', checked, $20005);
 end;
 
 
 var
-  Water: TTask;
   SavedWaterKind: Integer;
 
 function GetWaterKind: Integer;  // -2 = base, 0 = none, 1 = base yet need wavy, 2 = need wavy, 3 = wavy
@@ -302,9 +282,8 @@ end;
 
 function WaterTaskCheck(checked: Boolean): Boolean;
 begin
-  if not Water.Checked then
-    Water.On:= (GetWaterKind > 0);
-  Result:= CheckTask(Water, checked)
+  Result:= (GetWaterKind > 0);
+  Result:= (Result = checked);
 end;
 
 function BaseWaterCheck: Boolean;
@@ -313,15 +292,11 @@ begin
 end;
 
 
-var
-  UI: TTask;
-
 function UITaskCheck(checked: Boolean): Boolean;
 begin
-  if not UI.Checked then
-    UI.On:= not CheckVer($20003);
+  Result:= not CheckVer($20003);
   Result:= ((UpperCase(GetIniString('Settings', 'UILayout', '', MMIni)) <> 'UI') or
-    not GetIniBool('Settings', 'SupportTrueColor', true, MMIni)) and CheckTask(UI, checked);
+    not GetIniBool('Settings', 'SupportTrueColor', true, MMIni)) and (Result = checked);
 end;
 
 

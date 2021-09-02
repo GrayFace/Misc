@@ -45,22 +45,20 @@ ru.InfoBeforeLabel=Ниже приведён файл {#MM}Patch ReadMe_rus.txt, описывающий изм
 [CustomMessages]
 NoFakeMouseLook=Disable default MM8 pseudo mouse look triggered by right mouse button
 ru.NoFakeMouseLook=Отключить встроенное в MM8 недо- управление мышью, активируемое нажатием правой кнопки мыши
-ObeliskTast=Fix Unicorn King appearing before all obelisks are visited
-ru.ObeliskTast=Исправить появление Короля единорогов до посещения всех обелисков
+ObeliskTask=Fix Unicorn King appearing before all obelisks are visited
+ru.ObeliskTask=Исправить появление Короля единорогов до посещения всех обелисков
 RussianGameVersion=Russian version of the game
 ru.RussianGameVersion=Русская версия игры
-LodsTask=Install LOD archives with fixes for particular maps and game progression%nUncheck this task if you are installing the patch over a big mod like MM6+7+8 merge.
-ru.LodsTask=LOD-архивы с исправлениями для конкретных карт и по ходу сюжета%nОтключите эту задачу, если Вы устанавливаете патч поверх большого мода, такого как объединение MM6+7+8.
+LodsTask=Install LOD archives with fixes for particular maps and game progression
+ru.LodsTask=LOD-архивы с исправлениями для конкретных карт и по ходу сюжета
 WaterTask=Use improved water animation
 ru.WaterTask=Использовать улучшенную анимацию воды
-IconsTask=Install LOD archive with one interface fix%nUncheck this task if you are installing the patch over a mod that recolors interface.
-ru.IconsTask=LOD-архив с одним исправлением для интерфейса%nОтключите эту задачу, если Вы устанавливаете патч поверх мода, перекрашивающего интерфейс.
+IconsTask=Install LOD archive with one interface fix
+ru.IconsTask=LOD-архив с одним исправлением для интерфейса
 UITask=Use widescreen-friendly flexible interface
 ru.UITask=Включить гибкий интерфейс, адаптированный для широкоэкранников
-PalTask=Improved Monsters - Fix monsters that look the same in all 3 variations, as well as thunderbirds and plane guardians.
-ru.PalTask=Улучшенные монстры - Исправить монстров, которые во всех 3 вариациях выглядят одинаково, а также громовых птиц и защитников измерения.
-MergeCleanTask=Remove patch archives that The World of Enroth is incompatible with
-ru.MergeCleanTask=Удалить архивы патча, с которыми The World of Enroth не совместим
+PalTask=Improved Monsters - Fix monsters that look the same in all 3 variations, as well as thunderbirds and plane guardians
+ru.PalTask=Улучшенные монстры - Исправить монстров, которые во всех 3 вариациях выглядят одинаково, а также громовых птиц и защитников измерения
 
 [Tasks]
 Name: RusFiles1; Description: {cm:RussianGameVersion}; Check: RussianTaskCheck(true);
@@ -69,15 +67,16 @@ Name: ui1; Description: {cm:UITask}; Check: UITaskCheck(true);
 Name: ui2; Description: {cm:UITask}; Flags: unchecked; Check: UITaskCheck(false);
 Name: NoFakeMouseLook1; Description: {cm:NoFakeMouseLook}; Check: LookTaskCheck(true);
 Name: NoFakeMouseLook2; Description: {cm:NoFakeMouseLook}; Flags: unchecked; Check: LookTaskCheck(false);
+Name: Obelisks1; Description: {cm:ObeliskTask}; Check: ObelisksCheck(true);
+Name: Obelisks2; Description: {cm:ObeliskTask}; Flags: unchecked; Check: ObelisksCheck(false);
 Name: lods1; Description: {cm:LodsTask}; Check: LodsTaskCheck(true);
 Name: lods2; Description: {cm:LodsTask}; Flags: unchecked; Check: LodsTaskCheck(false);
-Name: water1; Description: {cm:WaterTask}; Check: WaterTaskCheck(true);
-Name: water2; Description: {cm:WaterTask}; Flags: unchecked; Check: WaterTaskCheck(false);
 Name: icons1; Description: {cm:IconsTask}; Check: IconsTaskCheck(true);
 Name: icons2; Description: {cm:IconsTask}; Flags: unchecked; Check: IconsTaskCheck(false);
+Name: water1; Description: {cm:WaterTask}; Check: WaterTaskCheck(true);
+Name: water2; Description: {cm:WaterTask}; Flags: unchecked; Check: WaterTaskCheck(false);
 Name: pal1; Description: {cm:PalTask}; Check: PalTaskCheck(true);
 Name: pal2; Description: {cm:PalTask}; Flags: unchecked; Check: PalTaskCheck(false);
-Name: MergeClean; Description: {cm:MergeCleanTask}; Check: MergeCleanCheck;
 
 ; Delete SafeDisk files
 [InstallDelete]
@@ -147,91 +146,58 @@ begin
   Result:= not (Exists('{app}\Data\mm6.games.lod') and Exists('{app}\Data\mm7.games.lod'));
 end;
 
-type
-  TTask = record
-    On, Checked: Boolean;
-  end;
-
-function CheckTask(var t: TTask; checked: Boolean): Boolean;
-begin
-  t.Checked:= true;
-  Result:= (t.On = checked);
-end;
-
-function CheckOptLod(var t: TTask; var vis: Boolean; path, md5: string; checked: Boolean; ver: Integer): Boolean;
+function CheckOptLod(var vis: Boolean; path, md5: string; checked: Boolean; ver: Integer): Boolean;
 var
   md: string;
+  b: Boolean;
 begin
   md:= GetMD5(path);
   Result:= (md <> md5);
-  if Result and not t.Checked then
-    t.On:= (md <> '') or not CheckVer(ver);
-  t.Checked:= t.Checked or Result;
-  vis:= Result and (t.On = checked);
+  b:= (md <> '') or not CheckVer(ver);
+  vis:= Result and (b = checked);
 end;
 
-
-var
-  Lods: TTask;
 
 function LodsTaskCheck(checked: Boolean): Boolean;
 begin
-  if not Lods.Checked then
-    Lods.On:= (not CheckVer($20001) or Exists('{app}\Data\00 patch.games.lod')) and CheckNoMerge;
-  Result:= CheckTask(Lods, checked);
+  Result:= (not CheckVer($20001) or Exists('{app}\Data\00 patch.games.lod')) and CheckNoMerge;
+  Result:= (Result = checked);
 end;
 
-
-var
-  Icons: TTask;
 
 function IconsTaskCheck(checked: Boolean): Boolean;
 begin
-  CheckOptLod(Icons, Result, '{app}\OptData\00 patch.icons.lod', '{#IconsMD5}', checked, $20002);
+  CheckOptLod(Result, '{app}\Data\00 patch.icons.lod', '{#IconsMD5}', checked, $20002);
 end;
 
 
-var
-  Pals: TTask;
-
 function PalTaskCheck(checked: Boolean): Boolean;
 begin
-  if not CheckOptLod(Pals, Result, '{app}\OptData\01 mon pal.bitmaps.lod', '{#PalMD5}', checked, $20005) then
-    CheckOptLod(Pals, Result, '{app}\OptData\01 roc.sprites.lod', '{#RocMD5}', checked, $20005);
+  if not CheckOptLod(Result, '{app}\Data\01 mon pal.bitmaps.lod', '{#PalMD5}', checked, $20005) then
+    CheckOptLod(Result, '{app}\Data\01 roc.sprites.lod', '{#RocMD5}', checked, $20005);
   Result:= Result and CheckNoMerge;
 end;
 
 
 
-var
-  RussianGame: TTask;
 
 function RussianTaskCheck(checked: Boolean): Boolean;
 begin
-  if not RussianGame.Checked then
-    RussianGame.On:= (GetIniString('Install', 'GameLanguage', '', ExpandConstant('{app}\{#m}lang.ini')) = 'rus') or
-     (ExpandConstant('{language}') = 'ru') and not Exists('{app}\{#MM}Patch ReadMe.TXT');
-  Result:= CheckTask(RussianGame, checked);
+  Result:= (GetIniString('Install', 'GameLanguage', '', ExpandConstant('{app}\{#m}lang.ini')) = 'rus') or
+   (ExpandConstant('{language}') = 'ru') and not Exists('{app}\{#MM}Patch ReadMe.TXT');
+  Result:= (Result = checked);
 end;
 
 
-var
-  LookVisible, LookEnabled, LookChecked: Boolean;
-
 function LookTaskCheck(checked: Boolean): Boolean;
+var
+  LookVisible, LookEnabled: Boolean;
 begin
   LookVisible:= GetIniInt('Settings', 'MouseLookBorder', 200, 0, 0, MMIni) >= 0;
-  if LookVisible and not LookChecked then
-  begin
-    LookEnabled:= not CheckVer($10006);  // 1.5.1 and lower didn't have this option in setup
-    LookChecked:= true;
-  end;
+  LookEnabled:= not CheckVer($10006);  // 1.5.1 and lower didn't have this option in setup
   Result:= LookVisible and (LookEnabled = checked);
 end;
 
-
-var
-  Water: TTask;
 
 function GetWaterKind: Integer;  // -2 = base, 2 = need wavy, 3 = wavy
 var
@@ -253,9 +219,8 @@ end;
 
 function WaterTaskCheck(checked: Boolean): Boolean;
 begin
-  if not Water.Checked then
-    Water.On:= (GetWaterKind > 0);
-  Result:= CheckTask(Water, checked) and CheckNoMerge;
+  Result:= (GetWaterKind > 0);
+  Result:= (Result = checked) and CheckNoMerge;
 end;
 
 function BaseWaterCheck: Boolean;
@@ -263,32 +228,12 @@ begin
   Result:= not IsTaskSelected('water1 water2') and CheckNoMerge;
 end;
 
-const
-  CleanFiles: array[1..5] of string = ('00 patch.bitmaps.lod', '00 patch.games.lod',
-    '00 patch.T.lod', '01 mon pal.bitmaps.lod', '01 roc.sprites.lod');
-var
-  CleanFiles: array[1..5] of string;
-
-function MergeCleanCheck: Boolean;
-var
-  i: Integer;
-begin
-  Result:= false;
-  if CheckNoMerge then  exit;
-  for i:= 1 to high(CleanFiles) do
-    Result:= Result or Exists('{app}\Data\' + CleanFiles[i]);
-end;
-
-
-var
-  UI: TTask;
 
 function UITaskCheck(checked: Boolean): Boolean;
 begin
-  if not UI.Checked then
-    UI.On:= not CheckVer($20003);
+  Result:= not CheckVer($20003);
   Result:= ((UpperCase(GetIniString('Settings', 'UILayout', '', MMIni)) <> 'UI') or
-    not GetIniBool('Settings', 'SupportTrueColor', true, MMIni)) and CheckTask(UI, checked);
+    not GetIniBool('Settings', 'SupportTrueColor', true, MMIni)) and (Result = checked);
 end;
 
 
@@ -338,12 +283,7 @@ begin
 end;
 
 procedure AfterInst;
-var
-  i: int;
 begin
   if BaseWaterCheck then
     DeleteFile(ExpandConstant('{app}\Data\01 water.bitmaps.lwd'));
-  if IsTaskSelected('MergeClean') then
-    for i:= 1 to high(CleanFiles) do
-      DeleteFile(ExpandConstant('{app}\Data\' + CleanFiles[i]));
 end;
