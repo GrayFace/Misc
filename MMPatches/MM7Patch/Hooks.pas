@@ -13,6 +13,8 @@ procedure ApplyDeferredHooks;
 
 implementation
 
+const
+  SecToTime: single = 128/30;
 var
   QuickSaveUndone: Boolean;
   _sprintfex: ptr; // Buka localization
@@ -1135,10 +1137,12 @@ function MemoryNewProc(n: uint): ptr;
 var
   i: uint;
 begin
+  inc(n);  // trailing zero for text files
   i:= (n + $FFF) and not $FFF;
   Result:= VirtualAlloc(nil, i + $1000, MEM_RESERVE, PAGE_NOACCESS);
   VirtualAlloc(Result, i, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
   inc(PChar(Result), i - n);
+  ZeroMemory(PChar(Result), n);
 end;
 
 procedure MemoryFreeProc(p: ptr; ret: int);
@@ -1177,7 +1181,8 @@ end;
 
 procedure GlobalTxtHook;
 asm
-  cmp [esp + $1C], $5E4A94
+  mov eax, [esp + $1C]
+  cmp eax, [$452D45]
   jnl @exit
   push $4CC17B
 @exit:
@@ -1187,7 +1192,9 @@ end;
 
 procedure SpellsTxtHook;
 asm
-  cmp [esp + $1C], ($4E4416 - $14)
+  mov eax, [esp + $1C]
+  add eax, $14
+  cmp eax, [$453B28]
   jg @exit
   push $4CC17B
 @exit:
@@ -2750,23 +2757,6 @@ begin
     p.y:= TransformMousePos(p.x, p.y, p.x);
 end;
 
-//----- Borderless fullscreen (also see WindowProcHook)
-
-procedure SwitchToWindowedHook;
-begin
-  Options.BorderlessWindowed:= true;
-  ShowWindow(_MainWindow^, SW_SHOWNORMAL);
-  SetWindowLong(_MainWindow^, GWL_STYLE, GetWindowLong(_MainWindow^, GWL_STYLE) or _WindowedGWLStyle^);
-end;
-
-procedure SwitchToFullscreenHook;
-begin
-  Options.BorderlessWindowed:= false;
-  ShowWindow(_MainWindow^, SW_SHOWMAXIMIZED);
-  PostMessage(_MainWindow^, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
-  MyClipCursor;
-end;
-
 //----- Compatible movie render
 
 var
@@ -3124,10 +3114,91 @@ asm
   mov ClockArea, eax
 end;
 
+//----- Fix 'Of David' not working on bows
+
+procedure FixTitanSlaying;
+asm
+  cmp ebx, 65
+  jnz @std
+  mov [esp], 7
+  push $48D296
+@std:
+end;
+
+//----- Fix 'Gibbet' only doing double damage to Undead
+
+function DoFixGibbet(_,__, mon: ptr): int;
+begin
+  Result:= 3;
+  while (Result > 1) and not _IsMonsterOfKind(0, Result, mon) do
+    dec(Result);
+end;
+
+procedure FixGibbet;
+asm
+  jnz @std
+  push ecx
+  call DoFixGibbet
+  pop ecx
+  mov edx, eax
+  mov [esp], $48CECF
+@std:
+end;
+
+//----- Wand stolen from a monster having 0 max charges
+
+procedure FixStealWand;
+asm
+  mov [ebp - $24 - $10 + $19], al
+end;
+
+//----- Resting in dark taverns was taking too long
+
+procedure FixDarkTaverns;
+asm
+  cmp eax, 25*60
+  jle @ok
+  sub eax, 24*60
+@ok:
+end;
+
+//----- Training in dark training halls was taking too long
+
+procedure FixDarkTrainers;
+asm
+  cmp eax, 28*60
+  jle @ok
+  sub eax, 24*60
+@ok:
+end;
+
+//----- Kelebrim wasn't doing -30 Earth Res
+
+procedure FixKelebrim;
+asm
+  jz @std
+  cmp esi, 13
+  jnz @std
+  sub edi, 30
+  mov [esp], $48F556
+@std:
+end;
+
+//----- Fix Wetsuits having recovery penalty
+
+procedure FixWetsuits;
+asm
+  cmp ebx, _Skill_Misc
+  jnz @std
+  xor ebx, ebx
+  mov [esp], $48E380
+@std:
+end;
+
 //----- HooksList
 
 var
-  HooksList: array[1..320] of TRSHookInfo = (
+  HooksList: array[1..324] of TRSHookInfo = (
     (p: $45B0D1; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $4655FE; old: $452C75; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave file name localization
     (p: $45E5A4; old: $45E2D0; backup: @FillSaveSlotsStd; newp: @FillSaveSlotsHook; t: RShtCall), // Fix Save/Load Slots
@@ -3258,7 +3329,7 @@ var
     (p: $493917; old: $48E8ED; newp: @FixWaitHook; t: RShtCall), // Waiting used to recover characters twice as fast
     (p: $4636E4; old: $4CAC80; newp: @FixLeaveMapDieHook; t: RShtCall), // Was no LeaveMap event on death
     (p: $432E63; newp: @FixLeaveMapWalkHook; t: RShtCall), // Was no LeaveMap event with walk travel
-    (p: $4D8260; newp: @MyGetAsyncKeyState; t: RSht4), // Don't rely on bit 1 of GetAsyncKeyState
+    //(p: $4D8260; newp: @MyGetAsyncKeyState; t: RSht4), // Don't rely on bit 1 of GetAsyncKeyState
     (p: $4B6997; old: $492BAE; newp: @TravelGoldFixHook1; t: RShtCall), // Subtract gold after autosave when trevelling
     (p: $4B6AF4; old: $4B1DF5; newp: @TravelGoldFixHook2; t: RShtCall), // Subtract gold after autosave when trevelling
     (p: $46532F; t: RShtNop; size: $11), // Switch to 16 bit color when going windowed
@@ -3365,18 +3436,6 @@ var
     (p: $47382F; newp: @FixLava2; t: RShtCall; size: 7), // Lava hurting players in air
     (p: $4BE889; newp: @FixEndMovieStop; t: RShtBefore), // Bug if the game is deactivated during end movie
     (p: $4D8258; newp: @ScreenToClientHook; t: RSht4), // Configure window size
-    (p: $465A5F; old: $49FF8B; new: $4A0583; t: RShtCall; Querry: hqBorderless), // Borderless fullscreen
-    (p: $465A5F; newp: @SwitchToFullscreenHook; t: RShtAfter; Querry: hqBorderless), // Borderless fullscreen
-    (p: $465A0F; newp: @SwitchToWindowedHook; t: RShtAfter; Querry: hqBorderless), // Borderless fullscreen
-    (p: $466868; new: $46688B; t: RShtJmp; size: 7; Querry: hqBorderless), // Borderless fullscreen
-    (p: $466907; newp: @SwitchToFullscreenHook; t: RShtCall; Querry: hqBorderless), // Borderless fullscreen
-    (p: $46690C; new: $466B37; t: RShtJmp; size: 6; Querry: hqBorderless), // Borderless fullscreen
-    (p: $46694B; size: 6; Querry: hqBorderless), // Borderless fullscreen
-    (p: $466951; old: $4A0583; newp: @SwitchToWindowedHook; t: RShtCall; size: $46696A - $466951; Querry: hqBorderless), // Borderless fullscreen
-    (p: $46697C; new: $466B37; t: RShtJmp; size: 6; Querry: hqBorderless), // Borderless fullscreen
-    (p: $46688D; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
-    (p: $46466E; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
-    (p: $464692; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
     (p: $4BE6EB; newp: @DrawMovieHook; t: RShtBefore; Querry: hqFixSmackDraw), // Compatible movie render
     (p: $4BEE41; old: $74; new: $EB; t: RSht1; Querry: hqFixSmackDraw), // Compatible movie render
     (p: $4BEE97; old: $840F; new: $E990; t: RSht2; Querry: hqFixSmackDraw), // Compatible movie render
@@ -3436,7 +3495,7 @@ var
     (p: $40D6BF; size: 2), // If current fines are due, arcomage win/lose count wasn't added to awards
     (p: $42FE94; old: 10; new: 2; t: RSht1), // Snow X speed was effected by strafing too much
     (p: $42FF15; old: -10; new: -2; t: RSht1), // Snow X speed was effected by strafing too much
-    (p: $4BB762; newp: @FixMasterHealer; t: RShtCall), // Fix Master Healer messing up some buff
+    (p: $4BB762; newp: @FixMasterHealer; t: RShtCall), // Fix Master Healer messing up some skills
     (p: $4501E8; size: 5), // Fix artifacts not being generated as objects on the ground
     (p: $41E0CC; old: $4E32A4; newp: @SDuration; newref: true; t: RSht4), // Duration text
     (p: $41E0F2; old: $4E329C; newp: @SDurationYr; newref: true; t: RSht4), // Duration text
@@ -3447,6 +3506,23 @@ var
     (p: $48D4F3; newp: @FixLichImmuneHook; t: RShtCall; size: 6; Querry: hqFixLichImmune), // Lich becoming immune to all magic with sufficient Day of Protection
     (p: HookPopAction; newp: @PopActionAfter; t: RShtBefore; size: 9), // Make HookPopAction useable with straight Delphi funcitons
     (p: $41BD94; newp: @RememberClockArea; t: RShtAfter), // Remember clock area to extend it with UI layout
+    (p: $445F76; old: 4; new: 3; t: RSht1), // Fix NPCs with action having 1 non-interactive dialog item
+    (p: $48D284; newp: @FixTitanSlaying; t: RShtBefore; size: 6), // Fix 'Of David' not working on bows
+    (p: $48CE8F; newp: @FixGibbet; t: RShtAfter; size: 6), // Fix 'Gibbet' only doing double damage to Undead
+    (p: $428EC9; size: 3), // Fix 'Charm' duration overflow on GM(Master)
+    (p: $428ED9; old: $4D8470; newp: @SecToTime; t: RSht4), // Fix 'Charm' duration overflow on GM(Master)
+    (p: $42E0F8; size: 3), // Fix 'Control Undead' duration overflow on GM
+    (p: $42E108; old: $4D8470; newp: @SecToTime; t: RSht4), // Fix 'Control Undead' duration overflow on GM
+    (p: $428E8F; old: 2; new: 3; t: RSht1), // Fix 'Charm' wrong durations
+    (p: $428E9F; old: 3; new: 4; t: RSht1), // Fix 'Charm' wrong durations
+    (p: $48DA1A; newp: @FixStealWand; t: RShtAfter; size: 7), // Wand stolen from a monster having 0 max charges
+    (p: $48DA92; old: $5E44C0; newp: @SStoleItem; t: RSht4), // Wrong message was displayed when stealing an item from a monster
+    (p: $433FC7; newp: @FixDarkTaverns; t: RShtAfter; Querry: hqFixDarkTrainers), // Resting in dark taverns was taking too long
+    (p: $4B4BCF; newp: @FixDarkTrainers; t: RShtAfter; Querry: hqFixDarkTrainers), // Training in dark training halls was taking too long
+    (p: $439F6C; old: 2; new: 8; t: RSht4), // 'of Acid' was dealing Water damage instead of Body
+    (p: $48F0C6; newp: @FixKelebrim; t: RShtBefore; Querry: hqFixKelebrim), // Kelebrim wasn't doing -30 Earth Res
+    (p: $450A15; old: 6; new: 7; t: RSht1; Querry: hqFixBarrels), // Kelebrim wasn't doing -30 Earth Res
+    (p: $48E30F; newp: @FixWetsuits; t: RShtCall), // Fix Wetsuits having recovery penalty
     ()
   );
 
@@ -3476,6 +3552,7 @@ var
   LastDebugHook: DWord;
 begin
   CheckHooks(HooksList);
+  CheckMMHooks;
   CheckHooksD3D;
   if not SupportMM7ResTool and (pint($434AA2)^ <> 470) then
     if RSMessageBox(0, MMResToolError, SCaption, MB_ICONEXCLAMATION or MB_OKCANCEL) <> ID_OK then
@@ -3501,8 +3578,6 @@ begin
     RSApplyHooks(HooksList, 17);
   if DisableAsyncMouse then
     RSApplyHooks(HooksList, 24);
-  if BorderlessFullscreen then
-    RSApplyHooks(HooksList, hqBorderless);
   if (MipmapsCount > 1) or (MipmapsCount < 0) then
     RSApplyHooks(HooksList, hqMipmaps);
   if TurnBasedWalkDelay > 0 then
@@ -3558,6 +3633,12 @@ begin
     RSApplyHooks(HooksList, hqFixInterfaceBugs2);
   if Options.HigherCloseRingsButton then
     RSApplyHooks(HooksList, hqCloseRingsCloser);
+  if Options.FixDarkTrainers then
+    RSApplyHooks(HooksList, hqFixDarkTrainers);
+  if Options.FixKelebrim then
+    RSApplyHooks(HooksList, hqFixKelebrim);
+  if Options.FixBarrels then
+    RSApplyHooks(HooksList, hqFixBarrels);
   ApplyMMDeferredHooks;
 end;
 

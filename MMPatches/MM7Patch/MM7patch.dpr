@@ -313,6 +313,10 @@ Version 2.5:
 [+] FixHouseAnimationRestart
 [+] CheckFreeSpace - Free space check when saving a game
 [+] ExitDialogsWithRightButton
+[+] MouseLookPermKey
+[+] Automatic horseman and boatsman speak time detection
+[+] KeepEmptyWands
+[-] Changing item graphics was causing inventory corruption
 [-] HintStayTime
 [-] Casting stronger buffs did nothing if a weaker, but longer one is in place
 [-] Item spells were causing bugs when cast onto the very 1st item in the inventory
@@ -325,13 +329,21 @@ Version 2.5:
 [-] KeepCurrentDirectory
 [-] FixDeadPlayerIdentifyItem
 [-] Fixed another crash due to facets without vertexes
+[-] Fix full brightness for a minute at 5:00 AM
 [-] New Day wasn't triggered on beginning of a month when resting until down and pressing Esc
+[-] Random item generation routine was generating the 1st item with bigger probability and last item with smaller probability
+[-] Buff duration was displayed incorrectly in the cases like "1 day 5 minutes"
+[-] "N/A" string for ranged damage wasn't localizeable
+[-] FixWaterWalkManaDrain
 [-] My bug: You were able to learn unavailable magic skills with keyboard navigation
 [*] My inactive players acting fix wasn't perfect
 [*] Now spell skills that don't fit are drawn over buttons. Still better than making them inaccessible.
 [*] 3DO and other logos in postponed intro, unless NoIntoLogos
 (MM6, MM7)
 [-] Snow X speed was effected by strafing too much
+[-] Copyright screen staying visible on startup if game window wasn't in focus
+[-] Awards page wasn't updated when player is switched by Tab
+[-] 'Charm' spell had wrong durations
 (MM7, MM8)
 [+] TrueColorSprites hidden option, off by default to prevent 'out of memory' with HD sprites
 [+] The game doesn't crash on exit if d3dsprite.hwl and d3dbitmap.hwl are missing
@@ -339,6 +351,8 @@ Version 2.5:
 [+] ClickThroughEffects now works in Hardware mode
 [+] SystemDDraw / support dgVoodoo
 [+] IndoorFovMul (0.813)
+[+] ClimbBetter
+[-] Fixed DirectX 7 bug: inability to work with big resolutions
 [-] Restore AnimatedTFT bit from Blv rather than Dlv to avoid crash
 [-] FixMonstersBlockingShots
 [-] Duration string for items wasn't localized
@@ -352,38 +366,51 @@ Version 2.5:
 [-] Souldrinker was hitting monsters beyond party range
 [-] Acid Burst was doing physical damage
 [-] Inability to equip sword or dagger when non-master spear is equipped
-[-] Arcomage hanging in some circumstances 
+[-] Arcomage hanging in some circumstances
+[-] Walking on water was dealing Fire damage
+[-] Bow skill bonus from items wasn't added to damage with GM Bow skill
+[-] When a monster attacked another one with a spell, wrong spell was used in damage calculation
+[-] Melee monsters under Berserk were hitting party from a far if their target died
+[-] Alchemy failure was breaking Hardened items
+[-] 'of Acid' was dealing Water damage instead of Body
+[-] ArmageddonElement
+[-] LeaveMap event not called on travel
+[-] Monsters summon overflow crash
+[-] 'Body' attack type was read as physical for monsters
+[-] Windows 10 incompatibility
 [-] My bug: Crash in full screen if BorderlessFullscreen=0
 [-] My bug: Mipmaps were always on in full screen if BorderlessFullscreen=0 and MipmapsCount>1
 [-] My bug: Empty icons were causing division by zero in UI Layout code
 [-] My bug: Empty sprites causing a crash in D3D mode
-(MM6)
-[-] End game movies were unskippable, as well as the intro on first launch
-[-] Game wasn't paused in Enchant Item screen
-[-] FixParalyze
-[-] Party was attacking enemies during their dying animation
-[-] My bug: Keyboard control in spell book was causing spells to be cast accidentally with arrow keys
 (MM7)
 [+] Minor tweaks to UI Layout mode
 [-] If current fines are due, arcomage win/lose count wasn't added to awards
-[-] Master Healer NPC was messing up one of player buffs when activated 
+[-] Master Healer NPC was messing up player skills when activated
 [-] Artifacts weren't generated properly as objects on the ground
 [-] Artifacts generated specifically as level 7 items weren't marked as found
 [-] FixLichImmune - Lich was becoming immune to elemental magic if resistances are 200
-(MM8)
-[-] Vampires weren't immune to Mind
-[-] lloyd pcx broken
+[-] NPCs with action (Heal/TP/...) had 1 selectable non-interactive dialog item at the bottom. It was shifting everything up
+[-] 'Of David' enchantment wasn't working on bows
+[-] 'Gibbet' was only doing double damage to Undead
+[-] 'Charm' and 'Control Undead' spells didn't work on Master and GM level respectively
+[-] Wands stolen from monsters would have garbage as max charges
+[-] Kelebrim relic wasn't doing -30 Earth Res
+[-] White barrels (+2 Luck) weren't generated
+[-] Wetsuits had recovery penalty
+[-] FixUnimplementedSpells
 
 
-
-[!!] Smooth video sides?
+[!!] https://discord.com/channels/296507109997019137/296508593744773120/900738954477834260
+[!!] Configure controls like in MM6, keyboard layout-independant in-game Controls
 [!!] Show videos from MM6 without black bars, support HD videos
+[!!] Smooth video sides?
 [!!] Prioritize geometry near the center
 [!!] Night sky, better day/night cycle, sun?
 [!!] Different configs for mouse look/no mouse look? No HKLM
-[!!] Configurable (Caps Lock) key for mouse look
+[!!] Set up video adapter by index in ini
 [!!] "Minotuars" in MM8 Promotion Quest NPC
 [!!] FPS don't do std action?
+[!!] Setup controls
 
 (Figo:) Is there still the limit of how many we can acquire with one party (~13)?
 I've read that in the Merge there is none, so how about a vanilla game?
@@ -402,6 +429,8 @@ Does not happen all the time, but seems to happen quite consistently when you ar
 
 
 The "-30 Earth Resistance" on the relic, Kelebrim, does not work.
+
+// Exploit fix: barrels in Walls of Mist were refilled on each visit.
 
 - if whole party dies Zombies lose "zombie" status, but portrait gets stuck
 
@@ -548,10 +577,13 @@ Xfing:
 - The dual-wielding damage calculation bug that I've made another thread about.
 - Not sure if the Shield spell or the "of Shielding" effect/GM Shield perk works properly.
 - I think thresholds on items in regards to their identification and repair should be raised. As things are now, 30 points in ID/Repair is enough to handle the best items in the game, which defeats the purpose of Grandmaster training entirely. I suggest to raise the threshold for artifacts and relics to 45 (or 45 and 60 respectively if these two categories can be done separately) to make GM in these two skills even worth obtaining.
+- Heal distant casting is available from normal body magic while the spell description says it should be from expert
 }
 
 begin
   try
+    if CompareMem(ptr($404180), PChar(#$51#$66#$A1#$AC#$34#$42#$00#$56#$8B#$F1#$66#$89#$44#$24#$06#$8D), 16) then
+      exit;  // MM7Patch.exe (for the future)
     AssertErrorProc:= RSAssertErrorHandler;
     LoadIni;
     HookAll;

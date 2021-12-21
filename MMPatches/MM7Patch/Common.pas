@@ -69,7 +69,6 @@ const
   _RightButtonPressed = pbool($507A70);
   _WindowedGWLStyle = pint($6BE1B8);
   _IndoorOrOutdoor = pint($6BE1E0);
-  _Time = puint64($ACCE64);
   _AbortMovie = pbool($F8B9F4);
   _ViewMulOutdoor = pint($6BDF04);
   _ViewMulIndoorSW = psingle($507B7C);
@@ -147,6 +146,7 @@ const
   _TurnBased_CharacterActed: procedure(n1: int = 0; n2: int = 0; this: int = $4F86D8) = ptr($40471C);
 
   _Mon_IsAgainstMon: function(_, defender, attacker: ptr): int = ptr($40104C);
+  _IsMonsterOfKind: function(_, kind: int; mon: ptr): BOOL = ptr($438BCE); 
 
   _MonOff_vx = $94;
   _MonOff_vy = $96;

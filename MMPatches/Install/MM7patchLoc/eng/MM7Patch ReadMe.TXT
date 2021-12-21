@@ -1,4 +1,4 @@
-GrayFace MM7 Patch v2.4
+GrayFace MM7 Patch v2.5
 By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
@@ -6,9 +6,125 @@ Official patches, Mok's patch and Black Phantom's patch are included.
 Save files are, of course, fully compatible with the unpatched game in both directions.
 The patch has no uninstaller to make things simpler.
 All configuration is done via mm7.ini, which is populated with main options on the first run.
-See description of all UILayout options near the end of ReadMe in the "UI Layout" section. They're marked with "UI.txt:" prefix in the change log.
+For all exploits the patch fixes an option to disable the fix shoud be described in this ReadMe.
+At the end of ReadMe you'll find info on how to report errors.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
+
+New in version 2.5:
+  << MM6 - MM8 >>
+[+] Set ShooterMode=1 to enable FPS-like mode. Press attack button to toggle the fight mode, then press left mouse button to attack and right button to use quick spell. Regular quick spell button also works. No auto-targeting is done. A sword icon indicates this mode, which also shows health of target (or last hit) monster.
+[+] Now you can set a spell that would be used when you press regular attack button. E.g. you can set Poison Spray as Attack Spell and Heal as Quick Spell. Add EnableAttackSpell=0 to INI to disable.
+[+] ViewDistanceD3D option to set view distance in Hardware 3D mode, increased to 12000 by default. In Software mode you can increase view distance slightly by setting dist_mist. Known issue I haven't been able to fix yet: ViewDistanceD3D above game's default 8192 causes occasional brief disappearance of a near ground tile.
+[+] Direct unaccelerated mouse input supported through MouseSensitivityDirectMul option. To enable, set it to a positive number, e.g. 1.0.
+[+] Player condition priorities changed to demonstrate the worst condition (weak, cursed etc.). Add FixConditionPriorities=0 to INI to disable. New conditions order is Eradicated, Dead, Stoned, Unconscious, Paralyzed, Asleep, Weak, Cursed, Disease3, Poison3, Disease2, Poison2, Disease1, Poison1, Insane, Drunk, Afraid, Zombie.
+[+] Now while you're holding right mouse button hint would be shown for the element you're pointing at. Especially useful for checking current time. Add ShowHintWithRMB=0 to INI to disable.
+[+] In inventory screen unidentified items are now painted green while you're holding right mouse button. Add GreenItemsWhileRightClick=0 to INI to disable.
+[+] Set DeadPlayerShowItemInfo=1 to be able to see items of unconscious players with right click.
+[+] Better fix for inactive players acting: now you can select inactive players, but if you press the attack key, an active player would be selected.
+[+] MouseLookPermKey option sets up the key that changes mouse look mode, but the mode doesn't get restored when a dialog is opened.
+[+] Set ExitDialogsWithRightButton=1 to make right mouse button act as Esc in houses, NPC, map entrance and message dialogs.
+[+] WinScreenDelay hidden option controls Win screen delay during which all input is ignored. Default is 500 (half a second instead of game's original 5 seconds).
+[+] Set AddDescriptions=1 to add option descriptions straight into INI file. Set it to -1 to remove them.
+[+] MonSpritesSizeMul option allows you to change the scale at which monsters are displayed in right button dialog. E.g. set it to 0.5 if you upscale monsters by 2. Mods can change it dynamically through the patch options API.
+[+] House animation is no longer restarted when you click any topic. Add FixHouseAnimationRestart=0 to INI to disable this change.
+[+] Free space check when saving a game. Add CheckFreeSpace=0 to INI to disable.
+[+] Automatic horseman and boatman speak time detection. HorsemanSpeakTimeLimit and BoatmanSpeakTimeLimit hidden options are used as the maximum time allowed for the speeches.
+[+] Wands no longer disappear when depleated, just break. Add KeepEmptyWands=0 in INI to disable this change.
+[+] Fixed graphics of monsters that looked the same in all 3 variations.
+[-] Changing item graphics was causing inventory corruption.
+[-] Poison Spray, Shrapmetal and second spell attacks by monsters were doing wrong damage. Shrapmetal also wasn't going in an arc as it should. Add FixMonsterSpells=0 to INI to disable these fixes. (thanks cthscr)
+[-] AOE damage wasn't dealt to paralyzed monsters.
+[-] Element hints staying visible in some dialogs after moving the mouse off the element. Add HintStayTime=0 to INI to return this behavior. Default is 2, making hint stay up for 2 frames.
+[-] Casting stronger buffs did nothing if a weaker, but longer one is active.
+[-] Item spells were causing bugs when cast onto the very first item in the inventory.
+[-] Now you when pick up items stolen from you from corpses of thieves it's properly indicated in status bar.
+[-] Monster attacks were causing a player switch even if Endurance eliminates hit recovery.
+[-] When casting a Quick Spell the spell points check was incorrect (it assigned GM spell to another school of magic)
+[-] The game couldn't be run normally when current folder is different from its folder. Add KeepCurrentDirectory=1 to INI to disable this fix.
+[-] Unconscious players could identify/repair items in shops before. Add FixDeadPlayerIdentifyItem=0 to INI to disable this fix.
+[-] Another situation where game could crash due to vertex-less facets.
+[-] New Day effects (weakness, insanity etc.) weren't triggered on beginning of a month when pressing "Wait until Dawn" and then Esc.
+[-] Often there was full brightness outdoors for a minute at 5:00 AM.
+[-] Random item generation routine was generating the first matching item with bigger probability and last matching item with smaller probability. (Thanks for Tomsod for this and many fixes that I've incorporated)
+[-] Buff duration was displayed incorrectly in the cases like "1 day 5 minutes".
+[-] Spell duration string for items and "N/A" string for ranged damage weren't localizeable.
+[-] Water Walk was draining mana every 5 minutes instead of every 20 minutes. Add FixWaterWalkManaDrain=0 to INI to disable this fix.
+[-] My bug: You were able to learn unavailable magic skills with keyboard navigation.
+[*] Now spell skills that don't fit on the screen (say, if you change class in Rev4 mod for MM7) are now drawn over buttons. It's still better than making them inaccessible.
+[*] 3DO and other logos are now shown when intro is postponed by NoIntro=1, unless NoIntoLogos=0 line is added to INI. You can cancel logos with Esc and still watch the intro.
+  << MM6, MM7 >>
+[-] Horizontal speed of snow was effected by strafing too much.
+[-] Copyright screen staying visible on startup if game window wasn't in focus when it appeared.
+[-] Awards page wasn't updated when player is switched by pressing Tab.
+[-] 'Charm' spell had wrong durations.
+  << MM7, MM8 >>
+[+] UI.txt: New FloatingScreens mode makes inventory, houses and other such screens open in a panel.
+[+] With IndoorFovMul hidden option you can specify the amount by which FOV is multiplied indoors. Default is 0.813.
+[+] TrueColorSprites hidden option, off by default to prevent 'out of memory' with HD sprites.
+[+] The game now doesn't crash on exit if d3dsprite.hwl and d3dbitmap.hwl are missing.
+[+] "Mapbkg" will be used as the background for minimap if present in *.icons.lod. This will help color blind people see blue dots on the minimap better.
+[+] Now explosions and missiles are ignored during targeting in Hardware 3D mode too, unless ClickThroughEffects=0.
+[+] When ddraw.dll is found in game folder (patch assumes it's dgVoodoo), you'll be asked whether you want to use it and SystemDDraw option would be set accordingly.
+[+] Now you can climb steep mountains, like you used to when the game came out, unless ClimbBetter=0.
+[-] If you set FixMonstersBlockingShots=1, enemy monsters won't block each other's shots with their body indoor resulting in projectiles being suspended in the air. This would fix the bug of reanimated monsters being unable to hit enemies of the same kind. This may increase difficulty of some encounters, like one in Rev4 mod.
+[-] Fixed DirectX 7 bug: inability to support big resolutions in Hardware accelerated mode.
+[-] Windows 10 compatibility issue fixed both in the game and Setup. Windowed mode also unlocked in Setup.
+[-] Changing a static texture to an animated one by a script was causing a crash next time the location is loaded.
+[-] Monsters shot at from a distance beyond active radius were appearing as green dots on minimap.
+[-] In Display Inventory screen you couldn't do anything with unconscious players.
+[-] Damage bonus of Assassins' and Barbarians' enchantments didn't work.
+[-] Grand spell skill wasn't read from Monsters.txt when written as "GM".
+[-] Ice Blast was read as Ice Bolt from Monsters.txt. Add FixIceBoltBlast=0 to INI to disable this fix.
+[-] Energy damage type was being turned into Earth when read from Monsters.txt. Add FixEnergyDamageType=0 to INI to disable this fix.
+[-] Gamma.pcx file was created whenever you open menu.
+[-] Souldrinker was hitting monsters beyond party range. Add FixSouldrinker=0 to INI to disable this fix.
+[-] Acid Burst spell was doing physical damage.
+[-] Inability to equip sword or dagger when a spear is equipped and its skill is below Master.
+[-] Arcomage hanging in some circumstances.
+[-] Walking on water was dealing Fire damage.
+[-] Bow skill bonus from items wasn't added to damage when you have Grandmaster Bow skill.
+[-] When a monster attacked another one with a spell, wrong spell was used in damage calculation.
+[-] Melee monsters under Berserk were hitting party from a far if their target died.
+[-] Failed alchemy was breaking Hardened items.
+[-] "of Acid" enchantment was dealing Water damage instead of Body.
+[-] Armageddon spell was dealing unresistable damage. Now it deals Dark damage. Add ArmageddonElement=5 to INI to disable this fix.
+[-] LeaveMap event wasn't called when travelling via stables or boat.
+[-] Monsters summoning other monsters was causing a crash if monsters limit is already reached.
+[-] "Body" attack type was read (from Monsters.txt) as physical for monsters.
+[-] My bug: Crash in full screen if BorderlessFullscreen=0.
+[-] My bug: Mipmaps were always on in full screen if BorderlessFullscreen=0 and MipmapsCount>1.
+[-] My bug: Empty pictures were causing division by zero in UI Layout code.
+[-] My bug: Empty sprites causing a crash in D3D mode.
+[-] UI.txt: 3D view was shifted vertically in the dungeon exit screen.
+[-] UI.txt: "Press Escape" message wasn't visible after the Win screen.
+  << MM7 >>
+[-] If current fines are due, arcomage win/lose count wasn't added to awards.
+[-] Master Healer NPC was messing up player skills when activated.
+[-] Artifacts weren't generated properly as objects on the ground.
+[-] Artifacts generated in a specific way (as level 7 items) weren't marked as found. Add FixUnmarkedArtifacts=0 to INI to disable this fix.
+[-] Lich was becoming immune to elemental magic if resistances are 200+. Add FixLichImmune=0 to INI to disable this fix.
+[-] NPCs with an action ("Heal Party", cast spell etc.) had 1 non-interactive invisible dialog item at the bottom. It was shifting everything else up.
+[-] "Of David" enchantment wasn't working on bows.
+[-] "Gibbet" artifact was only doing double damage to Undead.
+[-] 'Control Undead' spell didn't work on GrandMaster level.
+[-] 'Charm' and 'Control Undead' spells didn't work on Master and GrandMaster level respectively.
+[-] Wand stolen from Mr. Malwick would have garbage as number of charges after recharging.
+[-] Wrong message was displayed when stealing an item from a monster.
+[-] Dark tavern and training hall were consuming more time than they should. Add FixDarkTrainers=0 to INI to disable this fix.
+[-] Kelebrim shield wasn't affecting Earth Resistance by -30 (I was hesitant to implement it on such a weak shield, but turns out only Golem explosions, Earth Elementals and Trees do Earth damage). Add FixKelebrim=0 to INI to disable this fix.
+[-] White Barrels (+2 Luck) weren't generated on maps.
+[-] Wetsuits had recovery penalty.
+[-] Monsters couldn't cast Paralyze/Implosion/Mass Distortion spells, but were wasting their turn.
+[-] UI.txt: Long simple message text was treated like a progress bar.
+  << Fixes in maps >>
+[-] The Walls of Mist (d11): Using some of the 3 keys and then save-loading was causing the door to not open once all 3 are inserted.
+[-] The Walls of Mist (d11): Not all facets of keyhole pedestals were clickable.
+[-] Upon completing Faerie Pipes quest it was recorded in Awards only of one player.
+[-] Dwarven guards and Behemoths were too fat and getting stuck in doorways.
+
+
+New in version 2.4.1:
 
 New in version 2.4:
   << MM6 - MM8 >>
@@ -43,7 +159,6 @@ New in version 2.4:
 [-] Technical: My bug: Input field of evt.Question command dialog wasn't shown in UI Layout mode with statusbar auto-hide.
   << Fixes in maps >>
 [-] The Tularean Forest (out04): There was no way to enter Clanker's Laboratory after Archibald occupies it even though he says you can enter for target practice.
-
 
 New in version 2.3.1:
   << MM7, MM8 >>
@@ -262,7 +377,6 @@ Other changes:
 [-] Spear skill wasn't added to damage on expert level, it required master level.
 [-] Autosave was done after the cost of transport is withdrawn.
 [-] Waiting (using Rest dialog) used to recover characters twice as fast.
-[-] Key strokes could potentially be ignored if some other programs run at the same time and use the same keyboard access method.
 [-] A rare case of "negative/0" caused a crash in stats screen.
 [-] Setup for keys like R (Rest) wasn't loaded properly.
 [-] Lloyd Beacon used to autosave game after decreasing spell points and adding recovery delay.
@@ -309,11 +423,11 @@ Create "DataFiles" folder in the game directory. To modify a file in events.lod 
 "DataFiles" option controls this. Default is 1 (enabled).
 
 --------------------------------------------------------------------------------
-Custom Archives
+Custom Archives:
 Custom archives are the best way to distribute new and modified content of a mod. Here's an explanation of their loading order: https://www.dropbox.com/s/iv9c2jc8abbrj6a/CustomLods.txt?dl=0
 
 --------------------------------------------------------------------------------
-Mouse Look
+Mouse Look:
 
 To enable mouse look set MouseLook option to 1.
 Mouse look can work in two modes. The default mode is like in 3D actions and alternative mode is closer to World of Warcraft and similar games.
@@ -322,6 +436,7 @@ Here is my preset for 3D action mode: http://sites.google.com/site/sergroj/mm/MM
 You can activate alternative mode by setting MouseLookUseAltMode option to 1 or by pressing Caps Lock if the CapsLockToggleMouseLook option is set to 1.
 MouseLookChangeKey is used to switch mode (turn off mouse look in normal mode or turn it on in activate mode). The mode is restored if you open any other screen.
 MouseLookTempKey changes mode while you hold it. Best fit for alternative (WoW) mode.
+MouseLookPermKey changes mouse look mode, but the mode doesn't get restored when a dialog is opened.
 MouseSensitivityX and MouseSensitivityY control mouse sensitivity. If you want, you can invert Y axis by making its sensitivity negative. Note that you can set values over 100.
 MouseSensitivityAltModeX and MouseSensitivityAltModeY are similar, but used for alternative mode.
 MouseLookFly option lets you fly up/down by pointing your view in the desired direction.
@@ -330,7 +445,8 @@ MouseWheelFly option lets you fly up and down by scrolling your wheel. This is p
 Cursor used in mouse look mode is located in Data\MouseLookCursor.bmp
 
 --------------------------------------------------------------------------------
-Video in Hardware Accelerated Mode
+Video in Hardware Accelerated Mode:
+
 If the videos aren't playing in hardware accelerated mode, try the following:
 Press Win+R, type Regedit, locate the following key in it:
 HKEY_LOCAL_MACHNE/Software/New World Computing/Might and Magic VII/1.0 
@@ -339,7 +455,8 @@ HKEY_LOCAL_MACHNE/Wow6432Node/New World Computing/Might and Magic VII/1.0
 Set 2dacceloff to 1.
 
 --------------------------------------------------------------------------------
-UI Layout
+UI Layout:
+
 If you set UILayout=UI, a flexible UI layout (named "UI") will be used. The layout is defined in corresponding Data\UI.txt file and uses icons.UI.lod graphics. It's possible to extend it with *.UI.txt files or create brand new layouts, but I haven't made any description for its format.
 
 Here are options you'll find under [UILayout=UI] section after first use of it:
@@ -356,5 +473,6 @@ MouseShiftY=30  - Vertical shift of the middle point of the view
 proportionate average of these values is used)
 
 --------------------------------------------------------------------------------
-Errors Reporting
+Errors Reporting:
+
 If an error occurs, send me a report, describing how and when it happened. Attach a savegame if possible. In case of a crash attach ErrorLog.txt file which which would be created in the game directory.
