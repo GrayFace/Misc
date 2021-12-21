@@ -73,7 +73,6 @@ const
   _GreenMask = pint($F01A5C);
   _BlueMask = pint($F01A60);
   _IndoorOrOutdoor = pint($6F39A0);
-  _Time = puint64($B20EBC);
   _AbortMovie = pbool($FFDDEC);
   _ViewMulOutdoor = pint($6F300C);
   _ViewMulIndoorSW = psingle($519454);

@@ -5,53 +5,91 @@ default Options.PartyScale	1.065
 default Options.StatusbarScale	0
 default Options.StatusbarPlace	0
 default Options.HideStatusbar	1
+var Game.TreeHints	0								Game.TreeHints = 1 and Options.HideStatusbar
 default Options.ShrinkStatusbar	1
-var Options.ShrinkStatusbar	0								Game.Version<=20301
+var Options.ShrinkStatusbar	0								Game.Version<=20301 or Game.Question
 default Options.NoCompass	1
 default Options.MouseShiftY_5	27.5
 default Options.MouseShiftY_1	20.5
 default Options.FOVMul	1
-var Game.TreeHints	0								Game.TreeHints = 1 and Options.HideStatusbar
+default Options.FlyEtcOnTop	1
+default Options.FloatingScreens	0
+var MidMode	Options.FloatingScreens<>0
+default Options.FloatingScreenHeight	460								MidMode
+default Options.FloatingScreenX	118								MidMode
+var MidScreenDW MidScreenH	Options.FloatingScreenX	MidMode and Options.FloatingScreenHeight or 480
+
+
+info Options.Scale	Interface size multiplier
+info Options.PartyScale	Portraits size multiplier
+info Options.StatusbarScale	Leave at 0 to make status bar scale match the size it would have in 640x480 resolution
+info Options.StatusbarPlace	0 - Above portraits, 1 - At the top of the screen, -1 - Below portraits
+info Options.HideStatusbar	1 - Hide status bar when it's empty, 0 - Don't
+info Options.ShrinkStatusbar	1 - Shrink status bar to its contents size, 0 - Don't
+info Options.NoCompass	1 - No compass, -1 - Compass on top, 0 - Compass at the top-right side
+info Options.MouseShiftY_5	Shifts crosshair up by this amount when 5 players are in the party
+info Options.MouseShiftY_1	Shifts crosshair up by this amount when 1 player is in the party
+info Options.FOVMul	Lets you change field of view
+info Options.FlyEtcOnTop	1 - Fly and water walk icons on top of the screen, 0 - at the bottom
+info Options.FloatingScreens	0 - Dialog screens are shown in their original form, 1 - Main area of the dialog screens is incorporated into adventure interface
+info Options.FloatingScreenHeight	Higher value makes dialog screens in FloatingScreens mode smaller
+info Options.FloatingScreenX	Desired horizontal position of dialog screens in FloatingScreens mode
+
+
+
+
+
+
+
+; Various Screens
+var Game.RenderedScreen	22								Game.Screen = 22
+var NoRecover	1								Game.RenderedScreen<0
+var Game.Screen MainMenu	-1	1							NoRecover or Game.Arcomage
+var MainMenuLike	1								MainMenu or Game.VideoPlaying or Game.Screen = 13 or Game.Screen = 18 or Game.Screen = 22 or Game.Screen = 29
+FOR x	0	30
+var x	104								x=30
+var s%d	Game.RenderedScreen=x									x
+LOOP
+
+var IsAdv	Game.Screen=0 or s0+s20 or s17 and Game.Loading=2
+var HasAdv	(Game.Screen=0)+(Game.Screen=20) and s0+s20
+var NeedAdv	MainMenu=0
+var AnyDialog	IsAdv=0
+var MidDialogCenter	s5+s104
+var MidDialog	AnyDialog and MidMode and s4+s7+s10+s13+s14+s15+s17+s18+s19+s23+s29+s103+MidDialogCenter and Game.Arcomage=0
+var FullDialog	AnyDialog and MidDialog=0
+var HasProgressBar	Game.Loading=2 and IsAdv
+
+
 var x	(Game.Players - 1)/4
 var MouseShiftY	Options.MouseShiftY_5*x + Options.MouseShiftY_1*(1-x)
 var Options.Scale	1								Options.Scale<=0
 var w h	914	570
 var mw mh	810	480
 var w h	w/Options.Scale	h/Options.Scale
-var w	mw								w<mw	
-var h	mh								h<mh	
+var w	mw								w<mw
+var h	mh								h<mh
 var ScreenW ScreenH	w	h
 SCREEN					ScreenW	ScreenH			
+var ScreenFW ScreenFH	R	B
 var StatusPlace	Options.StatusbarPlace
+var StatusPlace	0								Options.StatusbarPlace>0 and MidDialog
 var StatusMul	1+(R-mw)/484								
 var StatusMul	Options.StatusbarScale								Options.StatusbarScale>0 and StatusMul>Options.StatusbarScale
 var StatusMul	B/480								Options.StatusbarScale<=0 and StatusMul>B/480
 var StatusMul	R/640								Options.StatusbarScale<=0 and StatusMul>R/640
 var StatusH0	19 - (StatusPlace>0)*2 - (StatusPlace=0)*1
 var StatusW StatusH	StatusMul*484	StatusMul*StatusH0
-var PartyStatusDist ScreenFW	1.5 + (Options.ShrinkStatusbar=0=0)*0.5	R
+var PartyStatusDist ScreenFW	1.5 + (Options.ShrinkStatusbar<>0)*0.5	R
 var PartyStatusDist	-StatusH								StatusPlace>0
 var PartyStatusDist	-1								StatusPlace<0
 var PartyMul	1+(R-mw)/484
 var PartyMul	Options.PartyScale								PartyMul>Options.PartyScale
 var PartyH	92*PartyMul
 var StatusH PartyStatusDist	0	0							(StatusPlace<0) and (StatusMul = PartyMul)
+var PartyBottom	(StatusPlace<0 and StatusH>0)*(StatusH + PartyStatusDist)
+var PartyFullH	PartyH + PartyBottom
 
-; Various Screens
-var NoRecover	1								Game.RenderedScreen<0
-var Game.Screen MainMenu	-1	1							NoRecover or Game.Arcomage
-var MainMenuLike	1								MainMenu or Game.VideoPlaying or Game.Screen = 13 or Game.Screen = 18
-FOR x	0	30
-var x	104								x=30
-var s%d	Game.RenderedScreen=x									x
-LOOP
-
-
-var IsAdv	Game.Screen=0 or s0+s20 or s17 and Game.Loading=2
-var HasAdv	(Game.Screen=0)+(Game.Screen=20) and s0+s20
-var NeedAdv	MainMenu=0
-var Dialog	IsAdv=0
-var HasProgressBar	Game.Loading=2 and IsAdv
 
 ; Stages
 stage Read									0
@@ -59,6 +97,7 @@ stage DrawView									0
 stage DrawViewUI									0
 stage Darken									0
 stage DrawDialog									0
+stage DrawAboveDialog									0
 stage DrawRMenu									0
 stage DrawMouse								
 
@@ -133,15 +172,17 @@ STAGE DrawViewUI
 	170	122	300	100	C	C-MouseShiftY								
 STAGE Read
 
-SCREEN					ScreenW	ScreenH			HasAdv						SCREEN
+SCREEN					ScreenW	ScreenH			HasAdv or MidDialog						SCREEN
 
 ; Statusbar
 	0	368	484	18	0	92	+	+	StatusH=0					BaseBar
 ;	1	367	482	19	1	B	+	-	StatusH=0					BaseBar
 			0	0	484				StatusH					BaseBar
 	0	368+(StatusPlace>=0)	484	StatusH0 - 1 - (StatusPlace=0)	0	(StatusPlace<=0)	+	+	StatusH					Statusbar
-	1	368+17	482	1	1	BT	+	+	StatusPlace>=0					Statusbar
 	1	367	482	1	1	0	+	-	StatusH and StatusPlace<0					Statusbar
+icon Basebar		2	8	StatusH0 - 2		(StatusPlace<=0)+(StatusPlace<0)			StatusH and s19+s13+s4					Statusbar
+	1		7	1	1	1			StatusH and s19+s13+s4 and StatusPlace<0					Statusbar
+	1	368+17	482	1	1	BT	+	+	StatusPlace>=0					Statusbar
 icon UI-Party		B		1	C	0	-	+	StatusH and StatusPlace					Statusbar	Top Line
 	0	370	1	1	0	0	-	+	StatusH and StatusPlace>0					Statusbar
 	0	0	1	1				+	StatusPlace>=0 and Options.HideStatusbar				Game.Status	StatusbarStatus
@@ -165,9 +206,9 @@ icon UI-OrR					xr-orx	92+TB			Game.Players<=3					BaseBar
 icon UI-OrL					x+LR+3+orx+or2	92+TB*2			Game.Players<=3					BaseBar	Ornament
 icon UI-OrR					xr-orx-or2	92+TB*2			Game.Players<=3					BaseBar
 	4	386	W+1	92	x+2		+	+						BaseBar	Portraits
-icon UI-Party			1	92	x+1			+						BaseBar
-icon UI-Party	R-1		1	92	x+1+W									BaseBar
-icon UI-Party	R		20	92	xr-20									BaseBar	Right Side
+icon UI-Party			1	92	x+1		-	+						BaseBar
+icon UI-Party	R-1		1	92	x+1+W		-							BaseBar
+icon UI-Party	R		20	92	xr-20		-							BaseBar	Right Side
 ; Move stuff
  up
 var x	x-2
@@ -200,7 +241,7 @@ icon UI-Party		B-1	w+1	1	x+2	b+TB-17	-	+						BaseBar	Bottom Line
 SCREEN															SCREEN BK
 icon UI-FrScr								+						DialogSize
 var DlgW DlgH	R	B											DialogSize
-var x y	DlgW/2-320	DlgH/2-240
+var x y	CfgDlgX or (DlgW/2-320)	CfgDlgY or (DlgH/2-240)
 var x0 y0	x	y
 recover			DlgW	DlgH									ScreenBk
 if empty	0	0											ScreenBk
@@ -208,7 +249,7 @@ icon UI-FrScr								+						ScreenBk
 icon UI-Darken			1	1	x	y		+			640	480		ScreenBk
 
 
-if									Dialog
+if									FullDialog
 SCREEN					640	480									DIALOGS
 					C	C			Game.FullScreen		640	480	Game.LockMouse
 var DlgW x	640	0							R=640 or Game.Arcomage
@@ -219,6 +260,71 @@ icon UI-FrScr	x0-x	y0-y	DlgW	DlgH				+	Game.OpaqueScreen=0					Dialog
 					x	y	+	+	Game.OpaqueScreen=0					Dialog
 var FullW FullH	R	B
 if
+
+
+if									MidDialog
+SCREEN															MID DIALOG
+icon UI-FrScM							-	+						Dialog
+var dy	CfgMidDlgConsumeTop
+var DlgW DlgH	640	368-dy
+var FullW FullH	R	B											Dialog
+var x y	CfgMidDlgX or 3	CfgMidDlgY or 2											Dialog
+var DlgDX DlgDY	x	y
+
+	x0	y0	DlgW	DlgH	x	y		+	Game.OpaqueScreen				ScreenBk	Dialog
+		dy		DlgH	x	y	+		Game.OpaqueScreen					Dialog
+		dy		DlgH	x	y	+	+	Game.OpaqueScreen=0					Dialog
+var x0 y0	x	y
+var dy	CfgMidDlgSpace or 4
+var AreaH	ScreenFH - PartyFullH - dy
+var fw fh	FullW+MidScreenDW	FullH/AreaH*ScreenFH
+var fh	MidScreenH								fh<MidScreenH
+
+SCREEN					fw	fh								
+var DlgX DlgY	C - FullW + fw/2	B*AreaH/ScreenFH - FullH
+var DlgX	C - FullW/2								MidDialogCenter
+var StatusbarOffset	PartyStatusDist								StatusPlace=0
+var StatusbarOffset	StatusH - 9								StatusPlace=0 and Game.Question
+var dy h2	(CfgMidDlgBtnSpace or 6)/ScreenFH*B	B - FullH
+var DlgBtnYN	s17+s18+s13*Game.HouseEnterMap
+var DlgBtnClose	s4+s10*(Game.PaperDollInChests=2)+s13+s14+s15*(Game.PaperDollInChests<>0)+s19								DlgBtnYN=0
+var DlgBtnInv	s7
+var DlgBtnInn	s29
+var DlgBtnCount	DlgBtnClose + DlgBtnInv + DlgBtnYN + 2*DlgBtnInn
+var DlgBtnX h	516+x	30
+var DlgBtnX h	520+x	26							DlgBtnInv+DlgBtnInn
+var sp	1								DlgBtnClose+DlgBtnYN
+var sp	0.5								DlgBtnInv
+var sp	1								DlgBtnInn
+var sp	sp*((h2-2*dy)/DlgBtnCount - h)								DlgBtnCount
+var DlgBtnY	FullH + dy + (h2-2*dy)/DlgBtnCount								DlgBtnCount
+var DlgBtnY1 DlgBtnY2	DlgBtnY - sp - h	DlgBtnY + sp							DlgBtnCount
+var DlgBtnY2	DlgBtnY1+h+dy								DlgBtnYN
+	516	431	83	30	DlgBtnX	DlgBtnY1	-	+	DlgBtnClose					Dialog
+	516	431	1	1	LR+DlgW+x	FullH	+	-	DlgBtnClose		168	h2		Dialog
+	516	391	83	30	DlgBtnX	DlgBtnY1	+	+	DlgBtnYN					Dialog
+	516	431	83	30	DlgBtnX	DlgBtnY2	-	+	DlgBtnYN					Dialog
+	516	431	1	1	LR+DlgW+x	DlgBtnY2 - dy/2	+	-	DlgBtnYN		168	FullH+h2 - (DlgBtnY2 - dy/2)		Dialog
+
+	520	420	1	1				+	DlgBtnInv					DlgBtnCheck
+icon Basebar	520	420-480+114-1	1	1				erase	DlgBtnInv					DlgBtnCheck
+	520	380	1	1				+	DlgBtnInn					DlgBtnCheck
+icon Basebar	520	380-480+114-1	1	1				erase	DlgBtnInn					DlgBtnCheck
+	639	479	1	1	LR+DlgW+x	FullH	+	-	DlgBtnInv		168	h2		Dialog
+if	0	0							DlgBtnInv				DlgBtnCheck
+	520	420	75	26	DlgBtnX	DlgBtnY1	+	+						Dialog
+if	0	0							DlgBtnInn				DlgBtnCheck
+	520	380	75	26	DlgBtnX	DlgBtnY1	+	+						Dialog
+	520	450	75	26	DlgBtnX	DlgBtnY2	-	+						Dialog
+	520	450	1	1	LR+DlgW+x	FullH + h2/2	+	-			168	h2/2		Dialog
+if									MidDialog
+
+var FullW FullH	R	B
+var DlgX DlgY	DlgX + x	DlgY + y
+					DlgX	B			Game.FullScreen		640	B-DlgY	Game.LockMouse
+if
+
+
 
 SCREEN									NoRecover						DISCARD
 			0	0										Compass
@@ -252,12 +358,11 @@ recover													Statusbar
 
 STAGE DrawView
 
-SCREEN					ScreenW	ScreenH			NeedAdv						VIEW
+SCREEN					ScreenW	ScreenH			Game.RenderedScreen<>-1 and Game.Arcomage=0						VIEW
 			0	0							R	B	Game.Render
 var Game.RenderCenterY Game.FOVMul	0.5-MouseShiftY/B	(1 + MouseShiftY/B)*Options.FOVMul
 
 SCREEN					ScreenW	ScreenH			NeedAdv						SPELLS
-default Options.FlyEtcOnTop	1														
 var dx dy	-1	-2
 var dx	3								Options.FlyEtcOnTop=0	
 var ok	R												Walk		tests can be done only on non-empy canvas
@@ -275,7 +380,8 @@ if and	16	19							ok				Lev
 					6+dx	32-2+dy	-		Options.FlyEtcOnTop				Lev
 					5+dx	B-113-4-dy	-		Options.FlyEtcOnTop=0				Lev
 if
-					R-125	B-140	-						Hand		Turn-Based Hand
+					R-125	B-140	-		Game.ShooterMode=0				Hand		Turn-Based Hand
+					R-177+15	B-140+15	-		Game.ShooterMode				Hand		Turn-Based Hand
 
 STAGE DrawViewUI															UI
 					R-0.6	22	-		Options.NoCompass=0				Compass		
@@ -289,13 +395,15 @@ var y	37.8
 					4+4-LR	B - y							Skull
 					R	B							Minimap
 var HasStatus	R												Statusbar
+var HasStatus	0								MidDialog and s13 and (Game.HouseScreen>=2 and Game.HouseScreen<=5 or Game.HouseScreen=18 or Game.HouseScreen=95 or Game.HouseScreen>=110 and Game.HouseScreen<=116)
+stage DrawAboveDialog									MidDialog
 if									StatusPlace<0				
 					C	B					StatusW	StatusH	Statusbar
 if
-					C	B - (StatusPlace<0 and StatusH>0)*(StatusH + PartyStatusDist)					-LR*PartyMul	-TB*PartyMul	BaseBar
-if	-(Options.HideStatusbar=0)	0							StatusPlace>=0 and s0+Game.OpaqueScreen and Options.ShrinkStatusbar*Options.HideStatusbar=0				StatusbarStatus
-					C	(StatusPlace=0)*(B-PartyH-PartyStatusDist) - (StatusPlace>0)*StatusMul/2	-				StatusW	StatusH	Statusbar
-if									StatusPlace>=0 and s0+Game.OpaqueScreen and Options.ShrinkStatusbar and Options.HideStatusbar and HasStatus
+					C	B - PartyBottom					-LR*PartyMul	-TB*PartyMul	BaseBar
+if	-(Options.HideStatusbar=0)	0							StatusPlace>=0 and s0+Game.OpaqueScreen+s19 and Options.ShrinkStatusbar*Options.HideStatusbar=0 and HasStatus				StatusbarStatus
+					C	(StatusPlace=0)*(B-PartyH-PartyStatusDist) - (StatusPlace>0)*StatusMul/2 + StatusbarOffset	-				StatusW	StatusH	Statusbar
+if									StatusPlace>=0 and s0+Game.OpaqueScreen+s19 and Options.ShrinkStatusbar and Options.HideStatusbar and HasStatus
 var W H	450	17
 	11	369	W	H				+						StatusbarLen
 icon Basebar	11	2	W	H				erase						StatusbarLen
@@ -309,14 +417,14 @@ if or	W-x-1	0											StatusbarLen
 	x+1	0	W-x*2-2	1	x+1			not					StatusbarLen	StatusbarLen	no more
 	0		1		x+11-d			+	x+11-d>0				Statusbar	Statusbar
 	R		1		11+W-x+dr-1			+	11+W-x+dr<484				Statusbar	Statusbar
-	x+11-d		W-x*2+d+dr		C	(StatusPlace=0)*(B-PartyH-PartyStatusDist) - (StatusPlace>0)*StatusMul/2	-				StatusW*(W-x*2+d+dr)/484	StatusH	Statusbar		draw
+	x+11-d		W-x*2+d+dr		C	(StatusPlace=0)*(B-PartyH-PartyStatusDist) - (StatusPlace>0)*StatusMul/2 + StatusbarOffset	-				StatusW*(W-x*2+d+dr)/484	StatusH	Statusbar		draw
 if
 LOOP
 if
 
 STAGE Darken
 
-SCREEN					Game.Width	Game.Height			Dialog						DARKEN
+SCREEN					Game.Width	Game.Height			AnyDialog						DARKEN
 for									Game.OpaqueScreen						fix undrawn frame of some house animations
 if	300	200
 loop									0
@@ -324,7 +432,8 @@ icon UI-Darken							+		MainMenuLike=0		Game.Width	Game.Height		Darken
 icon UI-Parch							+		MainMenuLike		Game.Width	Game.Height		Darken	
 var mul	Game.Width/FullW
 var x2 y2	DlgW*mul	DlgH*mul
-var x1 y1	(Game.Width - x2)/2	(Game.Height - y2)/2
+var x1 y1	DlgX*mul	DlgY*mul
+var x1 y1	(Game.Width - x2)/2	(Game.Height - y2)/2							AreaH=0
 var x2 y2	x1 + x2	y1 + y2
 var x1 x2	0	x2							x1<0
 var y1 y2	0	y2							y1<0
@@ -334,15 +443,20 @@ var y1 y2	0	y2							y1<0
 	0	y2		Game.Height-y2	0	y2	+						Darken
 
 
-SCREEN					FullW	FullH			Dialog						DIALOG
 STAGE DrawDialog
+SCREEN					FullW	FullH			FullDialog						DIALOG
 					C	C	+	+	Game.OpaqueScreen				Dialog
 					C	C	+		Game.OpaqueScreen=0				Dialog
+
+SCREEN					FullW	FullH			MidDialog						MID DLG
+					DlgX-DlgDX	DlgY-DlgDY	+						Dialog
+
 STAGE DrawMouse
+SCREEN					FullW	FullH			AnyDialog						DLG MOUSE
 							-						Game.MouseItem		Mouse item
 
 STAGE DrawRMenu
-SCREEN					640	480			IsAdv						ADV RBUTTON
+SCREEN					640	480			IsAdv or MidDialog						ADV RBUTTON
 					C	C	-						Game.RightButtonMenu		Right menu
 var mul	R/ScreenFW												
 var x y	20	15

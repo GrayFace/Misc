@@ -294,6 +294,91 @@ Version 2.4.1:
 (MM8)
 [-] My bug: Random items weren't appearing in chests with quest items
 
+Version 2.5:
+(MM6-MM8)
+[+] WinScreenDelay hidden option controls Win screen delay during which all input is ignored. Default is 500 (half a second instead of game's original 5 seconds). 
+[+] Direct unaccelerated mouse input supported through MouseSensitivityDirectMul option.
+[+] FixConditionPriorities
+[+] EnableAttackSpell
+[+] ShowHintWithRMB
+[+] ShooterMode
+[+] GreenItemsWhileRightClick
+[+] AddDescriptions - Descriptions in INI
+[+] DeadPlayerShowItemInfo
+[+] dist_mist, ViewDistanceD3D
+[+] MonSpritesSizeMul
+[+] FixHouseAnimationRestart
+[+] CheckFreeSpace - Free space check when saving a game
+[+] ExitDialogsWithRightButton
+[+] MouseLookPermKey
+[+] Automatic horseman and boatsman speak time detection
+[+] KeepEmptyWands
+[-] Changing item graphics was causing inventory corruption
+[-] HintStayTime
+[-] Casting stronger buffs did nothing if a weaker, but longer one is in place
+[-] Item spells were causing bugs when cast onto the very 1st item in the inventory
+[-] Now you can pick up stolen items from corpses of thieves (in MM7 and MM8 this was originally the case, but there was no indication)
+[-] Monster hits were causing a player switch even when Endurance eliminates hit recovery
+[-] When casting a Quick Spell the spell points check was incorrect (it assinged GM spell to another school of magic)
+[-] AOE damage wasn't dealt to paralyzed monsters
+[-] Monster spell attacks were broken (esp. Poison Spray, Shrapmetal) (thanks cthscr)
+    MM6: All spells were doing Fire damage
+[-] KeepCurrentDirectory
+[-] FixDeadPlayerIdentifyItem
+[-] Fixed another crash due to facets without vertexes
+[-] Fix full brightness for a minute at 5:00 AM
+[-] New Day wasn't triggered on beginning of a month when resting until down and pressing Esc
+[-] Random item generation routine was generating the 1st item with bigger probability and last item with smaller probability
+[-] Buff duration was displayed incorrectly in the cases like "1 day 5 minutes"
+[-] "N/A" string for ranged damage wasn't localizeable
+[-] FixWaterWalkManaDrain
+[-] My bug: You were able to learn unavailable magic skills with keyboard navigation
+[*] My inactive players acting fix wasn't perfect
+[*] Now spell skills that don't fit are drawn over buttons. Still better than making them inaccessible.
+[*] 3DO and other logos in postponed intro, unless NoIntoLogos
+(MM7, MM8)
+[+] TrueColorSprites hidden option, off by default to prevent 'out of memory' with HD sprites
+[+] The game doesn't crash on exit if d3dsprite.hwl and d3dbitmap.hwl are missing
+[+] Minimap background picture (mainly for color blind)
+[+] ClickThroughEffects now works in Hardware mode
+[+] SystemDDraw / support dgVoodoo
+[+] IndoorFovMul (0.813)
+[+] ClimbBetter
+[-] Fixed DirectX 7 bug: inability to work with big resolutions
+[-] Restore AnimatedTFT bit from Blv rather than Dlv to avoid crash
+[-] FixMonstersBlockingShots
+[-] Duration string for items wasn't localized
+[-] Monsters shot at from a distance appearing green on minimap
+[-] Display Inventory screen didn't work with unconscious players
+[-] Damage bonus of Assassins' and Barbarians' enchantments didn't work
+[-] 'GM' spell skill wasn't read from Monsters.txt
+[-] FixIceBoltBlast
+[-] FixEnergyDamageType - Ener damage type was being turned into Earth
+[-] No more gamma.pcx
+[-] Souldrinker was hitting monsters beyond party range
+[-] Acid Burst was doing physical damage
+[-] Inability to equip sword or dagger when non-master spear is equipped
+[-] Arcomage hanging in some circumstances
+[-] Walking on water was dealing Fire damage
+[-] Bow skill bonus from items wasn't added to damage with GM Bow skill
+[-] When a monster attacked another one with a spell, wrong spell was used in damage calculation
+[-] Melee monsters under Berserk were hitting party from a far if their target died
+[-] Alchemy failure was breaking Hardened items
+[-] 'of Acid' was dealing Water damage instead of Body
+[-] ArmageddonElement
+[-] LeaveMap event not called on travel
+[-] Monsters summon overflow crash
+[-] 'Body' attack type was read as physical for monsters
+[-] Windows 10 incompatibility
+[-] My bug: Crash in full screen if BorderlessFullscreen=0
+[-] My bug: Mipmaps were always on in full screen if BorderlessFullscreen=0 and MipmapsCount>1
+[-] My bug: Empty icons were causing division by zero in UI Layout code
+[-] My bug: Empty sprites causing a crash in D3D mode
+(MM8)
+[-] Vampires weren't immune to Mind
+[-] lloyd pcx broken
+[-] 'Spirit Lash', 'Inferno', 'Prismatic Light' were broken when used by monsters
+
 
 
 
@@ -325,19 +410,11 @@ Did you fix enchanted weapons "Of Poison" dealing Water damage instead of Body m
 And did you fix Acid Burst dealing Physical damage instead of Water damage? (Bug is the same as in MM7)
 
 
-The problem with Cauri is that when you free her, you absolutely have to talk to
-her about each and every point of dialogue. She will end the promotion quest
-herself IIRC, and if you just close the dialog box, then the quest is no longer
-completable and you have to reload the game.
+Wrong text: https://www.celestialheavens.com/forum/10/16657?start=6700#p384916
 
 - MM8: When you cast Heroism or Hour of Power, you can see your new damage in
 your stats. The change cannot be seen using the Heroism potion. This is probably
 also true for Bless and its relation to attack bonus.
-
-- The names of objects scattered on the map do not display when you point at
-them, for example the "skeletons" and "carrions" in the Ironsand Desert or
-"tar rocks" in Shadowspire do not display their names. And I remember that
-quite a while ago the game would display them
 
 - When you do the Troll promotion quest in MM8, Volog Sandwind thanks you,
  but on behalf of the Minotaurs from Balthazar Lair. Obviously a mistake in
@@ -349,14 +426,14 @@ than once, the game freezes. The first time reloading near the stables is
 ok, but the second will crash the game totally. In MM7 there's no problem
 with it.
 
-Xfing: Items that give + points to the Bow skill only affect the Normal and Expert bonuses (attack bonus and recovery time), but not the Grandmaster bonus, the damage. Could you make it so that a Dark Elf with GM Bow wearing the Fleetfingers gets +8 to damage? I believe the Tounrament Bow and the Longseeker both have +5 bonuses, too.
-
-ArmsMaster with GM staff: http://www.celestialheavens.com/forums/viewtopic.php?t=14870&highlight=
+- Merchant House of Alvar can sometimes fool you into thinking that it doesn't respawn
 
 }
 
 begin
   try
+    if CompareMem(ptr($402420), PChar(#$56#$57#$8B#$F1#$E8#$65#$29#$01#$00#$8B#$86#$70#$01#$00#$00#$8B), 16) then
+      exit;  // MM8Patch.exe (for the future)
     AssertErrorProc:= RSAssertErrorHandler;
     LoadIni;
     HookAll;

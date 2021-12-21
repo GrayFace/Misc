@@ -1178,10 +1178,12 @@ function MemoryNewProc(n: uint): ptr;
 var
   i: uint;
 begin
+  inc(n);  // trailing zero for text files
   i:= (n + $FFF) and not $FFF;
   Result:= VirtualAlloc(nil, i + $1000, MEM_RESERVE, PAGE_NOACCESS);
   VirtualAlloc(Result, i, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
   inc(PChar(Result), i - n);
+  ZeroMemory(PChar(Result), n);
 end;
 
 procedure MemoryFreeProc(p: ptr; ret: int);
@@ -1225,7 +1227,8 @@ var
 procedure SpellsTxtHook;
 asm
   mov eax, [esp + $1C]
-  cmp eax, ($4F52D2 - $24)
+  add eax, $14
+  cmp eax, [$451292]
   jg @exit
   push SpellsTxtStd
 @exit:
@@ -2092,7 +2095,8 @@ type
 var
   CurRemainder: pint;
   PlayerStrafe: TStrafeRemainder;
-  MonsterStrafe: array[0..499] of TStrafeRemainder;
+  // 1499 because MMMerge extends map monsters limit for some weird reason
+  MonsterStrafe: array[0..1499] of TStrafeRemainder;
   ObjectStrafe: array[0..999] of TStrafeRemainder;
   OldMoveStructInit: ptr;
 
@@ -2663,25 +2667,6 @@ asm
 @std:
 end;
 
-//----- Monsters can't cast some spells, but waste turn
-
-procedure FixUnimplementedSpells;
-asm
-  mov eax, [esp + $C]
-  cmp eax, 20  // Implosion
-  jz @bad
-  cmp eax, 44  // Mass Distortion
-  jz @bad
-  cmp eax, 81  // Paralyze
-  jz @bad
-
-  jmp @std
-@bad:
-  xor eax, eax
-  mov [esp], $425509
-@std:
-end;
-
 //----- Configure window size (also see WindowProcHook)
 
 function ScreenToClientHook(w: HWND; var p: TPoint): BOOL; stdcall;
@@ -2689,23 +2674,6 @@ begin
   Result:= ScreenToClient(w, p);
   if Result then
     p.y:= TransformMousePos(p.x, p.y, p.x);
-end;
-
-//----- Borderless fullscreen (also see WindowProcHook)
-
-procedure SwitchToWindowedHook;
-begin
-  Options.BorderlessWindowed:= true;
-  ShowWindow(_MainWindow^, SW_SHOWNORMAL);
-  SetWindowLong(_MainWindow^, GWL_STYLE, GetWindowLong(_MainWindow^, GWL_STYLE) or _WindowedGWLStyle^);
-end;
-
-procedure SwitchToFullscreenHook;
-begin
-  Options.BorderlessWindowed:= false;
-  ShowWindow(_MainWindow^, SW_SHOWMAXIMIZED);
-  PostMessage(_MainWindow^, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
-  MyClipCursor;
 end;
 
 //----- Compatible movie render
@@ -3116,14 +3084,33 @@ asm
   mov eax, ebp
   mov ebp, ArtBonusBefore
   sub eax, ebp
-  add dword ptr [esp + 18h], eax 
+  add dword ptr [esp + 18h], eax
 @skip:
+end;
+
+//----- Fix evt.CheckItemsCount
+
+procedure FixCheckItems;
+asm
+  test eax, eax
+  jg @ok
+  mov [esp], $449876
+@ok:
+end;
+
+//----- 'of Acid' was dealing Water damage instead of Body
+
+procedure FixOfAcid;
+asm
+  mov dword ptr [edi], 8
+  push 12
+  push $437AC5
 end;
 
 //----- HooksList
 
 var
-  HooksList: array[1..325] of TRSHookInfo = (
+  HooksList: array[1..314] of TRSHookInfo = (
     (p: $458E18; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $463862; old: $450493; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave/quicksave filenames localization
     (p: $4CD509; t: RShtNop; size: 12), // Fix Save/Load Slots: it resets SaveSlot, SaveScroll
@@ -3274,7 +3261,7 @@ var
     (p: $4D132A; old: $4C4AF7; backup: @@LBOld2; newp: @LBHook2; t: RShtCall),  // Lloyd Beacon dlg reacts spell book click
     (p: $463E9E; newp: @DefaultSmoothTurnHook; t: RShtCall), // Use Smooth turn rate by default
     (p: $461758; old: $4D9E20; newp: @FixLeaveMapDieHook; t: RShtCall), // Was no LeaveMap event on death
-    (p: $4E8280; newp: @MyGetAsyncKeyState; t: RSht4), // Don't rely on bit 1 of GetAsyncKeyState
+    //(p: $4E8280; newp: @MyGetAsyncKeyState; t: RSht4), // Don't rely on bit 1 of GetAsyncKeyState
     (p: $4B5172; old: $4BBDCD; newp: @TravelGoldFixHook1; t: RShtCall), // Subtract gold after autosave when trevelling
     (p: $4B5354; old: $4B0341; newp: @TravelGoldFixHook2; t: RShtCall), // Subtract gold after autosave when trevelling
     (p: $4635B6; t: RShtNop; size: $11), // Switch to 16 bit color when going windowed
@@ -3373,21 +3360,7 @@ var
     (p: $47256E; newp: @FixLava2; t: RShtCall; size: 7), // Lava hurting players in air
     (p: $479B04; newp: @FixObelisk; t: RShtBefore; size: 6; Querry: hqFixObelisks), // Unicorn King appearing before obelisks are taken and respawning
     (p: $424E55; newp: @FixObelisk2; t: RShtAfter; Querry: hqFixObelisks), // Unicorn King appearing before obelisks are taken and respawning
-    (p: $4254BA; newp: @FixUnimplementedSpells; t: RShtBefore; size: 6; Querry: hqFixUnimplementedSpells), // Monsters can't cast some spells, but waste turn
     (p: $4E821C; newp: @ScreenToClientHook; t: RSht4), // Configure window size
-    (p: $463D5F; old: $49D5EE; new: $49DC06; t: RShtCall; Querry: hqBorderless), // Borderless fullscreen
-    (p: $463D5F; newp: @SwitchToFullscreenHook; t: RShtAfter; Querry: hqBorderless), // Borderless fullscreen
-    (p: $463D0F; newp: @SwitchToWindowedHook; t: RShtAfter; Querry: hqBorderless), // Borderless fullscreen
-    (p: $464C2A; size: 3; Querry: hqBorderless), // Borderless fullscreen
-    (p: $464C34; new: $464C4E; t: RShtJmp; Querry: hqBorderless), // Borderless fullscreen
-    (p: $464CCA; newp: @SwitchToFullscreenHook; t: RShtCall; size: 6; Querry: hqBorderless), // Borderless fullscreen
-    (p: $464CD0; new: $464EFA; t: RShtJmp; Querry: hqBorderless), // Borderless fullscreen
-    (p: $464D09; size: 6; Querry: hqBorderless), // Borderless fullscreen
-    (p: $464D14; old: $49DC06; newp: @SwitchToWindowedHook; t: RShtCall; size: $464D2D - $464D14; Querry: hqBorderless), // Borderless fullscreen
-    (p: $464D3F; new: $464EFA; t: RShtJmp; size: 6; Querry: hqBorderless), // Borderless fullscreen
-    (p: $464C50; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
-    (p: $46296E; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
-    (p: $462992; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
     (p: $4BC2B3; newp: @DrawMovieHook; t: RShtBefore; Querry: hqFixSmackDraw), // Compatible movie render
     (p: $4BCA69; old: $74; new: $EB; t: RSht1; Querry: hqFixSmackDraw), // Compatible movie render
     (p: $4BCABF; old: $840F; new: $E990; t: RSht2; Querry: hqFixSmackDraw), // Compatible movie render
@@ -3450,6 +3423,10 @@ var
     (p: $48CDF6; size: 10), // Fix vampires immunity
     (p: $48E659; newp: @FixArtifactBonuses1; t: RShtBefore; size: 6), // Fix artifact skill bonus stacking
     (p: $48EC2D; newp: @FixArtifactBonuses2; t: RShtBefore; size: 9), // Fix artifact skill bonus stacking
+    (p: $44985F; newp: @FixCheckItems; t: RShtBefore; size: 10), // Fix evt.CheckItemsCount
+    (p: $449884; old: $8B53; new: $078B; t: RSht2; size: 8), // Fix evt.CheckItemsCount - mov eax, [edi]
+    (p: $437AAD; newp: @FixOfAcid; t: RShtJmp; size: 6), // 'of Acid' was dealing Water damage instead of Body
+    (p: $40546F; old: $36FF; new: $9057; t: RSht2), // (push edi) Fix monsters using 'Spirit Lash', 'Inferno', 'Prismatic Light'
     ()
   );
 
@@ -3472,6 +3449,7 @@ var
   LastDebugHook: DWord;
 begin
   CheckHooks(HooksList);
+  CheckMMHooks;
   CheckHooksD3D;
   ExtendSpriteLimits;
   ReadDisables;
@@ -3492,8 +3470,6 @@ begin
     RSApplyHooks(HooksList, 17);
   if DisableAsyncMouse then
     RSApplyHooks(HooksList, 24);
-  if BorderlessFullscreen then
-    RSApplyHooks(HooksList, hqBorderless);
   if TurnBasedWalkDelay > 0 then
     RSApplyHooks(HooksList, hqFixTurnBasedWalking);
   if NoWaterShoreBumpsSW then
@@ -3545,8 +3521,6 @@ begin
     RSApplyHooks(HooksList, hqFixSmackDraw);
   if Options.SupportTrueColor then
     RSApplyHooks(HooksList, hqTrueColor);
-  if Options.FixUnimplementedSpells then
-    RSApplyHooks(HooksList, hqFixUnimplementedSpells);
   if Options.FixMonsterSummon then
     RSApplyHooks(HooksList, hqFixMonsterSummon);
   ApplyMMDeferredHooks;
