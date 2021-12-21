@@ -63,7 +63,15 @@ const
   hqFixMonsterSpells = 76;
   hqCheckFreeSpace = 77;
   hqFixSouldrinker = 78;
-  hqSmoothMouseLook = 79;
+  hqFixUnmarkedArtifacts = 79;
+  hqFixClubsDelay = 80;
+  hqFixDarkTrainers = 81;
+  hqFixLightBolt = 82;
+  hqFixKelebrim = 83;
+  hqFixBarrels = 84;
+  hqClimbBetter = 85;
+  hqFixWaterWalkManaDrain = 86;
+  hqKeepEmptyWands = 87;
 
 {$IFDEF mm6}
   m6 = 1;
@@ -81,9 +89,10 @@ const
 
   HookEachTick = m6*$453AD3 + m7*$46334B + m8*$461320; // OnAction
   HookPopAction = m6*$42B2C9 + m7*$43056D + m8*$42EE83; // use RShtBefore
-  HookLoadLods = m6*$45761E + m7*$4655FE + m8*$463862; // use RShtAfter
+  HookLoadLods = m6*$45761E + m7*$4655FE + m8*$463862; // use RShtAfter (once!)
   HookWindowProc = m6*$454340 + m7*$463828 + m8*$4618FF; // use RShtFunctionStart or RShtBefore
   HookLoadInterface = m6*$4534D0 + m7*$462E36 + m8*$460DA0; // on game start. Use RShtBefore
+  HookMapLoaded = m6*$456A46 + m7*$464A22 + m8*$462D1E; // use RShtBefore
   fpsNone = 0;
   fpsOff = 1;
   fpsOn = 2;
@@ -136,7 +145,7 @@ type
     SmoothMovieScaling: LongBool;             //
     SupportTrueColor: LongBool;               //
     RenderRect: TRect;                        //
-    FixUnimplementedSpells: LongBool;         // (MM8 only)
+    FixUnimplementedSpells: LongBool;         // (unused in MM6)
     IndoorMinimapZoomMul: int;                //
     IndoorMinimapZoomPower: int;              //
     FixMonsterSummon: LongBool;               // (unused in MM6)
@@ -163,6 +172,18 @@ type
     FixMonsterSpells: LongBool;               //
     FixSouldrinker: LongBool;                 //
     MouseLookPermKey: int;                    //
+    LastSoundSample: int;                     //
+    WaterWalkDamage: int;                     // (unused in MM6)
+    FixUnmarkedArtifacts: LongBool;           // (MM7 only)
+    FixClubsDelay: LongBool;                  // (unused in MM6)
+    FixDarkTrainers: LongBool;                // (MM7 only)
+    FixLightBolt: LongBool;                   // (unused in MM6)
+    ArmageddonElement: int;                   //
+    FixKelebrim: LongBool;                    // (MM7 only)
+    FixBarrels: LongBool;                     // (MM7 only)
+    ClimbBetter: LongBool;                    // (unused in MM6)
+    FixWaterWalkManaDrain: LongBool;          //
+    KeepEmptyWands: LongBool;                 //
   end;
 
 var
@@ -183,6 +204,10 @@ var
     RenderBottomPixel: 351;
 {$ENDIF}
     MaxMLookUpAngle: 300;
+{$IFNDEF mm6}
+    WaterWalkDamage: 2;
+    FixLightBolt: true;
+{$ENDIF}
   );
 
 var
@@ -205,7 +230,8 @@ var
   RecoveryTimeInfo, PlayerNotActive, SDoubleSpeed, SNormalSpeed,
   QuickSaveName, QuickSaveDigitSpace, SArmorHalved, SArmorHalvedMessage,
   SDuration, SDurationYr, SDurationMo, SDurationDy, SDurationHr,
-  SDurationMn, SRemoveASpell, SChooseASpell, SSetASpell, SSetASpell2: string;
+  SDurationMn, SRemoveASpell, SChooseASpell, SSetASpell, SSetASpell2,
+  SStoleItem, SNotAvailable: string;
 
   CapsLockToggleRun, NoDeathMovie, FreeTabInInventory, ReputationNumber,
   AlwaysStrafe, StandardStrafe, MouseLookChanged, MLookRaw, FixInfiniteScrolls,
@@ -217,7 +243,7 @@ var
   GreenItemsWhileRightClick, FixDeadPlayerIdentifyItem,
   DeadPlayerShowItemInfo, SystemDDraw, UseVoodoo, NeedFreeSpaceCheck,
   FixHouseAnimationRestart, ExitTalkingWithRightButton, NoIntoLogos,
-  MouseLookChanged2: Boolean;
+  MouseLookChanged2, BorderlessTopmost: Boolean;
   DoubleSpeed: BOOL;
   {$IFNDEF mm6}
   NoVideoDelays, DisableAsyncMouse, ShowTreeHints: Boolean;
@@ -535,18 +561,29 @@ const
   _SpellInfo = PSpellInfoArray(m6*$4BDD6E + m7*$4E3C46 + m8*$4F486E);
   _DDraw = pptr(m6*$9B10E4 + m7*$E31AF4 + m8*$F01A0C);
   _dist_mist = pint(m6*$6296EC + m7*$6BDEFC + m8*$6F3004);
+  __Time = m6*$908D08 + m7*$ACCE64 + m8*$B20EBC;
+  __LastRegenTime = m6*$90E83C + (1 - m6)*(__Time + 8);
   __TimeYear = m6*$908D10 + m7*$ACD544 + m8*$B215AC;
   __TimeMonth = __TimeYear + 4;
   __TimeWeek = __TimeMonth + 4;
   __DayOfMonth = __TimeWeek + 4;
   __TimeHour = __DayOfMonth + 4;
   __TimeMinute = __TimeHour + 4;
+  _Time = puint64(__Time);
+  _LastRegenTime = puint64(__LastRegenTime);
   _TimeYear = pint(__TimeYear);
   _TimeMonth = pint(__TimeMonth);
   _TimeWeek = pint(__TimeWeek);
   _DayOfMonth = pint(__DayOfMonth);
   _TimeHour = pint(__TimeHour);
   _TimeMinute = pint(__TimeMinute);
+  __ObjectsCount = m6*$5E2180 + m7*$6650AC + m8*$692FB4;
+  _ObjectsCount = pint(__ObjectsCount);
+  __MonstersCount = m6*$5B22F8 + m7*$6650A8 + m8*$692FB0;
+  _MonstersCount = pint(__MonstersCount);
+  __MonstersLimit = m6*$4A35FA + m7*$4BBED6 + m8*$4BA086;
+  _MonstersLimit = pint(__MonstersLimit);
+  __MonstersSummonLimit = m6*$4A35FA + m7*$44F6FD + m8*$44CE1F;
 
   _ItemOff_Number = 0;
   _ItemOff_Bonus = 4;
@@ -583,12 +620,19 @@ const
   _MonOff_Item1 = m7*$234 + m8*$2BC;
   _MonOff_Item2 = _MonOff_Item1 + _ItemOff_Size;
   _MonOff_Buff_Stoned = $114 + m7*$10 + m8*$18;
+  _MonOff_CurrentActionStep = $a8 + m7*$10 + m8*$18;
+  _MonOff_CurrentActionLength = $90 + m7*$10 + m8*$18;
+
+  AIState_Removed = 11;
 
   _FacetOff_VertexCount = $5D - m6*$10;
 
   _ObjOff_X = 4;
   _ObjOff_Y = 8;
   _ObjOff_Z = $C;
+
+  _Skill_Club = -m6 + m7*37 + m8*40;
+  _Skill_Misc = m6*12 + m7*38 + m8*40;
 
 const
   _malloc: function(size:int):ptr cdecl = ptr(m6*$4AE753 + m7*$4CADC2 + m8*$4D9F62);
@@ -604,6 +648,7 @@ const
   _FaceAnim: procedure(_,__: int; pl: ptr; _3, action: int) = ptr(m6*$488CA0 + m7*$4948A9 + m8*$492BCD);
   _DrawItemInfoBox: procedure(n1, n2: int; it: ptr) = ptr(m6*$41C440 + m7*$41D83E + m8*$41CDC2);
   _Mon_IsAgainstMon: function(_: int; against, who: ptr): int = ptr(m7*$40104C + m8*$401051);
+  _Mon_InitGraphicState: procedure(n1, n2: int; mon: ptr) = ptr(m6*$44C140 + m7*$4597A6 + m8*$457060);
   _GetDistance: function(_, x, y, z: int): int = ptr(m6*$445420 + m7*$462217 + m8*$46003B);
 
   _Character_GetSkillWithBonuses: function(n1,n2:int; this: ptr; skill: int):int = ptr(m7*$48F87A + m8*$48EF4F);
@@ -616,6 +661,7 @@ var
 
 procedure LoadIni;
 procedure LoadExeMods;
+procedure ApplyBytePatches;
 {$IFNDEF mm6}
 function GetMipmapsCountProc(var a: THwlBitmap; p: PChar): int;
 procedure AddMipmapBase(p: PChar; v: int);
@@ -665,7 +711,7 @@ implementation
 procedure ReadDisabledHooks(const ss: string);
 var
   ps: TRSParsedString;
-  i: int;
+  i, v: int;
 begin
   DisabledHooks:= TStringList.Create;
   DisabledHooks.Sorted:= true;
@@ -673,7 +719,13 @@ begin
   DisabledHooks.Duplicates:= dupIgnore;
   ps:= RSParseString(ss, [',']);
   for i:= 0 to RSGetTokensCount(ps, true) do
-    DisabledHooks.Add(Trim(RSGetToken(ps, i)));
+    if RSVal('$' + Trim(RSGetToken(ps, i)), v) then
+      DisabledHooks.Add(IntToHex(v, 0));
+end;
+
+procedure DisableHook(v: int); stdcall;
+begin
+  DisabledHooks.Add(IntToHex(v, 0));
 end;
 
 procedure DelIniInfo(ini: TRSMemIniStrings; i: int; const info: string);
@@ -688,7 +740,7 @@ begin
       inc(i);
 end;
 
-procedure AddIniInfo(ini: TRSMemIniStrings; sect: int; const key, info: string);
+procedure DoAddIniInfo(ini: TRSMemIniStrings; sect: int; const key, info: string);
 var
   k: int;
 begin
@@ -721,7 +773,7 @@ begin
     begin
       DelIniInfo(ini, sect, s);
       if AddDescriptions > 0 then
-        AddIniInfo(ini, sect, list[i], s);
+        DoAddIniInfo(ini, sect, list[i], s);
     end;
   end;
   if del <> nil then
@@ -756,22 +808,32 @@ var
     info:= '';
   end;
 
-  function ReadString(const key, default: string; write: Boolean = true): string;
+  function DoReadString(const key, default, ReadDef: string; write: Boolean): string;
   begin
     AddInfo(key);
     if iniOverride <> nil then
     begin
-      Result:= iniOverride.ReadString(sect, key, #13#10);
-      if Result <> #13#10 then
+      Result:= iniOverride.ReadString(sect, key, ReadDef);
+      if Result <> ReadDef then
         exit;
     end;
-    Result:= ini.ReadString(sect, key, #13#10);
-    if Result = #13#10 then
+    Result:= ini.ReadString(sect, key, ReadDef);
+    if Result = ReadDef then
     begin
       if write then
         ini.WriteString(sect, key, default);
       Result:= default;
     end;
+  end;
+
+  function ReadString(const key, default: string; write: Boolean = true): string;
+  begin
+    Result:= DoReadString(key, default, #13#10, write);
+  end;
+
+  function ReadLocString(const key, default: string; write: Boolean = true): string;
+  begin
+    Result:= DoReadString(key, default, '', write);
   end;
 
   function ReadInteger(const key: string; default: int; write: Boolean = true): int;
@@ -845,6 +907,12 @@ begin
       AddDescriptions:= ini.ReadInteger(sect, 'AddDescriptions', 1);
       if AddDescriptions < 0 then
         ini.WriteInteger(sect, 'AddDescriptions', 0);
+      if (AddDescriptions = 1) and not ini.HasKey(sect, 'AddDescriptions') then
+      begin
+        i:= ini.Lines.FindSection(sect);
+        if i >= 0 then
+          ini.Lines.Insert(i + 1, 'AddDescriptions=1');
+      end;
       info:= 'Set to 1 to add descriptions to INI entries, set to -1 to remove previously added descriptions, set to 0 to do nothing';
       ReadInteger('AddDescriptions', 1);
 {$IFDEF mm6}
@@ -890,9 +958,16 @@ begin
 
       info:= 'Set to 1 to disable the death movie';
       NoDeathMovie:= ReadBool('NoDeathMovie', false, false);
-      info:= 'Skips intro and makes it appear when you press the New Game button instead (unless "PostponeIntro" is set to 0)';
+      if m6 = 1 then
+        info:= 'Skips intro and makes it appear when you press the New Game button instead (unless "PostponeIntro" is set to 0)'
+      else
+        info:= 'Skips intro and makes it appear when you start a new game instead (unless "PostponeIntro" is set to 0)';
       if ReadBool('NoIntro', false) then
       begin
+        if m7 = 1 then
+          info:= 'Set to 0 to disable intro completely, set to 1 to show it after new game team is chosen (default), set to 2 to show intro when New Game button is clicked.'
+        else
+          info:= 'Set to 0 to disable intro completely. Default is 1 (show it at the start of a new game).';
         i:= ReadInteger('PostponeIntro', 1, false);
         if (i <> 0) and (i <> m7*2) then
           i:= 1;
@@ -1008,8 +1083,10 @@ begin
       StretchHeight:= max(1, ReadFloat('StretchHeight', 1));
       info:= 'Like StretchHeight, but only applied if it makes black bars go away';
       StretchHeightFull:= max(StretchHeight, ReadFloat('StretchHeightFull', 1.067)); // stretch to 5:4
-      info:= 'Makes the game occupy full screen without changing resolution (note: use F4 to go to/from full screen mode)';
-      BorderlessFullscreen:= ReadBool('BorderlessFullscreen', true);
+      info:= 'Makes the game occupy full screen without changing resolution (note: use F4 to go to/from full screen mode). If task bar is shown above the game window, set this to 2 instead of 1.';
+      i:= ReadInteger('BorderlessFullscreen', 1);
+      BorderlessFullscreen:= (i <> 0);
+      BorderlessTopmost:= (i > 1);
       BorderlessProportional:= ReadBool('BorderlessProportional', false, false);
       CompatibleMovieRender:= ReadBool('CompatibleMovieRender', true, false);
       SmoothMovieScaling:= ReadBool('SmoothMovieScaling', true, false);
@@ -1028,7 +1105,7 @@ begin
       MouseLookCursorHD:= ReadBool('MouseLookCursorHD', true, false);
       SmoothScaleViewSW:= ReadBool('SmoothScaleViewSW', true, false);
       {$IFDEF mm8}NoWaterShoreBumpsSW:= ReadBool('NoWaterShoreBumpsSW', true, false);{$ENDIF}
-      {$IFDEF mm8}FixUnimplementedSpells:= ReadBool('FixUnimplementedSpells', true, false);{$ENDIF}
+      {$IFNDEF mm6}FixUnimplementedSpells:= ReadBool('FixUnimplementedSpells', true, false);{$ENDIF}
       {$IFNDEF mm6}FixMonsterSummon:= ReadBool('FixMonsterSummon', true, false);{$ENDIF}
       {$IFDEF mm8}FixQuickSpell:= ReadBool('FixQuickSpell', true, false);{$ENDIF}
       {$IFDEF mm7}FixInterfaceBugs:= ReadBool('FixInterfaceBugs', true, false);{$ENDIF}
@@ -1062,7 +1139,7 @@ begin
       WinScreenDelay:= ReadInteger('WinScreenDelay', 500, false);
       FixConditionPriorities:= ReadBool('FixConditionPriorities', true, false);
       HintStayTime:= ReadInteger('HintStayTime', 2, false);
-      info:= 'Set this to 1 to stop monster shots being suspended in the air in dungeons when blocked by other monsters. This makes the game harder';
+      info:= 'Set this to 1 to stop monster shots being suspended in the air in dungeons when blocked by other monsters. This also fixes the bug of reanimated monsters being unable to hit enemies of the same kind';
       {$IFNDEF mm6}FixMonstersBlockingShots:= ReadBool('FixMonstersBlockingShots', false);{$ENDIF}
       info:= '';
       {$IFDEF mm7}FixLichImmune:= ReadBool('FixLichImmune', true, false);{$ENDIF}
@@ -1072,7 +1149,6 @@ begin
       info:= 'Set this to 1 to enable shooter mode (see patch readme for more info)';
       ShooterMode:= BoolToInt[ReadBool('ShooterMode', false)];
       ShowHintWithRMB:= ReadBool('ShowHintWithRMB', true, false);
-      {$IFNDEF mm6}FixHitDistantMonstersIndoor:= ReadBool('FixHitDistantMonstersIndoor', true, false);{$ENDIF}
       GreenItemsWhileRightClick:= ReadBool('GreenItemsWhileRightClick', true, false);
       FixDeadPlayerIdentifyItem:= ReadBool('FixDeadPlayerIdentifyItem', true, false);
       info:= 'Set this to 1 to allow seeing item info inside inventory screen of an unconscious player';
@@ -1091,25 +1167,34 @@ begin
         TrueColorTextures:= TrueColorSprites;
       dist_mist:= ReadInteger('dist_mist', m6*$2000, false);
       MonSpritesSizeMul:= Round($10000*ReadFloat('MonSpritesSizeMul', 0, false));
-      {$IFNDEF mm6}
+{$IFNDEF mm6}
       info:= 'View distance in Direct 3D mode. Causes minor graphical glitches. Set to 0 to disable';
       ViewDistanceD3D:= ReadInteger('ViewDistanceD3D', 12000);
+      FixHitDistantMonstersIndoor:= ReadBool('FixHitDistantMonstersIndoor', true, false);
       FixIceBoltBlast:= ReadBool('FixIceBoltBlast', true, false);
       FixMonsterAttackTypes:= ReadBool('FixMonsterAttackTypes', true, false);
       IndoorAntiFov:= Round(300/ReadFloat('IndoorFovMul', 300/369, false));
       FixSouldrinker:= ReadBool('FixSouldrinker', true, false);
-      {$ENDIF}
+      FixClubsDelay:= ReadBool('FixClubsDelay', true, false);
+      ClimbBetter:= ReadBool('ClimbBetter', true, false);
+{$ENDIF}
       FixHouseAnimationRestart:= ReadBool('FixHouseAnimationRestart', true, false);
       info:= 'Makes right mouse button act as Esc in houses, NPC, map entrance and message dialogs';
-      ExitTalkingWithRightButton:= ReadBool('ExitDialogsWithRightButton', false, false);
+      ExitTalkingWithRightButton:= ReadBool('ExitDialogsWithRightButton', false);
       FixMonsterSpells:= ReadBool('FixMonsterSpells', true, false);
       NeedFreeSpaceCheck:= ReadBool('CheckFreeSpace', true, false);
       NoIntoLogos:= ReadBool('NoIntoLogos', false, false);
+      ArmageddonElement:= ReadInteger('ArmageddonElement', 10 - 9*m6, false);
+      {$IFDEF mm7}FixKelebrim:= ReadBool('FixKelebrim', true, false);{$ENDIF}
+      {$IFDEF mm7}FixBarrels:= ReadBool('FixBarrels', true, false);{$ENDIF}
+      FixWaterWalkManaDrain:= ReadBool('FixWaterWalkManaDrain', true, false);
+      KeepEmptyWands:= ReadBool('KeepEmptyWands', true, false);
 
 {$IFDEF mm6}
       info:= 'Set this to 0 to disable loading of mm6text.dll';
       if FileExists(AppPath + 'mm6text.dll') then
         UseMM6text:= ReadBool('UseMM6textDll', true);
+      info:= '';
 
       for i:=1 to 255 do
         MappedKeysBack[i]:= i;
@@ -1153,6 +1238,10 @@ begin
       info:= 'Set this to 0 to disable loading of mm7text.dll';
       if FileExists(AppPath + 'mm7text.dll') then
         UseMM7text:= ReadBool('UseMM7textDll', true);
+      info:= '';
+
+      FixUnmarkedArtifacts:= ReadBool('FixUnmarkedArtifacts', true, false);
+      FixDarkTrainers:= ReadBool('FixDarkTrainers', true, false);
 {$ENDIF}
       info:= '';
       ReadDisabledHooks(ReadString('DisableHooks', '', false));
@@ -1170,11 +1259,12 @@ begin
         QuickSaveDigitSpace:= ' ';
       RecoveryTimeInfo:= #10#10 + ReadString('RecoveryTimeInfo', 'Recovery time: %d');
       {$IFDEF mm6}GameSavedText:= ReadString('GameSavedText', 'Game Saved!');{$ENDIF}
-      PlayerNotActive:= ReadString('PlayerNotActive', 'That player is not active');
+      PlayerNotActive:= ReadLocString('PlayerNotActive', 'That player is not active');
       SDoubleSpeed:= ReadString('DoubleSpeed', 'Double Speed');
       SNormalSpeed:= ReadString('NormalSpeed', 'Normal Speed');
-      {$IFDEF mm7}SArmorHalved:= ReadString('ArmorHalved', 'Armor Halved');{$ENDIF}
-      {$IFNDEF mm6}SArmorHalvedMessage:= ReadString('ArmorHalvedMessage', '%s halves armor of %s');{$ENDIF}
+      {$IFDEF mm7}SArmorHalved:= ReadLocString('ArmorHalved', 'Armor Halved');{$ENDIF}
+      {$IFNDEF mm6}SArmorHalvedMessage:= ReadLocString('ArmorHalvedMessage', '%s halves armor of %s');{$ENDIF}
+      {$IFDEF mm7}SStoleItem:= ReadLocString('StoleItem', '%s stole an item (%s)!');{$ENDIF}
 {$IFNDEF mm8}
       SChooseASpell:= ReadString('ChooseAttackSpell', 'Select a spell then click here to set an Attack Spell');
       SSetASpell:= ReadString('SetAttackSpell', 'Set %s as the Attack Spell');
@@ -1186,15 +1276,16 @@ begin
       SSetASpell2:= ReadString('SwitchAttackSpell', 'Change Attack Spell (%s)');
       SRemoveASpell:= ReadString('RemoveAttackSpell', 'Remove Attack Spell (%s)');
 {$ENDIF}
-      HorsemanSpeakTime:= ReadInteger('HorsemanSpeakTime', 1500);
-      BoatmanSpeakTime:= ReadInteger('BoatmanSpeakTime', 2500);
+      HorsemanSpeakTime:= ReadInteger('HorsemanSpeakTimeLimit', 1500+500, false);
+      BoatmanSpeakTime:= ReadInteger('BoatmanSpeakTimeLimit', 2500+500, false);
 {$IFNDEF mm6}
-      SDuration:= ReadString('Duration', 'Duration:', false);
-      SDurationYr:= ReadString('DurationYr', ' %d:yr', false);
-      SDurationMo:= ReadString('DurationMo', ' %d:mo', false);
-      SDurationDy:= ReadString('DurationDy', ' %d:dy', false);
-      SDurationHr:= ReadString('DurationHr', ' %d:hr', false);
-      SDurationMn:= ReadString('DurationMn', ' %d:mn', false);
+      SDuration:= ReadLocString('Duration', 'Duration:');
+      SDurationYr:= ReadLocString('DurationYr', ' %d:yr');
+      SDurationMo:= ReadLocString('DurationMo', ' %d:mo');
+      SDurationDy:= ReadLocString('DurationDy', ' %d:dy');
+      SDurationHr:= ReadLocString('DurationHr', ' %d:hr');
+      SDurationMn:= ReadLocString('DurationMn', ' %d:mn');
+      SNotAvailable:= ReadLocString('N/A', 'N/A');
 {$ENDIF}
 
     finally
@@ -1239,23 +1330,63 @@ begin
     end;
 end;
 
-{$IFNDEF mm6}
-function PatMatch(const pat, s: string): Boolean;  // only allows one '*' and any number of '?'
+//----- Allow simple byte patches from ini
+
+function ReadBStr(const s: string): string;
 var
-  i: int;
+  i, v, k: int;
 begin
-  Result:= false;
-  for i:= 1 to length(pat) + 1 do
-    if pat[i] = '*' then
+  Result:= '';
+  k:= $110;
+  for i := 1 to length(s) do
+  begin
+    v:= RSCharToInt(s[i], 16);
+    if s[i] in [' ', ',', ';'] then
+      k:= k or $10000
+    else if v < 0 then
     begin
-      Result:= (i = length(pat)) or
-         PatMatch(Copy(pat, i + 1, MaxInt), Copy(s, i + 1 + length(s) - length(pat), MaxInt));
+      Result:= '';
       exit;
-    end else if (s[i] <> pat[i]) and (pat[i] <> '?') then
-      exit;
-  Result:= true;
+    end else
+      k:= k*16 + v;
+    if k >= $10000 then
+    begin
+      if k and $1000 <> 0 then
+        Result:= Result + chr(byte(k));
+      k:= $110;
+    end;
+  end;
+  if k and $1000 <> 0 then
+    Result:= Result + chr(byte(k));
 end;
 
+procedure ApplyBytePatches;
+var
+  hk: TRSHookInfo;
+  i, v: int;
+begin
+  hk:= RSEmptyHook;
+  hk.t:= RShtBStr;
+  with TRSMemIni.Create(AppPath + SIni) do
+    try
+      i:= Lines.FindSection('BytePatch') + 1;
+      if i <= 0 then
+        exit;
+      for i := i to Lines.FindSectionEnd(i) - 1 do
+        if not Lines.IsComment(i) and RSVal('$' + Lines.GetKey(i), v) then
+        begin
+          hk.p:= v;
+          hk.newstr:= ReadBStr(Lines.GetValue(i));
+          RSApplyHook(hk);
+        end;
+    finally
+      Free;
+    end;
+end;
+
+//----- Misc
+
+{$IFNDEF mm6}
 function GetMipmapsCountProc(var a: THwlBitmap; p: PChar): int;
 var
   s: string;
@@ -1273,7 +1404,7 @@ begin
     w:= int(MipmapsBase.Objects[i])
   else
     for i:= 0 to MipmapsBasePat.Count - 1 do
-      if PatMatch(MipmapsBasePat[i], s) then
+      if RSWildcardMatch(MipmapsBasePat[i], s) then
       begin
         w:= int(MipmapsBasePat.Objects[i]);
         break;
@@ -1544,7 +1675,7 @@ end;
 
 procedure ShowStatusText(text: string; time: int = 2);
 begin
-  _ShowStatusText(0, time, ptr(text));
+  _ShowStatusText(0, time, PChar(text));
   _NeedRedraw^:= 1;
 end;
 
@@ -1731,12 +1862,47 @@ begin
   b.Free;
 end;
 
+var
+  InfoSect: string;
+  InfoList: TRSKeyValueStringList;
+  InfoDel: TStringList;
+
+procedure AddIniInfo(sect, key, info: PChar); stdcall;
+begin
+  if AddDescriptions = 0 then
+    exit;
+  if (InfoSect <> '') and not SameText(sect, InfoSect) then
+    with TRSMemIni.Create(AppPath + SIni) do
+    try
+      AddIniInfos(Lines, InfoSect, InfoList, InfoDel);
+      AddIniSectSpace(Lines);
+      FreeAndNil(InfoList);
+      FreeAndNil(InfoDel);
+    finally
+      Free;
+    end;
+  InfoSect:= sect;
+  if InfoSect = '' then
+    exit;
+  if InfoList = nil then
+  begin
+    InfoList:= TRSKeyValueStringList.Create;
+    InfoDel:= TStringList.Create;
+  end;
+  if SameText(key, '') then
+    InfoDel.Add(info)
+  else
+    InfoList.Add(key, info);
+end;
+
 exports
 {$IFNDEF mm6}
   AddMipmapBase,
 {$ENDIF}
   GetOptions,
-  SaveBufferToBitmap;
+  SaveBufferToBitmap,
+  AddIniInfo,
+  DisableHook;
 initialization
   @SetSpellBuff:= @__SetSpellBuff;
   @PlaySound:= @DoPlaySound;

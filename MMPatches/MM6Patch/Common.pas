@@ -66,7 +66,6 @@ const
   _GreenMask = pint($9B1124);
   _BlueMask = pint($9B1128);
   _IndoorOrOutdoor = pint($6107D4);
-  _Time = puint64($908D08);
   _IsMoviePlaying = pbool($9DE364);
   _AbortMovie = pbool($9DE338);
   _ViewMulOutdoor = pint($6296F4);

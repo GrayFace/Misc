@@ -1,6 +1,6 @@
-#ifdef for_convenience
-#include "..\MM6PatchBuka\mm6patchBuka.iss"
-#include "..\MM6PatchLoc\mm6patchLoc.iss"
+#if false
+	#include "..\MM6PatchBuka\mm6patchBuka.iss"
+	#include "..\MM6PatchLoc\mm6patchLoc.iss"
 #endif
 #ifndef en
 #define en 1
@@ -12,10 +12,10 @@
 #define AppDll() AddBackslash(SourcePath) + "Files\" + MM() + "patch.dll"
 #define AppVersion() GetFileVersion(AppDll())
 #define AppVer() \
-  ParseVersion(AppDll(), Local[0], Local[1], Local[2], Local[3]), \
-  Str(Local[0])+"."+Str(Local[1])+((Local[2] || Local[3]) ? "."+Str(Local[2]) : "")+(Local[3] ? "."+Str(Local[3]) : "")
-#define BitmapsMD5() GetMD5OfFile(AddBackslash(SourcePath) + "OptData\00 patch.bitmaps.lod")
-#define SpritesMD5() GetMD5OfFile(AddBackslash(SourcePath) + "OptData\00 patch.sprites.lod")
+	ParseVersion(AppDll(), Local[0], Local[1], Local[2], Local[3]), \
+	Str(Local[0])+"."+Str(Local[1])+((Local[2] || Local[3]) ? "."+Str(Local[2]) : "")+(Local[3] ? "."+Str(Local[3]) : "")
+#define OptMD5(s) GetMD5OfFile(AddBackslash(SourcePath) + "OptData\" + s)
+#define CheckOptLod(s, v) "CheckOptLod(vis, '{app}\Data\" + s + "', '" + OptMD5(s) + "', " + Str(v) + ")";
 
 [Setup]
 VersionInfoVersion={#AppVersion}
@@ -51,10 +51,10 @@ InfoBeforeFile="Files\{#MM}Patch ReadMe.TXT"
 InfoBeforeFile="Files\{#MM}Patch ReadMe_rus.TXT"
 #endif
 AppendDefaultDirName=no
-;WizardImageFile={#MM}Install.bmp
-WizardImageFile=none.bmp
+WizardImageFile={#MM}Install.bmp
+;WizardImageFile=none.bmp
+;WizardImageStretch=no
 WizardSmallImageFile=none.bmp
-WizardImageStretch=no
 ;WizardStyle=modern
 WizardResizable=yes
 WizardSizePercent=120
@@ -104,6 +104,9 @@ Name: RusFiles; Description: {cm:RussianGameVersion};
 Name: lods; Description: {cm:LodsTask}; GroupDescription: {cm:LodGroup};
 Name: sprites; Description: {cm:SpritesTask}; GroupDescription: {cm:LodGroup}; Check: SpritesTaskCheck(true);
 
+// must be last in the list:
+Name: Dummy; Description: -; Check: CheckUpdateTasks;
+
 [InstallDelete]
 Type: files; Name: "{app}\MSS32.DLL";
 Type: files; Name: "{app}\MSS32.NEW";
@@ -113,9 +116,9 @@ Type: files; Name: "{app}\MP3DEC.ASI";
 
 [Files]
 #if en
-Source: "Files\*"; Excludes: "*.bak"; DestDir: "{app}"; Flags: promptifolder ignoreversion recursesubdirs; AfterInstall: AfterInst;
+Source: "Files\*"; Excludes: "*.bak"; DestDir: "{app}"; Flags: promptifolder ignoreversion recursesubdirs;
 #else
-Source: "Files\*"; Excludes: "*.bak"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs; AfterInstall: AfterInst;
+Source: "Files\*"; Excludes: "*.bak"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs;
 #endif
 Source: "OptData\00 patch.bitmaps.lod"; DestDir: "{app}\Data\"; Tasks: sprites;
 Source: "OptData\00 patch.sprites.lod"; DestDir: "{app}\Data\"; Tasks: sprites;
@@ -140,111 +143,70 @@ Source: "Data\*"; Excludes: "*.bak"; DestDir: "{app}\Data\"; Flags: promptifolde
 Filename: "{tmp}\PatchTxt.exe"; Parameters: """{app}\data\icons.lod"" ""{tmp}\GLOBAL.diff.txt"" ""{app}\data\00 patch.icons.lod"" /r"; Tasks: lods;
 #endif
 #if en
-Filename: "{app}\{#MM}Patch ReadMe.TXT"; Flags: shellexec skipifdoesntexist postinstall skipifsilent; Languages: en;
+Filename: "{app}\{#MM}Patch ReadMe.TXT"; Flags: shellexec skipifdoesntexist postinstall skipifsilent; Languages: en; Check: CheckFinishPage;
 #endif
 #if ru
-Filename: "{app}\{#MM}Patch ReadMe_rus.TXT"; Flags: shellexec skipifdoesntexist postinstall skipifsilent; Languages: ru;
+Filename: "{app}\{#MM}Patch ReadMe_rus.TXT"; Flags: shellexec skipifdoesntexist postinstall skipifsilent; Languages: ru; Check: CheckFinishPage;
 #endif
 
 [Code]
 
-type int = Integer;
-
-function GetMD5(s: string): string;
-begin
-  s:= ExpandConstant(s);
-  Result:= '';
-  if FileExists(s) then
-    Result:= GetMD5OfFile(s);
-end;
-
-function Exists(const s: string): Boolean;
-begin
-  Result:= FileExists(ExpandConstant(s));
-end;
+#include "..\..\MMCommon\MMPatchCommonCode.iss"
 
 function GetInstallDir(param: string): string;
 begin
-  if not RegQueryStringValue(HKLM, 'SOFTWARE\New World Computing\Might and Magic® VI\1.0', 'AppPath', Result) then
+	if not RegQueryStringValue(HKLM, 'SOFTWARE\New World Computing\Might and Magic® VI\1.0', 'AppPath', Result) then
 #if en
-    Result:= ExpandConstant('{pf}\Might and Magic VI');
+		Result:= _P('{pf}\Might and Magic VI');
 #else
-    Result:= ExpandConstant('{pf}\Buka\MMCollection\MM_VI');
+		Result:= _P('{pf}\Buka\MMCollection\MM_VI');
 #endif
-end;
-
-function MMIni: string;
-begin
-  Result:= ExpandConstant('{app}\{#m}.ini');
-end;
-
-function CheckVer(ver: Cardinal): Boolean;
-var
-  ms, ls: Cardinal;
-begin
-  Result:= GetVersionNumbers(ExpandConstant('{app}\{#m}patch.dll'), ms, ls) and (ms >= ver);
-end;
-
-function CheckOptLod(vis: Boolean; path, md5: string; ver: Integer): Boolean;
-begin
-  if vis then
-    Result:= (GetMD5(path) <> md5)
-  else
-    Result:= Exists(path) or not CheckVer(ver);
 end;
 
 
 #if loc
 function RussianTaskCheck: Boolean;
 begin
-  Result:= (GetIniString('Install', 'GameLanguage', '', ExpandConstant('{app}\{#m}lang.ini')) = 'rus') or
-   (ExpandConstant('{language}') = 'ru') and not Exists('{app}\{#MM}Patch ReadMe.TXT');
+	Result:= (GetIniString('Install', 'GameLanguage', '', _P('{app}\{#m}lang.ini')) = 'rus') or
+	 (_P('{language}') = 'ru') and not Exists('{app}\{#MM}Patch ReadMe.TXT');
 end;
 #endif
 
 
 function LodsTaskCheck: Boolean;
 begin
-  if CheckVer($20001) then
-    Result:= Exists('{app}\Data\00 patch.games.lod')
-  else
-    Result:= GetIniBool('Install', 'PatchLods', true, MMIni);
+	if CheckVer($20001) then
+		Result:= Exists('{app}\Data\00 patch.games.lod')
+	else
+		Result:= GetIniBool('Install', 'PatchLods', true, MMIni);
 end;
 
 
 function SpritesTaskCheck(vis: Boolean): Boolean;
 begin
-  Result:= CheckOptLod(vis, '{app}\Data\00 patch.bitmaps.lod', '{#BitmapsMD5}', $20005);
-  if Result <> vis then
-    Result:= CheckOptLod(vis, '{app}\Data\00 patch.sprites.lod', '{#SpritesMD5}', $20005);
+	Result:= {#CheckOptLod('00 patch.bitmaps.lod', 0x20005)};
+	if Result <> vis then
+		Result:= {#CheckOptLod('00 patch.sprites.lod', 0x20005)};
 end;
 
 
-procedure CheckTask(const msg: string; b: Boolean);
-var
-  i: int;
+procedure UpdateTasks;
 begin
-  i:= WizardForm.TasksList.Items.IndexOf(CustomMessage(msg));
-  if i >= 0 then
-    WizardForm.TasksList.Checked[i]:= b;
-end;
-
-var
-  LastPath: string;
-
-procedure CurPageChanged(CurPageID: Integer);
-begin
-  if (CurPageID <> wpSelectTasks) or (ExpandConstant('{app}') = LastPath) then  exit;
-  LastPath:= ExpandConstant('{app}');
 #if loc
-  CheckTask('RussianGameVersion', RussianTaskCheck());
+	CheckTask('RusFiles', RussianTaskCheck());
 #endif
-  CheckTask('LodsTask', LodsTaskCheck());
-  CheckTask('SpritesTask', SpritesTaskCheck(false));
+	CheckTask('lods', LodsTaskCheck());
+	CheckTask('sprites', SpritesTaskCheck(false));
 end;
 
-procedure AfterInst;
+procedure BeforeInstall;
 begin
-  if GetIniString('Install', 'PatchLods', #13#10, ExpandConstant('{app}\{#m}.ini')) <> #13#10 then 
-    DeleteIniEntry('Install', 'PatchLods', ExpandConstant('{app}\{#m}.ini'))
+end;
+
+procedure AfterInstall;
+begin
+	if GetIniString('Install', 'PatchLods', #13#10, MMIni) <> #13#10 then 
+		DeleteIniEntry('Install', 'PatchLods', MMIni);
+	if IsIniSectionEmpty('Install', MMIni) then
+		DeleteIniSection('Install', MMIni);
 end;

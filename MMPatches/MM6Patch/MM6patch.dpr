@@ -267,6 +267,60 @@ Version 2.4.1:
 (MM6-MM8)
 [+] MouseDX, MouseDY in PatchOptions
 
+Version 2.5:
+(MM6-MM8)
+[+] WinScreenDelay hidden option controls Win screen delay during which all input is ignored. Default is 500 (half a second instead of game's original 5 seconds). 
+[+] Direct unaccelerated mouse input supported through MouseSensitivityDirectMul option.
+[+] FixConditionPriorities
+[+] EnableAttackSpell
+[+] ShowHintWithRMB
+[+] ShooterMode
+[+] GreenItemsWhileRightClick
+[+] AddDescriptions - Descriptions in INI
+[+] DeadPlayerShowItemInfo
+[+] dist_mist, ViewDistanceD3D
+[+] MonSpritesSizeMul
+[+] FixHouseAnimationRestart
+[+] CheckFreeSpace - Free space check when saving a game
+[+] ExitDialogsWithRightButton
+[+] MouseLookPermKey
+[+] Automatic horseman and boatsman speak time detection
+[+] KeepEmptyWands
+[-] Changing item graphics was causing inventory corruption
+[-] HintStayTime
+[-] Casting stronger buffs did nothing if a weaker, but longer one is in place
+[-] Item spells were causing bugs when cast onto the very 1st item in the inventory
+[-] Now you can pick up stolen items from corpses of thieves (in MM7 and MM8 this was originally the case, but there was no indication)
+[-] Monster hits were causing a player switch even when Endurance eliminates hit recovery
+[-] When casting a Quick Spell the spell points check was incorrect (it assinged GM spell to another school of magic)
+[-] AOE damage wasn't dealt to paralyzed monsters
+[-] Monster spell attacks were broken (esp. Poison Spray, Shrapmetal) (thanks cthscr)
+    MM6: All spells were doing Fire damage
+[-] KeepCurrentDirectory
+[-] FixDeadPlayerIdentifyItem
+[-] Fixed another crash due to facets without vertexes
+[-] Fix full brightness for a minute at 5:00 AM
+[-] New Day wasn't triggered on beginning of a month when resting until down and pressing Esc
+[-] Random item generation routine was generating the 1st item with bigger probability and last item with smaller probability
+[-] Buff duration was displayed incorrectly in the cases like "1 day 5 minutes"
+[-] "N/A" string for ranged damage wasn't localizeable
+[-] FixWaterWalkManaDrain
+[-] My bug: You were able to learn unavailable magic skills with keyboard navigation
+[*] My inactive players acting fix wasn't perfect
+[*] Now spell skills that don't fit are drawn over buttons. Still better than making them inaccessible.
+[*] 3DO and other logos in postponed intro, unless NoIntoLogos
+(MM6, MM7)
+[-] Snow X speed was effected by strafing too much
+[-] Copyright screen staying visible on startup if game window wasn't in focus
+[-] Awards page wasn't updated when player is switched by Tab
+[-] 'Charm' spell had wrong durations
+(MM6)
+[-] End game movies were unskippable, as well as the intro on first launch
+[-] Game wasn't paused in Enchant Item screen
+[-] FixParalyze
+[-] Party was attacking enemies during their dying animation
+[-] My bug: Keyboard control in spell book was causing spells to be cast accidentally with arrow keys
+
 
 Если загрузить сейв, где все рожи одинаковые, а потом сейв с разными, будут черные пятна на месте рож
 

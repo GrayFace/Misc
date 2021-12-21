@@ -5,10 +5,11 @@ interface
 
 uses
   Windows, Messages, SysUtils, Classes, RSSysUtils, RSQ, Common, RSCodeHook,
-  Math, MP3, RSDebug, IniFiles, Direct3D, Graphics, MMSystem, RSStrUtils,
+  Math, MP3, RSDebug, RSIni, Direct3D, Graphics, MMSystem, RSStrUtils,
   DirectDraw, DXProxy, {$IFNDEF MM6}LayoutSupport,{$ENDIF} MMCommon,
   RSResample{$IFDEF MM8}, MMLayout{$ENDIF};
 
+procedure CheckMMHooks;
 procedure ApplyMMHooks;
 procedure ApplyMMDeferredHooks;
 procedure ApplyMMHooksLodsLoaded;
@@ -20,10 +21,9 @@ function GetCoordCorrectionIndoorX: ext;
 function GetCoordCorrectionIndoorY: ext;
 function IsLayoutActive(CanActivate: Boolean = true): Boolean; inline;
 function TransformMousePos(x, y: int; out x1: int): int;
-function MyGetAsyncKeyState(vKey: Integer): SHORT; {$IFNDEF MM6}stdcall;{$ENDIF}
+function MyGetAsyncKeyState(vKey: Integer): SHORT; inline; //{$IFNDEF MM6}stdcall;{$ELSE}inline;{$ENDIF}
 function CheckKey(key: int):Boolean;
 procedure CommonKeysProc;
-procedure MyClipCursor;
 procedure ProcessMouseLook;
 procedure ProcessRawMouseLook(h: THandle);
 procedure NeedScreenDraw(var scale: TRSResampleInfo; sw, sh, w, h: int);
@@ -135,16 +135,16 @@ end;
 
 //----- Keys
 
-var
-  KeysChecked: array[0..255] of Boolean;
+{var
+  KeysChecked: array[0..255] of Boolean;}
 
-function MyGetAsyncKeyState(vKey: Integer): SHORT; {$IFNDEF MM6}stdcall;{$ENDIF}
+function MyGetAsyncKeyState(vKey: Integer): SHORT; inline;//{$IFNDEF MM6}stdcall;{$ELSE}inline;{$ENDIF}
 begin
-  vKey:= vKey and $ff;
+  //vKey:= vKey and $ff;
   Result:= GetAsyncKeyState(vKey);
-  if (Result < 0) and not KeysChecked[vKey] then
+  {if (Result < 0) and not KeysChecked[vKey] then
     Result:= Result or 1;
-  KeysChecked[vKey]:= Result < 0;
+  KeysChecked[vKey]:= Result < 0;}
 end;
 
 function CheckKey(key: int): Boolean;
@@ -294,7 +294,7 @@ begin
           _AddCommand(0, 0, _CommandsArray, 14)
         else
           _AddCommand(0, 0, _CommandsArray, 13);
-{$IFDEF MM6}
+{ $IFDEF MM6
     WM_KEYDOWN, WM_SYSKEYDOWN:
       if wp and not $ff = 0 then
         KeysChecked[wp]:= false;
@@ -308,8 +308,11 @@ begin
     case msg of
       WM_ACTIVATEAPP:
         if wp = 0 then
-          ClipCursor(nil)
-        else
+        begin
+          ClipCursor(nil);
+          if BorderlessTopmost then
+            SendMessage(w, WM_SYSCOMMAND, SC_MINIMIZE, 0);
+        end else
           MyClipCursor;
       WM_SYSCOMMAND:
         if wp and $FFF0 = SC_RESTORE then
@@ -352,6 +355,29 @@ begin
     AllowMovieQuickLoad:= false;
     _AbortMovie^:= true;
   end;
+end;
+
+//----- Borderless fullscreen (also see WindowProcHook)
+
+procedure SwitchToWindowedHook;
+begin
+  Options.BorderlessWindowed:= true;
+  if BorderlessTopmost then
+    SetWindowPos(_MainWindow^, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE + SWP_NOSIZE);
+  SetWindowPos(_MainWindow^, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE + SWP_NOSIZE);
+  ShowWindow(_MainWindow^, SW_SHOWNORMAL);
+  SetWindowLong(_MainWindow^, GWL_STYLE, GetWindowLong(_MainWindow^, GWL_STYLE) or _WindowedGWLStyle^);
+  ClipCursor(nil);
+end;
+
+procedure SwitchToFullscreenHook;
+begin
+  Options.BorderlessWindowed:= false;
+  if BorderlessTopmost then
+    SetWindowPos(_MainWindow^, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE + SWP_NOSIZE);
+  ShowWindow(_MainWindow^, SW_SHOWMAXIMIZED);
+  PostMessage(_MainWindow^, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
+  MyClipCursor;
 end;
 
 //----- Mouse look
@@ -1989,9 +2015,8 @@ var
 begin
   a[0]:= 0;
   a:= @a[-slot];
-  slot:= -1 - slot;
   for i := 0 to 137 do
-    if a[i] = slot then
+    if (a[i] < 0) and (a[-1 - a[i]] <= 0) then
       a[i]:= 0;
 end;
 
@@ -2014,9 +2039,8 @@ var
   i: int;
 begin
   a[slot]:= 0;
-  slot:= -1 - slot;
   for i := 0 to 137 do
-    if a[i] = slot then
+    if (a[i] < 0) and (a[-1 - a[i]] <= 0) then
       a[i]:= 0;
 end;
 
@@ -3309,7 +3333,7 @@ end;
 
 procedure FixWaterWalkDamage;
 asm
-  mov edx, 2
+  mov edx, Options.WaterWalkDamage
   mov [esp + 8], edx
   jmp eax
 end;
@@ -3345,48 +3369,319 @@ asm
   mov [ecx + m6*$7C264 + m7*$1C288 + m8*$23A7C], eax
 end;
 
-//----- Smooth mouse look
+//----- Fix copyright screen staying visible on startup
 
-function MyCos(a, part: int): int; inline;
+procedure FixStartupCopyright;
 begin
-  Result:= Round($10000*cos((a*2048 + part - 1024)*pi/1024/2048)); // !!! tmp
+  if GetForegroundWindow = _MainWindow^ then
+    PostMessage(_MainWindow^, WM_ACTIVATEAPP, 1, GetCurrentThreadId);
+  WaitMessage;
 end;
 
-function FastCosX(a: int): int; stdcall;
-begin
-  Result:= MyCos(a, MLookPartX);
+//----- Play horseman/boatman sounds just enough time
+
+procedure TravelDelayHook1;
+asm
+  mov Options.LastSoundSample, 0
 end;
 
-function FastCosY(a: int): int; stdcall;
-begin
-  Result:= MyCos(a, MLookPartY);
+procedure TravelDelayHook2;
+asm
+  mov eax, [esp + 4]
+  mov Options.LastSoundSample, eax
 end;
 
-function FastCosSummed(a: int): int; stdcall;
-begin
-  Result:= Round($10000*cos(a*pi/1024/2048)); // !!! tmp
+procedure TravelDelayHook3;
+asm
+@loop:
+  mov eax, Options.LastSoundSample
+  test eax, eax
+  jz @stop // no sound
+  push eax
+  call ds:[m6*$4B9278 + m7*$4D82F8 + m8*$04E83B4] // AIL_sample_status
+  cmp eax, 2 // stopped?
+  jnz @cont
+  push 10*(1 - m8) // wait a little bit after the sample ends before playing the clicking sound
+  call Sleep
+  ret
+@cont:
+  push 1
+  call Sleep // important for PlayMP3, good in any case
+{$IFDEF MM6}
+  call edi
+  cmp eax, esi
+  jb @loop
+{$ELSE}
+  {$IFDEF MM7}
+    call esi
+  {$ELSE}
+    call ebp
+  {$ENDIF}
+  cmp eax, edi
+  jnb @stop
+  mov [esp], m7*$4B6B91 + m8*$4B51F6 // continue loop
+{$ENDIF}
+@stop:
 end;
 
-type
-  TThisCall0 = function(_,__, this: uint): int;
+//----- Fix awards not updating when pressing Tab
 
-procedure UpdateDirection1(f: TThisCall0; _, p: uint);
+procedure UpdateAfterTab;
+const
+  _UpdateAwards: TProcedure = ptr(m6*$415160 + m7*$4190A9);
+begin
+  if (_CurrentScreen^ in [7, 14]) and (_CurrentCharScreen^ = 102) then
+    _UpdateAwards;
+end;
+
+//----- Fix random item generation
+
+procedure FixItemGeneration;
+asm
+{$IFDEF mm6}
+  inc edx
+{$ELSE}
+  inc ebx
+{$ENDIF}
+end;
+
+//----- Fix cubs
+
+procedure FixClubs;
+asm
+  cmp eax, _Skill_Club
+  jnz @std
+  mov eax, 6  // Mace delay and sound
+@std:
+end;
+
+//----- Fix buff duration display
+
+function DoFixBuffTime(var time: int64): int64;
 var
-  x, y: int;
+  n, left: int;
 begin
-  x:= pint(p + 20)^;
-  y:= pint(p + 24)^;
-  pint(p + 20)^:= x*2048 + MLookPartX - 1024;
-  pint(p + 24)^:= y*2048 + MLookPartY - 1024;
-  f(0,0, p);
-  pint(p + 20)^:= x;
-  pint(p + 24)^:= y;
+  Result:= time*15 div 64;
+  left:= Result mod (60*60*24);
+  n:= 0;  // number of numbers displayed - need to show only 2
+  if left <> Result then  // has days
+    n:= 1;
+  if left >= 60*60 then  // has hours
+    inc(n);
+  left:= left mod (60*60);
+  if (n < 2) and (left >= 60) then  // has minutes
+  begin
+    inc(n);
+    left:= left mod 60;
+  end;
+  if n < 2 then  // has seconds
+    left:= 0;
+  Result:= Result - left;
+end;
+
+procedure FixBuffTime;
+asm
+  lea eax, [esp + $30 - 8*m6 + 4 + 4]
+  jmp DoFixBuffTime
+end;
+
+//----- Fix removed objects reappearing when dropping one on the ground or saving
+//(Elemental Mod does it, but I haven't been able to reproduce the bug, at least in MM6)
+
+//procedure FixSummonObject;
+//asm
+//{$IFDEF mm6}
+//  cmp edx, dword ptr [__ObjectsCount]
+//{$ELSE}
+//  cmp ebx, dword ptr [__ObjectsCount]
+//{$ENDIF}
+//end;
+
+//----- Fix potion explosions breaking hardened items
+
+procedure FixPotionBreakItem;
+asm
+  test dword ptr [eax], $200
+  jnz @skip
+  or dword ptr [eax], 2
+@skip:
+end;
+
+//----- Fix monsters under Berserk hitting party from a far if their target died
+//(preserve targets of monsters in the 'MeleeAttack' state in real time mode)
+
+const
+  _pMonTargets = m7*$401E6E + m8*$401EA2 - 4;
+
+procedure FixBerserkHitParty;
+asm
+  jz @std
+  cmp ax, 2
+  jnz @std
+  mov [esp], m7*$401C8B + m8*$401CBA
+@std:
+end;
+
+procedure FixBerserkHitParty2; // assumes FixMonsterAttackCorpse is active
+asm
+  cmp word ptr [ebx + _MonOff_AIState], 2
+  jnz @std
+  cmp dword ptr [edx], 0
+  jz @std
+  cmp dword ptr [edx], 4
+  jz @std
+  ret 4
+@std:
+  mov [edx], 4
+  jmp eax
+end;
+
+procedure FixBerserkHitParty3; // reset on map load
+var
+  i: int;
+begin
+  for i := 0 to _MonstersCount^ - 1 do
+    pint(pint(_pMonTargets)^ + i*4)^:= 0;
+end;
+
+//----- Fix monsters attacking corpses
+//(leave 1 frame between ending a blow to a monster and starting a new one)
+
+procedure DoFixMonsterAttackCorpse(p: PChar);
+begin
+  pint2(p + _MonOff_AIState)^:= 1;
+  pint2(p + _MonOff_CurrentActionStep)^:= max(0, pint2(p + _MonOff_CurrentActionLength)^ - 1);
+end;
+
+procedure FixMonsterAttackCorpse;
+asm
+  mov eax, [_pMonTargets]
+  mov eax, [eax + esi*4]
+  and eax, 7
+  cmp eax, 3
+  jnz @std  // not hitting a monster
+  mov eax, ebx
+  mov [esp], m7*$402606 + m8*$4026DD
+  jmp DoFixMonsterAttackCorpse
+@std:
+end;
+
+//----- Fix Light Bolt no x2 damage to Undead
+
+procedure FixLightBolt;
+const
+  IsMonOfKind: int = m7*$438BCE + m8*$436542;
+asm
+{$IFDEF mm7}
+  cmp dword ptr [ebx + $48], 78
+{$ELSE}
+  cmp dword ptr [edi + $48], 78
+{$ENDIF}
+  jnz @std
+  push eax
+  movzx ecx, word ptr [esi + m7*96 + m8*106]
+  mov edx, 1  // undead
+  call IsMonOfKind
+  test eax, eax
+  pop eax
+  jz @std
+  sal eax, 1
+@std:
+end;
+
+//----- Fix LeaveMap event not called on travel
+
+procedure FixCallLeaveMap;
+const
+  OnLeaveMap: int = m7*$443FB8 + m8*$440DBC;
+asm
+  push ecx
+  push edx
+  call OnLeaveMap
+  pop edx
+  pop ecx
+end;
+
+//----- Fix monsters summoning causing a crash
+
+procedure FixMonstersSummon;
+asm
+  push eax
+  mov eax, [__MonstersCount]
+  cmp eax, [__MonstersSummonLimit]
+  jl @ok
+  pop eax
+@ok:
+end;
+
+//----- Fix reading of Body attack type of monsters
+
+procedure FixMonstersBodyAttack;
+asm
+	cmp eax, 'b'
+	jnz @std
+	mov eax, 8
+	mov [esp], m7*$454DA6 + m8*$45258D
+@std:
+end;
+
+//----- Fix Water Walk draining mana every 5 minutes instead of 20
+
+function CheckNoWaterWalkDrain: Boolean;
+const
+  step = 20*256;
+begin
+  Result:= (_Time^ div step) = (_LastRegenTime^ div step);
+end;
+
+procedure FixWaterWalkManaDrain;
+asm
+  jnz @std
+  push eax
+  push edx
+  call CheckNoWaterWalkDrain
+  test al, al
+  pop edx
+  pop eax
+@std:
+end;
+
+//----- Keep wands without charges
+
+procedure EmptyWandProc;
+asm
+{$IFDEF mm6}
+  or [eax+128h + $14], 2
+{$ELSEIF defined(MM7)}
+  or [eax + $14], 2
+{$ELSE}
+  or [edx + $14], 2
+{$IFEND}
+end;
+
+//----- Monsters can't cast some spells, but waste turn
+
+procedure FixUnimplementedSpells;
+asm
+  mov eax, [esp + $C]
+  cmp eax, 20  // Implosion
+  jz @bad
+  cmp eax, 44  // Mass Distortion
+  jz @bad
+  cmp eax, 81  // Paralyze
+  jz @bad
+  ret
+
+@bad:
+  pop edx
+  xor eax, eax
+  ret 8 + 4*m8
 end;
 
 //----- HooksList
 
 var
-  HooksCommon: array[1..41] of TRSHookInfo = (
+  HooksCommon: array[1..74] of TRSHookInfo = (
     (p: m6*$453ACE + m7*$463341 + m8*$461316; newp: @UpdateHintHook;
        t: RShtCallStore; Querry: hqFixStayingHints), // Fix element hints staying active in some dialogs
     (p: m6*$4226F8 + m7*$427E71 + m8*$4260A8; newp: @FixItemSpells;
@@ -3427,13 +3722,13 @@ var
     (p: m6*$454801 + m7*$464366 + m8*$4623E9; newp: @ShooterRightClick;
        t: RShtCallStore; Querry: hqShooterMode), // Shooter mode - ignore right click
     (p: m7*$43951B + m8*$436EF2; newp: @ShooterSetSwordMonHook;
-       t: RShtBefore; size: 12; Querry: hqShooterMode - m6*MaxInt), // Shooter mode - last hit monster
+       t: RShtBefore; size: 12; Querry: hqShooterMode), // Shooter mode - last hit monster
     (p: m6*$42A730 + m7*$42F5C9 + m8*$42E05C; newp: @ShooterCreateProjectile;
        t: RShtBefore; size: 6; Querry: hqShooterMode), // Shooter mode - shoot from screen middle
     (p: m6*$42A024 + m7*$42EDA9 + m8*$42D932; newp: @FixAttackMonster;
        t: RShtCallStore), // Attacking friendly monsters
     (p: m7*$4395F5 + m8*$436FC3; newp: @HookHitDistantMonster;
-       t: RShtCall; size: 6; Querry: hqFixHitDistantMonstersIndoor - m6*MaxInt), // Fix shooting distant monsters indoor
+       t: RShtCall; size: 6; Querry: hqFixHitDistantMonstersIndoor), // Fix shooting distant monsters indoor
     (p: m6*$431E27 + m7*$43A38A + m8*$437EA1; newp: @FixZeroRecovery;
        t: RShtCallStore), // Fix character switch when Endurance eliminates hit recovery
     (p: m6*$4320C3 + m7*$43A8B0 + m8*$438341; newp: @FixZeroRecovery;
@@ -3463,13 +3758,98 @@ var
       t: RSht1), // New Day wasn't triggered on beginning of a month when resting until down and pressing Esc
     (p: m6*$47BFE1 + m7*$4892D0 + m8*$488BE7; newp: @FixBright5AM;
       t: RShtBefore), // Fix full brightness for a minute at 5:00 AM
+    (p: m6*$49D8DD + m7*$4B6AEE + m8*$4B51A8; newp: @TravelDelayHook1;
+      t: RShtBefore; size: 6 - m8), // Horseman and boatman automatic speaking time
+    (p: m6*$48EF7A + m7*$4AABEE + m8*$4A9141; newp: @TravelDelayHook2;
+      t: RShtBefore; size: 6), // Horseman and boatman automatic speaking time
+    (p: m6*$49D9E1 + m7*$4B6BA6 + m8*$4B520B; newp: @TravelDelayHook3;
+      t: RShtCall; size: 6), // Horseman and boatman automatic speaking time
+    (p: m6*$448A33 + m7*$45685E + m8*$4540CF; newp: @FixItemGeneration;
+      t: RShtAfter; size: 6 + m6*2), // Fix random item generation
+    (p: m7*$42F0E2 + m8*$42DB91; newp: @FixClubs;
+      t: RShtAfter; size: 7), // Fix clubs having no sound
+    (p: m7*$48E27C + m8*$48D70B; newp: @FixClubs;
+      t: RShtBefore; size: 8; Querry: hqFixClubsDelay), // Fix clubs having no delay
+    (p: m6*$41A2F3 + m7*$41D1B9 + m8*$41C5F4; size: 4), // Fix buff duration display
+    (p: m6*$41A2FE + m7*$41D1C1 + m8*$41C5FB; size: 6), // Fix buff duration display
+    (p: m6*$41A309 + m7*$41D1CF + m8*$41C60A; newp: @FixBuffTime; t: RShtCall), // Fix buff duration display
+    (p: m6*$41A472 + m7*$41D2CE + m8*$41C709; size: 2), // Fix buff duration display
+    (p: m6*$41A4DE + m7*$41D30D + m8*$41C748; size: 2), // Fix buff duration display
+//    (p: m6*$42A74B + m7*$42F5F0 + m8*$42E083; newp: @FixSummonObject;
+//      t: RShtCall; size: 6), // Fix removed objects reappearing when dropping one on the ground or saving
+    (p: m7*$41617B + m8*$415636; size: 10), // Fix potion explosions breaking hardened items
+    (p: m7*$41619F + m8*$41565A; size: 3), // Fix potion explosions breaking hardened items
+    (p: m7*$416198 + m8*$415653; newp: @FixPotionBreakItem;
+      t: RShtAfter; size: 7), // Fix potion explosions breaking hardened items
+    (p: m7*$43B2D1 + m8*$438EEC; old: $4E; new: $4F; t: RSht1), // When a monster used a spell vs another one, wrong spell was used in damage calculation
+    (p: m7*$43B2E2 + m8*$438EDB; old: $4E; new: $4F; t: RSht1), // When a monster used a spell vs another one, wrong spell was used in damage calculation
+    (p: m7*$401C5F + m8*$401C8E; newp: @FixBerserkHitParty;
+      t: RShtAfter; size: 7), // Fix monsters under Berserk hitting party from a far if their target died
+    (p: m7*$401E76 + m8*$401EAF; newp: @FixBerserkHitParty2;
+      t: RShtCallStore), // Fix monsters under Berserk hitting party from a far if their target died
+    (p: HookMapLoaded*(1 - m6); newp: @FixBerserkHitParty3;
+      t: RShtBefore), // Fix monsters under Berserk hitting party from a far if their target died
+    (p: m7*$4021A2 + m8*$4021F0; newp: @FixMonsterAttackCorpse;
+      t: RShtAfter), // Fix monsters attacking corpses (required by FixBerserkHitParty)
+    (p: m7*$43976B + m8*$437150; newp: @FixLightBolt;
+      t: RShtBefore; size: 7; Querry: hqFixLightBolt), // Fix Light Bolt no x2 damage to Undead
+    (p: m6*$401910 + m7*$401B74 + m8*$401B9B; old: 5 - 4*m6; newp: @Options.ArmageddonElement;
+      newref: true; t: RSht1; Querry: -1), // Fix Armageddon dealing unresistable damage
+    (p: m6*$4019A9 + m7*$401BFB + m8*$401C28; old: 5 - 4*m6; newp: @Options.ArmageddonElement;
+      newref: true; t: RSht1; Querry: -1), // Fix Armageddon dealing unresistable damage
+    (p: m7*$44FD55 + m8*$44D4A3; newp: @FixMonstersSummon;
+      t: RShtFunctionStart; size: 6), // Fix monsters summoning causing a crash
+    (p: m7*$454D9A + m8*$452580; newp: @FixMonstersBodyAttack;
+      t: RShtBefore), // Fix reading of Body attack type of monsters
+    (p: m7*$47445B + m8*$4732E7; old: $C1; new: $41;
+      t: RSht1; Querry: hqClimbBetter), // Climb mountains better
+    (p: m6*$487AF9 + m7*$493A02 + m8*$491DAD; newp: @FixWaterWalkManaDrain;
+      t: RShtAfter; size: 7; Querry: hqFixWaterWalkManaDrain), // Fix Water Walk draining mana every 5 minutes instead of 20
+    (p: m6*$47EF5C + m7*$48D3CC + m8*$48CCD4; newp: @SNotAvailable;
+      newref: true; t: RSht4), // Fix Water Walk draining mana every 5 minutes instead of 20
+    (p: m6*$429FC3 + m7*$42ED4F + m8*$42D8E7; newp: @EmptyWandProc;
+      t: RShtCall; size: 8 + 4*m6; Querry: hqKeepEmptyWands), // Keep wands without charges
+    (p: m6*$42A184 + m7*$42F077 + m8*$42DB17; old: $8F0F; new: $E990;
+      t: RSht2; Querry: hqKeepEmptyWands), // Keep wands without charges
+    (p: m6*$42A31B + m7*$42EEAE;
+      size: 12 + 2*m7; Querry: hqKeepEmptyWands), // Keep wands without charges
+    (p: m7*$4270B9 + m8*$4254BA; newp: @FixUnimplementedSpells;
+      t: RShtBefore; size: 6; Querry: hqFixUnimplementedSpells), // Monsters can't cast some spells, but waste turn
+    (p: m7*$49DB05 + m8*$49AFCD; size: 2), // Windows 10 incompatibility 
     ()
   );
 {$IFDEF MM6}
-  Hooks: array[1..59] of TRSHookInfo = (
+  Hooks: array[1..88] of TRSHookInfo = (
     (p: $457567; newp: @WindowWidth; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $45757D; newp: @WindowHeight; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $454340; newp: @WindowProcHook; t: RShtFunctionStart; size: 8), // Window procedure hook
+    (p: $457AEC; old: $48D840; new: $48DA70; t: RShtCall; Querry: hqBorderless), // Borderless fullscreen
+    (p: $457AEC; newp: @SwitchToFullscreenHook; t: RShtAfter; Querry: hqBorderless), // Borderless fullscreen
+    (p: $457AA8; newp: @SwitchToWindowedHook; t: RShtAfter; Querry: hqBorderless), // Borderless fullscreen
+    (p: $45835A; size: 6; Querry: hqBorderless), // Borderless fullscreen
+    (p: $4583E0; size: 1; Querry: hqBorderless), // Borderless fullscreen
+    (p: $4583E6; old: $48D840; newp: @SwitchToFullscreenHook; t: RShtCall; Querry: hqBorderless), // Borderless fullscreen
+    (p: $4583F8; size: 1; Querry: hqBorderless), // Borderless fullscreen
+    (p: $4583F9; old: $48DA70; newp: @SwitchToWindowedHook; t: RShtCall; size: $458413 - $4583F9; Querry: hqBorderless), // Borderless fullscreen
+    (p: $458426; old: $8B; new: $5E; t: RSht1; Querry: hqBorderless), // Borderless fullscreen - 'pop esi' from 45862B
+    (p: $458427; new: $45863D; t: RShtJmp; Querry: hqBorderless), // Borderless fullscreen
+    (p: $458353; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
+    (p: $450CE4; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
+    (p: $450D08; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
+    (p: $45291C; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
+    (p: $452942; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
+    (p: $453255; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
+    (p: $45327D; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
+    (p: $4537AB; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
+    (p: $4537D1; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
+    (p: $45423C; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
+    (p: $454261; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
+    (p: $454B0C; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
+    (p: $454B31; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
+    (p: $4589D8; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
+    (p: $4589FC; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
+    (p: $458AFE; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
+    (p: $458B22; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
     (p: $41EA02; newp: @PaperDollInChestsInit; t: RShtAfter; Querry: hqPaperDollInChests), // Full screen chests
     (p: $40FFB5; newp: @PaperDollInChestsDraw; t: RShtBefore; size: 6; Querry: hqPaperDollInChests), // Full screen chests
     (p: HookEachTick; newp: @PaperDollInChestsUpdate; t: RShtBefore; Querry: hqPaperDollInChests), // Full screen chests
@@ -3525,10 +3905,12 @@ var
     (p: $4581C5; old: $2000; newp: @dist_mist; newref: true; t: RSht4), // dist_mist
     (p: $431D8A; newp: @FixMonsterSpellsMM6; t: RShtCall; Querry: hqFixMonsterSpells), // All spells were doing Fire damage
     (p: $43201A; newp: @FixMonsterSpellsMM6; t: RShtCall; Querry: hqFixMonsterSpells), // All spells were doing Fire damage
+    (p: $450A2B; newp: @FixStartupCopyright; t: RShtCall; size: 6), // Fix copyright screen staying visible on startup
+    (p: $42DFBF; newp: @UpdateAfterTab; t: RShtAfter), // Fix awards not updating when pressing Tab
     ()
   );
 {$ELSEIF defined(MM7)}
-  Hooks: array[1..117] of TRSHookInfo = (
+  Hooks: array[1..135] of TRSHookInfo = (
     (p: $47B84E; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (monsters)
     (p: $47B296; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (items)
     (p: $47AD40; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (sprites)
@@ -3540,6 +3922,18 @@ var
     (p: $465531; newp: @WindowWidth; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $465546; newp: @WindowHeight; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $463828; newp: @WindowProcHook; t: RShtFunctionStart; size: 6), // Window procedure hook
+    (p: $465A5F; old: $49FF8B; new: $4A0583; t: RShtCall; Querry: hqBorderless), // Borderless fullscreen
+    (p: $465A5F; newp: @SwitchToFullscreenHook; t: RShtAfter; Querry: hqBorderless), // Borderless fullscreen
+    (p: $465A0F; newp: @SwitchToWindowedHook; t: RShtAfter; Querry: hqBorderless), // Borderless fullscreen
+    (p: $466868; new: $46688B; t: RShtJmp; size: 7; Querry: hqBorderless), // Borderless fullscreen
+    (p: $466907; newp: @SwitchToFullscreenHook; t: RShtCall; Querry: hqBorderless), // Borderless fullscreen
+    (p: $46690C; new: $466B37; t: RShtJmp; size: 6; Querry: hqBorderless), // Borderless fullscreen
+    (p: $46694B; size: 6; Querry: hqBorderless), // Borderless fullscreen
+    (p: $466951; old: $4A0583; newp: @SwitchToWindowedHook; t: RShtCall; size: $46696A - $466951; Querry: hqBorderless), // Borderless fullscreen
+    (p: $46697C; new: $466B37; t: RShtJmp; size: 6; Querry: hqBorderless), // Borderless fullscreen
+    (p: $46688D; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
+    (p: $46466E; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
+    (p: $464692; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
     (p: $4105F9; newp: @FixLoadBitmapInPlace; t: RShtBefore), // Fix LoadBitmapInPlace
     (p: $441030; newp: @ScreenHasRightSideHook; t: RShtFunctionStart), // Full screen chests and support evt.Question in houses
     (p: $420547; newp: @PaperDollInChestsInit; t: RShtAfter; Querry: hqPaperDollInChests), // Full screen chests
@@ -3599,7 +3993,7 @@ var
     (p: $47E787; old: $4CA780; newp: @FixReadFacetBit; t: RShtCall), // Restore AnimatedTFT bit from Odm rather than Ddm to avoid crash
     (p: $4716EE; newp: @FixMonsterBlockShots; t: RShtJmp; size: 7; Querry: hqFixMonsterBlockShots), // Fix monsters blocking shots of other monsters
     (p: $43951B; newp: @FixFarMonstersAppearGreen; t: RShtBefore; size: 12), // Fix monsters shot at from a distance appearing green on minimap
-    (p: $450657; newp: @FixUnmarkedArtifacts; t: RShtBefore), // Fix deliberately generated artifacts not marked as found
+    (p: $450657; newp: @FixUnmarkedArtifacts; t: RShtBefore; Querry: hqFixUnmarkedArtifacts), // Fix deliberately generated artifacts not marked as found
     (p: $48DF0C; newp: @FixMonStealDisplay; t: RShtAfter; size: 6), // Don't show stealing animation if nothing's stolen
     //(p: $426D46; size: 12), // Demonstrate recovered stolen items
     (p: $426D49; newp: @FixStolenLootHint; t: RShtCallStore), // Show that stolen item was found
@@ -3648,13 +4042,19 @@ var
     (p: $48D2C2; newp: @FixBowSkillDamageBonus7; t: RShtBefore), // Fix +Bow skill items not affecting damage on GM
     (p: $48D15E; newp: @FixBowSkillDamageBonusStat; t: RShtCall; size: 6), // Fix +Bow skill items not affecting damage on GM
     (p: $48D1CB; newp: @FixBowSkillDamageBonusStat; t: RShtCall; size: 6), // Fix +Bow skill items not affecting damage on GM
+    (p: $462B21; newp: @FixStartupCopyright; t: RShtCall; size: 6), // Fix copyright screen staying visible on startup
+    (p: $433259; newp: @UpdateAfterTab; t: RShtAfter), // Fix awards not updating when pressing Tab
+    (p: $433324; newp: @FixCallLeaveMap; t: RShtCallBefore), // Fix LeaveMap event not called on travel
+    (p: $44800F; newp: @FixCallLeaveMap; t: RShtCallBefore), // Fix LeaveMap event not called on travel
+    (p: $44C30F; newp: @FixCallLeaveMap; t: RShtCallBefore), // Fix LeaveMap event not called on travel
+    (p: $4B6A96; newp: @FixCallLeaveMap; t: RShtCallBefore), // Fix LeaveMap event not called on travel
     ()
   );
 {$ELSE}
   FogRange: int;
   FogRangeFloat, FogRangeMul, FogRangeMul2: Single;
 
-  Hooks: array[1..151] of TRSHookInfo = (
+  Hooks: array[1..134] of TRSHookInfo = (
     (p: $47AB35; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Monsters not visible on the sides of the screen
     (p: $47A55E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Items not visible on the sides of the screen
     (p: $48B37E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Effects not visible on the sides of the screen
@@ -3665,6 +4065,19 @@ var
     (p: $4637B7; newp: @WindowWidth; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $4637CD; newp: @WindowHeight; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $4618FF; newp: @WindowProcHook; t: RShtFunctionStart; size: 6), // Window procedure hook
+    (p: $463D5F; old: $49D5EE; new: $49DC06; t: RShtCall; Querry: hqBorderless), // Borderless fullscreen
+    (p: $463D5F; newp: @SwitchToFullscreenHook; t: RShtAfter; Querry: hqBorderless), // Borderless fullscreen
+    (p: $463D0F; newp: @SwitchToWindowedHook; t: RShtAfter; Querry: hqBorderless), // Borderless fullscreen
+    (p: $464C2A; size: 3; Querry: hqBorderless), // Borderless fullscreen
+    (p: $464C34; new: $464C4E; t: RShtJmp; Querry: hqBorderless), // Borderless fullscreen
+    (p: $464CCA; newp: @SwitchToFullscreenHook; t: RShtCall; size: 6; Querry: hqBorderless), // Borderless fullscreen
+    (p: $464CD0; new: $464EFA; t: RShtJmp; Querry: hqBorderless), // Borderless fullscreen
+    (p: $464D09; size: 6; Querry: hqBorderless), // Borderless fullscreen
+    (p: $464D14; old: $49DC06; newp: @SwitchToWindowedHook; t: RShtCall; size: $464D2D - $464D14; Querry: hqBorderless), // Borderless fullscreen
+    (p: $464D3F; new: $464EFA; t: RShtJmp; size: 6; Querry: hqBorderless), // Borderless fullscreen
+    (p: $464C50; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
+    (p: $46296E; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
+    (p: $462992; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
     (p: $4119FC; newp: @FixLoadBitmapInPlace; t: RShtBefore), // Fix LoadBitmapInPlace
     (p: $4D0839; newp: @PaperDollInChestsInitHook; t: RShtBefore; Querry: hqPaperDollInChests),
     (p: $415584; newp: @PaperDollInChestsDrawExit; t: RShtBefore; Querry: hqPaperDollInChests),
@@ -3776,44 +4189,9 @@ var
     (p: $48CBED; newp: @FixBowSkillDamageBonus8; t: RShtBefore), // Fix +Bow skill items not affecting damage on GM
     (p: $48CA86; newp: @FixBowSkillDamageBonusStat; t: RShtCall; size: 6), // Fix +Bow skill items not affecting damage on GM
     (p: $48CAEE; newp: @FixBowSkillDamageBonusStat; t: RShtCall; size: 6), // Fix +Bow skill items not affecting damage on GM
-    (p: $476903; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $476925; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $478019; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $47802F; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $483AF0; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $483B06; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $483EAB; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $483EC1; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $48506E; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $485091; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $48597F; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $48598F; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $48AEB5; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $48AECA; old: $402DB7; newp: @FastCosX; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    // 4C001B!!!
-    (p: $4768C5; old: $402DB7; newp: @FastCosY; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $4768E7; old: $402DB7; newp: @FastCosY; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $47803F; old: $402DB7; newp: @FastCosY; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $478055; old: $402DB7; newp: @FastCosY; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $4859A5; old: $402DB7; newp: @FastCosY; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $4859B5; old: $402DB7; newp: @FastCosY; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $4873F1; old: $402DB7; newp: @FastCosY; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $48740A; old: $402DB7; newp: @FastCosY; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $4874A8; old: $402DB7; newp: @FastCosY; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $4874C6; old: $402DB7; newp: @FastCosY; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $48AE90; old: $402DB7; newp: @FastCosY; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $48AEA5; old: $402DB7; newp: @FastCosY; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-
-    (p: $43E0DF; size: 2; Querry: hqSmoothMouseLook), // !!! tmp
-    // writing 519464, 519468, 51946C: (refs to 4E8538)
-
-    (p: $4E853E; old: $3f40; new: $3e90; t: RSht2; Querry: hqSmoothMouseLook), // Smooth mouse look (1/2048 -> 1/2048^2)
-    (p: $421DDA; newp: @UpdateDirection1; t: RShtFunctionStart; size: 10; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $421EC6; old: $402DB7; newp: @FastCosSummed; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $421ED3; old: $402DB7; newp: @FastCosSummed; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $421EE7; old: $402DB7; newp: @FastCosSummed; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-    (p: $421EF4; old: $402DB7; newp: @FastCosSummed; t: RShtCall; Querry: hqSmoothMouseLook), // Smooth mouse look
-
+    (p: $430BC3; newp: @FixCallLeaveMap; t: RShtCallBefore), // Fix LeaveMap event not called on travel
+    (p: $445335; newp: @FixCallLeaveMap; t: RShtCallBefore), // Fix LeaveMap event not called on travel
+    (p: $4B52F5; newp: @FixCallLeaveMap; t: RShtCallBefore), // Fix LeaveMap event not called on travel
     ()
   );
 {$IFEND}
@@ -3824,11 +4202,17 @@ begin
   RSApplyHooks(Hooks, Querry);
 end;
 
-procedure ApplyMMHooks;
+procedure CheckMMHooks;
 begin
   CheckHooks(HooksCommon);
   CheckHooks(Hooks);
+end;
+
+procedure ApplyMMHooks;
+begin
   ApplyHooks(0);
+  if BorderlessFullscreen then
+    ApplyHooks(hqBorderless);
   if PlaceChestItemsVertically then
     ApplyHooks(hqPlaceChestItemsVertically);
   if FixChestsByCompacting then
@@ -3861,11 +4245,12 @@ begin
     ApplyHooks(hqFixHouseAnimationRestart);
   if NeedFreeSpaceCheck then
     ApplyHooks(hqCheckFreeSpace);
-  ApplyHooks(hqSmoothMouseLook);
+  ApplyBytePatches;
 end;
 
 procedure ApplyMMDeferredHooks;
 begin
+  ApplyHooks(-1);
   if Options.PaperDollInChests > 0 then
     ApplyHooks(hqPaperDollInChests);
   if Options.PaperDollInChests = 2 then
@@ -3886,6 +4271,20 @@ begin
     ApplyHooks(hqFixMonsterSpells);
   if Options.FixSouldrinker then
     ApplyHooks(hqFixSouldrinker);
+  if Options.FixUnmarkedArtifacts then
+    ApplyHooks(hqFixUnmarkedArtifacts);
+  if Options.FixClubsDelay then
+    ApplyHooks(hqFixClubsDelay);
+  if Options.FixLightBolt then
+    ApplyHooks(hqFixLightBolt);
+  if Options.ClimbBetter then
+    ApplyHooks(hqClimbBetter);
+  if Options.FixWaterWalkManaDrain then
+    ApplyHooks(hqFixWaterWalkManaDrain);
+  if Options.KeepEmptyWands then
+    ApplyHooks(hqKeepEmptyWands);
+  if Options.FixUnimplementedSpells then
+    ApplyHooks(hqFixUnimplementedSpells);
 end;
 
 procedure ApplyMMHooksSW;

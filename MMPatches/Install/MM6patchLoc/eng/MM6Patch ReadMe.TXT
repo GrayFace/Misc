@@ -1,4 +1,4 @@
-GrayFace MM6 Patch v2.4
+GrayFace MM6 Patch v2.5
 By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
@@ -6,8 +6,72 @@ Official patches, Mok's patch and Angel's patch are included.
 Save files are, of course, fully compatible with the unpatched game in both directions.
 The patch has no uninstaller to make things simpler.
 All configuration is done via mm6.ini, which is populated with main options on the first run.
+For all exploits the patch fixes an option to disable the fix shoud be described in this ReadMe.
+At the end of ReadMe you'll find info on how to report errors.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
+
+New in version 2.5:
+  << MM6 - MM8 >>
+[+] Set ShooterMode=1 to enable FPS-like mode. Press attack button to toggle the fight mode, then press left mouse button to attack and right button to use quick spell. Regular quick spell button also works. No auto-targeting is done. A sword icon indicates this mode, which also shows health of target (or last hit) monster.
+[+] Now you can set a spell that would be used when you press regular attack button. E.g. you can set Poison Spray as Attack Spell and Heal as Quick Spell. Add EnableAttackSpell=0 to INI to disable.
+[+] Direct unaccelerated mouse input supported through MouseSensitivityDirectMul option. To enable, set it to a positive number, e.g. 1.0.
+[+] Player condition priorities changed to demonstrate the worst condition (weak, cursed etc.). Add FixConditionPriorities=0 to INI to disable. New conditions order is Eradicated, Dead, Stoned, Unconscious, Paralyzed, Asleep, Weak, Cursed, Disease3, Poison3, Disease2, Poison2, Disease1, Poison1, Insane, Drunk, Afraid, Zombie.
+[+] Now while you're holding right mouse button hint would be shown for the element you're pointing at. Especially useful for checking current time. Add ShowHintWithRMB=0 to INI to disable.
+[+] In inventory screen unidentified items are now painted green while you're holding right mouse button. Add GreenItemsWhileRightClick=0 to INI to disable.
+[+] Set DeadPlayerShowItemInfo=1 to be able to see items of unconscious players with right click.
+[+] Better fix for inactive players acting: now you can select inactive players, but if you press the attack key, an active player would be selected.
+[+] MouseLookPermKey option sets up the key that changes mouse look mode, but the mode doesn't get restored when a dialog is opened.
+[+] Set ExitDialogsWithRightButton=1 to make right mouse button act as Esc in houses, NPC, map entrance and message dialogs.
+[+] WinScreenDelay hidden option controls Win screen delay during which all input is ignored. Default is 500 (half a second instead of game's original 5 seconds).
+[+] Set AddDescriptions=1 to add option descriptions straight into INI file. Set it to -1 to remove them.
+[+] MonSpritesSizeMul option allows you to change the scale at which monsters are displayed in right button dialog. E.g. set it to 0.5 if you upscale monsters by 2. Mods can change it dynamically through the patch options API.
+[+] House animation is no longer restarted when you click any topic. Add FixHouseAnimationRestart=0 to INI to disable this change.
+[+] Free space check when saving a game. Add CheckFreeSpace=0 to INI to disable.
+[+] Changing view distance by setting dist_mist option is now supported, but useless, because it won't increase ground drawing distance.
+[+] Automatic horseman and boatman speak time detection. HorsemanSpeakTimeLimit and BoatmanSpeakTimeLimit hidden options are used as the maximum time allowed for the speeches.
+[+] Wands no longer disappear when depleated, just break. Add KeepEmptyWands=0 in INI to disable this change.
+[+] Fixed graphics of skeletons and enforcer units.
+[-] Changing item graphics was causing inventory corruption.
+[-] All spells cast by monsters were doing Fire damage. Add FixMonsterSpells=0 to INI to disable this fix.
+[-] AOE damage wasn't dealt to paralyzed monsters.
+[-] Element hints staying visible in some dialogs after moving the mouse off the element. Add HintStayTime=0 to INI to return this behavior. Default is 2, making hint stay up for 2 frames.
+[-] Casting stronger buffs did nothing if a weaker, but longer one is active.
+[-] Item spells were causing bugs when cast onto the very first item in the inventory.
+[-] Now you can pick up items stolen from you from corpses of thieves.
+[-] Monster attacks were causing a player switch even if Endurance eliminates hit recovery.
+[-] When casting a Quick Spell the spell points check was incorrect (it assigned GM spell to another school of magic)
+[-] The game couldn't be run normally when current folder is different from its folder. Add KeepCurrentDirectory=1 to INI to disable this fix.
+[-] Unconscious players could identify/repair items in shops before. Add FixDeadPlayerIdentifyItem=0 to INI to disable this fix.
+[-] Another situation where game could crash due to vertex-less facets.
+[-] New Day effects (weakness, insanity etc.) weren't triggered on beginning of a month when pressing "Wait until Dawn" and then Esc.
+[-] Often there was full brightness outdoors for a minute at 5:00 AM.
+[-] Random item generation routine was generating the first matching item with bigger probability and last matching item with smaller probability. (Thanks for Tomsod for this and many fixes that I've incorporated)
+[-] Buff duration was displayed incorrectly in the cases like "1 day 5 minutes".
+[-] "N/A" string for ranged damage wasn't localizeable.
+[-] Water Walk was draining mana every 5 minutes instead of every 20 minutes. Add FixWaterWalkManaDrain=0 to INI to disable this fix.
+[-] My bug: You were able to learn unavailable magic skills with keyboard navigation.
+[*] Now spell skills that don't fit on the screen (say, if you change class in Rev4 mod for MM7) are now drawn over buttons. It's still better than making them inaccessible.
+[*] 3DO and other logos are now shown when intro is postponed by NoIntro=1, unless NoIntoLogos=0 line is added to INI. You can cancel logos with Esc and still watch the intro.
+  << MM6, MM7 >>
+[-] Horizontal speed of snow was effected by strafing too much.
+[-] Copyright screen staying visible on startup if game window wasn't in focus when it appeared.
+[-] Awards page wasn't updated when player is switched by pressing Tab.
+[-] 'Charm' spell had wrong durations.
+  << MM6 >>
+[-] End game movies were unskippable, as well as the intro on first launch.
+[-] Game wasn't paused in Enchant Item screen.
+[-] Paralyze spell didn't do anything when cast by monsters. Add FixParalyze=0 to INI to disable this fix.
+[-] Party was trying to attack enemies during their dying animation.
+[-] Small text fixes in spell descriptions.
+[-] My bug: Keyboard control in spell book was causing spells to be cast accidentally with arrow keys.
+  << Fixes in maps >>
+[-] Oracle was giving wrong hints in many cases.
+[-] Dragonsand (outb3): Both Tomb of VARN doors had the same texture.
+[-] Agar's Laboratory (d19): You could get +50 intellect any number of times.
+[-] The Arena (zarena): Exit doors weren't triggering a confirmation dialog.
+[*] Warlord's Fortress (d16): Rolled back duplicated chests fix, because it made people think there's a key for them.
+
 
 New in version 2.4:
   << MM6 - MM8 >>
@@ -22,7 +86,6 @@ New in version 2.4:
 [-] My bug: keyboard control of dialogs was breaking evt.Question command in houses (used for Escaton riddles in MM8).
   << MM6 >>
 [-] Static Charge cost at Expert was incorrect. Spells cost wasn't taken from Spells.txt.
-
 
 New in version 2.3.1:
   << MM6, MM8 >>
@@ -178,7 +241,6 @@ Other changes:
 [-] Fixed condition removal spells (they worked 3 hours/days per skill point instead of 1, also causing integer overflow on huge skill levels).
 [-] My bug: Quick Save didn't work in Hive after destroying the Reactor.
 [-] Waiting (using Rest dialog) didn't recover characters.
-[-] Key strokes could potentially be ignored if some other programs run at the same time and use the same keyboard access method.
 [-] Map crossing dialog was triggered while flying low, accepting it in that case did nothing.
 [-] A rare case of "negative/0" caused a crash in stats screen.
 [-] Lloyd Beacon used to autosave game after decreasing spell points and adding recovery delay.
@@ -212,7 +274,7 @@ Some localization options are kept in mm6lang.ini. You can change them or transl
 
 --------------------------------------------------------------------------------
 Quick Saves:
-Press F11 to use quick save. You will see "Game saved!" message. "QuickSaveKeyCode" option in mm6.ini controls the key used to save the game.
+Press F11 to use quick save. You will see "Game saved!" message. "QuickSavesKey" option in mm6.ini controls the key used to save the game.
 "QuickSavesCount" option controls the number of quick saves.
 "QuickSavesName" option controls names of quick saves. Default is "Quicksave".
 "SpaceBeforeQuicksaveDigit" controls whether there should be a space between "Quicksave" and the number of quick save.
@@ -236,11 +298,11 @@ Create "DataFiles" folder in the game directory. To modify a file in icons.lod e
 "DataFiles" option controls this. Default is 1 (enabled).
 
 --------------------------------------------------------------------------------
-Custom Archives
+Custom Archives:
 Custom archives are the best way to distribute new and modified content of a mod. Here's an explanation of their loading order: https://www.dropbox.com/s/iv9c2jc8abbrj6a/CustomLods.txt?dl=0
 
 --------------------------------------------------------------------------------
-Mouse Look
+Mouse Look:
 
 To enable mouse look set MouseLook option to 1.
 Mouse look can work in two modes. The default mode is like in 3D actions and alternative mode is closer to World of Warcraft and similar games.
@@ -249,13 +311,18 @@ Here is my preset for 3D action mode: http://sites.google.com/site/sergroj/mm/MM
 You can activate alternative mode by setting MouseLookUseAltMode option to 1 or by pressing Caps Lock if the CapsLockToggleMouseLook option is set to 1. You may also want to set MouseLookTempKey to 4 or other key code and reset MouseLookChangeKey to 0 for this mode.
 MouseLookChangeKey is used to switch mode (turn off mouse look in normal mode or turn it on in activate mode). The mode is restored if you open any other screen. Middle mouse button is set by default.
 MouseLookTempKey changes mode while you hold it. Best fit for alternative (WoW) mode.
-MouseSensitivityX and MouseSensitivityY control mouse sensitivity. If you want, you can invert Y axis by making its sensitivity negative. Note that you can set values over 100.
+MouseLookPermKey changes mouse look mode, but the mode doesn't get restored when a dialog is opened.
+MouseSensitivityX and MouseSensitivityY control mouse sensitivity. If you want, you can invert Y axis by making its sensitivity negative. Note that you can set values over 100 and well as non-integer values.
 MouseSensitivityAltModeX and MouseSensitivityAltModeY are similar, but used for alternative mode.
 MouseLookFly option lets you fly up/down by pointing your view in the desired direction.
 MouseWheelFly option lets you fly up and down by scrolling your wheel. This is particularly useful for take off in mouse look mode.
 
 Cursor used in mouse look mode is located in Data\MouseLookCursor.bmp
 
+To convert your sensitivity from other games when using raw mouse input, first use an online converter to calculate Valorant sensitivity, then use this formula:
+MouseSensitivityX = 25.486222*ValorantSensitivity/MouseSensitivityDirectMul
+
 --------------------------------------------------------------------------------
-Errors Reporting
+Errors Reporting:
+
 If an error occurs, send me a report, describing how and when it happened. Attach a savegame if possible. In case of a crash attach ErrorLog.txt file which which would be created in the game directory.

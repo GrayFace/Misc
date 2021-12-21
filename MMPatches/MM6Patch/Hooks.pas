@@ -139,8 +139,8 @@ begin
     if not (pint($5F6F74)^ in [1, 2]) and (pint($4D46BC)^ = 0) then
     begin
       if (chr(Result) in [#9, #13, ' ', '0'..'9', 'A'..'Z']) then
-        ProcessChar(0, 0, Result);
-      if Result in [107, 109] then // +, -
+        ProcessChar(0, 0, Result)
+      else if Result in [107, 109] then // +, -
         ProcessChar(0, 0, Result - 64);
     end;
   end else
@@ -565,18 +565,6 @@ asm
   call AttackDescriptionProc
   mov [esp + $34 - $24], eax
   push $413859
-end;
-
-//----- Important for PlayMP3, good in any case
-
-procedure TravelHook;
-asm
-@loop:
-  push 1
-  call Sleep
-  call edi
-  cmp eax, esi
-  jb @loop
 end;
 
 //----- Stop sounds on deactivate
@@ -1147,10 +1135,12 @@ function MemoryNewProc(n: uint): ptr;
 var
   i: uint;
 begin
+  inc(n);  // trailing zero for text files
   i:= (n + $FFF) and not $FFF;
   Result:= VirtualAlloc(nil, i + $1000, MEM_RESERVE, PAGE_NOACCESS);
   VirtualAlloc(Result, i, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
   inc(PChar(Result), i - n);
+  ZeroMemory(PChar(Result), n);
 end;
 
 procedure MemoryFreeProc(p: ptr; ret: int);
@@ -1192,7 +1182,7 @@ end;
 
 procedure GlobalTxtHook;
 asm
-  cmp edi, $56C180
+  cmp edi, [$4456C5]
   jge @exit
   push $4AF2CC
 @exit:
@@ -2738,24 +2728,6 @@ begin
   end;
 end;
 
-//----- Borderless fullscreen (also see WindowProcHook)
-
-procedure SwitchToWindowedHook;
-begin
-  Options.BorderlessWindowed:= true;
-  ShowWindow(_MainWindow^, SW_SHOWNORMAL);
-  SetWindowLong(_MainWindow^, GWL_STYLE, GetWindowLong(_MainWindow^, GWL_STYLE) or _WindowedGWLStyle^);
-  ClipCursor(nil);
-end;
-
-procedure SwitchToFullscreenHook;
-begin
-  Options.BorderlessWindowed:= false;
-  ShowWindow(_MainWindow^, SW_SHOWMAXIMIZED);
-  PostMessage(_MainWindow^, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
-  MyClipCursor;
-end;
-
 //----- Compatible movie render
 
 var
@@ -2961,10 +2933,21 @@ asm
   mov ecx, [$4D5F48]
 end;
 
+//----- Fix 'Charm' wrong duration on Master
+
+procedure FixCharm;
+asm
+  jz @std
+  cmp esi, 3
+  jnz @std
+  lea eax, [eax*2]
+@std:
+end;
+
 //----- HooksList
 
 var
-  HooksList: array[1..283] of TRSHookInfo = (
+  HooksList: array[1..256] of TRSHookInfo = (
     (p: $42ADE7; newp: @RunWalkHook; t: RShtCall), // Run/Walk check
     (p: $453AD3; old: $42ADA0; newp: @KeysHook; t: RShtCall), // My keys handler
     (p: $45456E; old: $417F90; newp: @WindowProcCharHook; t: RShtCall), // Map Keys
@@ -2994,7 +2977,6 @@ var
     (p: $41376C; old: $413859; newp: @AttackDescriptionHook; t: RShtJmp), // Show recovery time for Attack
     (p: $413799; old: $413859; newp: @ShootDescriptionHook; t: RShtJmp), // Show recovery time for Shoot
     (p: $481C79; old: $481C92; new: $481C80; t: RShtJmp2; Querry: 5), // Fix dual weapons recovery time
-    (p: $49D9E1; newp: @TravelHook; t: RShtCall; size: 6), // Important for PlayMP3, good in any case
     (p: $454477; newp: @ActivateHook; t: RShtCall), // Stop sounds on deactivate
     (p: $4544DA; newp: @DeactivateHook; t: RShtCall), // Stop sounds on deactivate
     (p: $40C1A0; newp: @LodFilesHook; t: RShtCall; size: 7; Querry: 12), // Load files from DataFiles folder
@@ -3192,33 +3174,6 @@ var
     (p: $48FFF0; newp: @ExitCrashHook; t: RShtCall; size: 9), // Crash on exit
     (p: $4B9224; newp: @ScreenToClientHook; t: RSht4), // Configure window size
     (p: $45B56D; old: $45ADF0; newp: @InstantMouseItemHook; t: RShtCallStore), // Configure window size
-    (p: $457AEC; old: $48D840; new: $48DA70; t: RShtCall; Querry: hqBorderless), // Borderless fullscreen
-    (p: $457AEC; newp: @SwitchToFullscreenHook; t: RShtAfter; Querry: hqBorderless), // Borderless fullscreen
-    (p: $457AA8; newp: @SwitchToWindowedHook; t: RShtAfter; Querry: hqBorderless), // Borderless fullscreen
-    (p: $45835A; size: 6; Querry: hqBorderless), // Borderless fullscreen
-    (p: $4583E0; size: 1; Querry: hqBorderless), // Borderless fullscreen
-    (p: $4583E6; old: $48D840; newp: @SwitchToFullscreenHook; t: RShtCall; Querry: hqBorderless), // Borderless fullscreen
-    (p: $4583F8; size: 1; Querry: hqBorderless), // Borderless fullscreen
-    (p: $4583F9; old: $48DA70; newp: @SwitchToWindowedHook; t: RShtCall; size: $458413 - $4583F9; Querry: hqBorderless), // Borderless fullscreen
-    (p: $458426; old: $8B; new: $5E; t: RSht1; Querry: hqBorderless), // Borderless fullscreen - 'pop esi' from 45862B
-    (p: $458427; new: $45863D; t: RShtJmp; Querry: hqBorderless), // Borderless fullscreen
-    (p: $458353; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
-    (p: $450CE4; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
-    (p: $450D08; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
-    (p: $45291C; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
-    (p: $452942; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
-    (p: $453255; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
-    (p: $45327D; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
-    (p: $4537AB; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
-    (p: $4537D1; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
-    (p: $45423C; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
-    (p: $454261; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
-    (p: $454B0C; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
-    (p: $454B31; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
-    (p: $4589D8; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
-    (p: $4589FC; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
-    (p: $458AFE; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
-    (p: $458B22; old: int(_Windowed); newp: @Options.BorderlessWindowed; t: RSht4; Querry: hqBorderless), // Borderless fullscreen
     (p: $4A5A17; newp: @DrawMovieHook; t: RShtBefore; Querry: hqFixSmackDraw), // Configure window size
     (p: $4A5EC8; old: $840F; new: $E990; t: RSht2; Querry: hqFixSmackDraw), // Compatible movie render
     (p: $4A5EB5; newp: @SmackDrawHook1; t: RShtBefore; Querry: hqFixSmackDraw), // Compatible movie render
@@ -3247,6 +3202,7 @@ var
     (p: $42AFD3; old: -10; new: -2; t: RSht1), // Snow X speed was effected by strafing too much
     (p: $45C7A1; newp: @FixParalyzeHook; t: RShtBefore; size: 6; Querry: hqFixParalyze), // Fix Paralyze
     (p: HookPopAction; newp: @PopActionAfter; t: RShtBefore; size: 6), // Make HookPopAction useable with straight Delphi funcitons
+    (p: $4235B7; newp: @FixCharm; t: RShtAfter; size: 7), // Fix 'Charm' wrong duration on Master
     ()
   );
 
@@ -3269,6 +3225,7 @@ var
   LastDebugHook: DWord;
 begin
   CheckHooks(HooksList);
+  CheckMMHooks;
   ReadDisables;
   RSApplyHooks(HooksList);
   if FixWalk then
@@ -3287,8 +3244,6 @@ begin
     RSApplyHooks(HooksList, 17);
   if PlaceItemsVertically then
     RSApplyHooks(HooksList, 22);
-  if BorderlessFullscreen then
-    RSApplyHooks(HooksList, hqBorderless);
   if NoPlayerSwap then
     RSApplyHooks(HooksList, hqNoPlayerSwap);
   FixConditionSpells;

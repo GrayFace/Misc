@@ -520,13 +520,13 @@ var
           Stage:= -1;
   end;
 
-  procedure EraseDraw(n: int; k1, k2: int);
+  procedure EraseDraw(n: int; const icn: string; k1, k2: int);
   var
     i: int;
   begin
     for i:= 0 to n - 1 do
       with TmpItems[i] do
-        if (Canvas = k1) and (NewCanvas = k2) then
+        if (Canvas = k1) and (NewCanvas = k2) and SameText(Icon, icn) then
           Stage:= -1;
   end;
 
@@ -679,7 +679,7 @@ begin
             else if SameText(CmdParam, 'canvas') then
               EraseCanvas(n, MainCanvas)
             else if SameText(CmdParam, 'draw') then
-              EraseDraw(n, Canvas, NewCanvas);
+              EraseDraw(n, Fmt(CmdParam2), Canvas, NewCanvas);
         lcTimer:
           if not JustLimits and InScreen and CheckCond then
             AddTimer(NewItem^);

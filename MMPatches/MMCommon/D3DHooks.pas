@@ -1179,7 +1179,7 @@ end;
 
 procedure WatrTylFix;
 begin
-  _LoadBitmap(0, 0, _BitmapsLod, 0, 'WtrTyl');
+  pint($EF5114)^:= _LoadBitmap(0, 0, _BitmapsLod, 0, 'WtrTyl');
 end;
 
 //----- Extend view distance
