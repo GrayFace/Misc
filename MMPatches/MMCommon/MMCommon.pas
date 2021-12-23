@@ -231,7 +231,7 @@ var
   QuickSaveName, QuickSaveDigitSpace, SArmorHalved, SArmorHalvedMessage,
   SDuration, SDurationYr, SDurationMo, SDurationDy, SDurationHr,
   SDurationMn, SRemoveASpell, SChooseASpell, SSetASpell, SSetASpell2,
-  SStoleItem, SNotAvailable: string;
+  SStoleItem, SNotAvailable, SEnergy: string;
 
   CapsLockToggleRun, NoDeathMovie, FreeTabInInventory, ReputationNumber,
   AlwaysStrafe, StandardStrafe, MouseLookChanged, MLookRaw, FixInfiniteScrolls,
@@ -1285,6 +1285,7 @@ begin
       SDurationDy:= ReadLocString('DurationDy', ' %d:dy');
       SDurationHr:= ReadLocString('DurationHr', ' %d:hr');
       SDurationMn:= ReadLocString('DurationMn', ' %d:mn');
+      SEnergy:= ReadLocString('Energy', 'Energy');
 {$ENDIF}
       SNotAvailable:= ReadLocString('N/A', 'N/A');
 

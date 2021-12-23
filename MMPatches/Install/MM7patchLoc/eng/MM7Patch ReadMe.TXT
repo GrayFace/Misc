@@ -1,4 +1,4 @@
-GrayFace MM7 Patch v2.5
+GrayFace MM7 Patch v2.5.1
 By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
@@ -10,6 +10,10 @@ For all exploits the patch fixes an option to disable the fix shoud be described
 At the end of ReadMe you'll find info on how to report errors.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
+
+New in version 2.5.1:
+  << MM7, MM8 >>
+[-] My bug: Energy damage wasn't displayed in identify monster dialog
 
 New in version 2.5:
   << MM6 - MM8 >>

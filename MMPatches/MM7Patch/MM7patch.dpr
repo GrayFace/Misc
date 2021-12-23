@@ -399,6 +399,10 @@ Version 2.5:
 [-] Wetsuits had recovery penalty
 [-] FixUnimplementedSpells
 
+Version 2.5.1:
+(MM7, MM8)
+[-] My bug: Energy damage wasn't displayed in identify monster dialog
+
 
 [!!] https://discord.com/channels/296507109997019137/296508593744773120/900738954477834260
 [!!] Configure controls like in MM6, keyboard layout-independant in-game Controls
@@ -411,6 +415,7 @@ Version 2.5:
 [!!] "Minotuars" in MM8 Promotion Quest NPC
 [!!] FPS don't do std action?
 [!!] Setup controls
+[!!] MouseLookBorder in UILayout mode
 
 (Figo:) Is there still the limit of how many we can acquire with one party (~13)?
 I've read that in the Merge there is none, so how about a vanilla game?

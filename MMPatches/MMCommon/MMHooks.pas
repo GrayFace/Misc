@@ -3678,10 +3678,21 @@ asm
   ret 8 + 4*m8
 end;
 
+//----- Show Energy damage type in monster info
+
+procedure FixIdMonEnergyDamage;
+asm
+  cmp eax, 10
+  jna @std
+  mov edx, SEnergy
+  mov [esp + 4], edx
+@std:
+end;
+
 //----- HooksList
 
 var
-  HooksCommon: array[1..74] of TRSHookInfo = (
+  HooksCommon: array[1..75] of TRSHookInfo = (
     (p: m6*$453ACE + m7*$463341 + m8*$461316; newp: @UpdateHintHook;
        t: RShtCallStore; Querry: hqFixStayingHints), // Fix element hints staying active in some dialogs
     (p: m6*$4226F8 + m7*$427E71 + m8*$4260A8; newp: @FixItemSpells;
@@ -3815,7 +3826,9 @@ var
       size: 12 + 2*m7; Querry: hqKeepEmptyWands), // Keep wands without charges
     (p: m7*$4270B9 + m8*$4254BA; newp: @FixUnimplementedSpells;
       t: RShtBefore; size: 6; Querry: hqFixUnimplementedSpells), // Monsters can't cast some spells, but waste turn
-    (p: m7*$49DB05 + m8*$49AFCD; size: 2), // Windows 10 incompatibility 
+    (p: m7*$49DB05 + m8*$49AFCD; size: 2), // Windows 10 incompatibility
+    (p: m7*$41EF8F + m8*$41E500; newp: @FixIdMonEnergyDamage;
+      t: RShtAfter; size: 7), // Show Energy damage type in monster info
     ()
   );
 {$IFDEF MM6}
