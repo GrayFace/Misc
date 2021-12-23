@@ -3110,7 +3110,7 @@ end;
 //----- HooksList
 
 var
-  HooksList: array[1..314] of TRSHookInfo = (
+  HooksList: array[1..315] of TRSHookInfo = (
     (p: $458E18; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $463862; old: $450493; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave/quicksave filenames localization
     (p: $4CD509; t: RShtNop; size: 12), // Fix Save/Load Slots: it resets SaveSlot, SaveScroll
@@ -3427,6 +3427,7 @@ var
     (p: $449884; old: $8B53; new: $078B; t: RSht2; size: 8), // Fix evt.CheckItemsCount - mov eax, [edi]
     (p: $437AAD; newp: @FixOfAcid; t: RShtJmp; size: 6), // 'of Acid' was dealing Water damage instead of Body
     (p: $40546F; old: $36FF; new: $9057; t: RSht2), // (push edi) Fix monsters using 'Spirit Lash', 'Inferno', 'Prismatic Light'
+    (p: $463EF0; size: 2), // Intro movies were unskippable on 1st launch
     ()
   );
 

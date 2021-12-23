@@ -379,6 +379,12 @@ Version 2.5:
 [-] lloyd pcx broken
 [-] 'Spirit Lash', 'Inferno', 'Prismatic Light' were broken when used by monsters
 
+Version 2.5.1:
+(MM7, MM8)
+[-] My bug: Energy damage wasn't displayed in identify monster dialog
+(MM8)
+[-] Intro was unskippable on first launch.
+
 
 
 
