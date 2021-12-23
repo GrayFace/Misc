@@ -321,6 +321,9 @@ Version 2.5:
 [-] Party was attacking enemies during their dying animation
 [-] My bug: Keyboard control in spell book was causing spells to be cast accidentally with arrow keys
 
+Version 2.5.1:
+(MM6)
+[-] My bug: Crash if character doesn't have a bow due to "N/A" string not being initialized 
 
 Если загрузить сейв, где все рожи одинаковые, а потом сейв с разными, будут черные пятна на месте рож
 

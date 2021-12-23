@@ -1285,8 +1285,8 @@ begin
       SDurationDy:= ReadLocString('DurationDy', ' %d:dy');
       SDurationHr:= ReadLocString('DurationHr', ' %d:hr');
       SDurationMn:= ReadLocString('DurationMn', ' %d:mn');
-      SNotAvailable:= ReadLocString('N/A', 'N/A');
 {$ENDIF}
+      SNotAvailable:= ReadLocString('N/A', 'N/A');
 
     finally
       ini.Free;
