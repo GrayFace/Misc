@@ -1,4 +1,4 @@
-GrayFace MM6 Patch v2.5.1
+GrayFace MM6 Patch v2.5.2
 By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
@@ -10,6 +10,12 @@ For all exploits the patch fixes an option to disable the fix shoud be described
 At the end of ReadMe you'll find info on how to report errors.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
+
+New in version 2.5.2:
+  << MM6 - MM8 >>
+[*] Now character's Stats screen displays a condition that determines stats, in all other places the most severe one is displayed.
+  << MM6, MM7 >>
+[-] Now simple message dialog (e.g. obelisk message) isn't cancelled by any key press. In MM7 the message also doesn't stay on the screen after being cancelled anymore. Add DontSkipSimpleMessage=0 to INI to disable this fix.
 
 New in version 2.5.1:
   << MM6 >>

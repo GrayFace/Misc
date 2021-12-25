@@ -143,7 +143,7 @@ begin
           _NeedRedraw^:= 1;
         end;
       7:
-        AddAction(113, BoolToInt[_EscKeyUnkCheck^ <> 0], 0);
+        ExitScreen;
     end;
 
   // Shared keys proc
@@ -3195,10 +3195,23 @@ asm
 @std:
 end;
 
+//----- Fix simple message staying on screen
+
+procedure FixSimpleMessagePersist;
+asm
+  cmp Options.DontSkipSimpleMessage, 0
+  jnz @redraw
+  cmp dword [eax + $1C], $1A
+  jnz @keep
+@redraw:
+  mov dword ptr [$576EAC], 1
+@keep:
+end;
+
 //----- HooksList
 
 var
-  HooksList: array[1..324] of TRSHookInfo = (
+  HooksList: array[1..325] of TRSHookInfo = (
     (p: $45B0D1; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $4655FE; old: $452C75; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave file name localization
     (p: $45E5A4; old: $45E2D0; backup: @FillSaveSlotsStd; newp: @FillSaveSlotsHook; t: RShtCall), // Fix Save/Load Slots
@@ -3523,6 +3536,7 @@ var
     (p: $48F0C6; newp: @FixKelebrim; t: RShtBefore; Querry: hqFixKelebrim), // Kelebrim wasn't doing -30 Earth Res
     (p: $450A15; old: 6; new: 7; t: RSht1; Querry: hqFixBarrels), // Kelebrim wasn't doing -30 Earth Res
     (p: $48E30F; newp: @FixWetsuits; t: RShtCall), // Fix Wetsuits having recovery penalty
+    (p: $4451C1; newp: @FixSimpleMessagePersist; t: RShtCallBefore), // Fix simple message staying on screen
     ()
   );
 

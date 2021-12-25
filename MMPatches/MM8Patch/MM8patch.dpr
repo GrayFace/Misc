@@ -385,6 +385,14 @@ Version 2.5.1:
 (MM8)
 [-] Intro was unskippable on first launch.
 
+Version 2.5.2:
+(MM6-MM8)
+[*] Now Stats screen displays a condition that determines stats, unlike all other places
+(MM7, MM8)
+[-] "Nothing here" was shown on the screen after a dialog with a guard
+[-] My bug: List of all conditions wasn't displayed in right click menu for Condition in Stats screen
+(MM8)
+[-] My bug: ExitDialogsWithRightButton was causing a crash in NPC/Guard dialog
 
 
 

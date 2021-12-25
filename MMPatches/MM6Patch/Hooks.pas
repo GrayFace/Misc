@@ -682,7 +682,7 @@ begin
   dlg:= pint($4D50CC)^;
   if (dlg <> 0) and (pint(dlg + $18)^ <> 0) then
   begin
-    AddAction(113, 0, 0);
+    ExitScreen;
     _ProcessActions;
   end;
 end;

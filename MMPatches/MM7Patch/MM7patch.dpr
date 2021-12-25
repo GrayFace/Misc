@@ -403,6 +403,14 @@ Version 2.5.1:
 (MM7, MM8)
 [-] My bug: Energy damage wasn't displayed in identify monster dialog
 
+Version 2.5.2:
+(MM6-MM8)
+[*] Now Stats screen displays a condition that determines stats, unlike all other places
+(MM6, MM7)
+[-] DontSkipSimpleMessage
+(MM7, MM8)
+[-] "Nothing here" was shown on the screen after a dialog with a guard
+[-] My bug: List of all conditions wasn't displayed in right click menu for Condition in Stats screen
 
 [!!] https://discord.com/channels/296507109997019137/296508593744773120/900738954477834260
 [!!] Configure controls like in MM6, keyboard layout-independant in-game Controls

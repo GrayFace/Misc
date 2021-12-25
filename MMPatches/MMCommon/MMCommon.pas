@@ -72,6 +72,7 @@ const
   hqClimbBetter = 85;
   hqFixWaterWalkManaDrain = 86;
   hqKeepEmptyWands = 87;
+  hqDontSkipSimpleMessage = 88;
 
 {$IFDEF mm6}
   m6 = 1;
@@ -184,6 +185,7 @@ type
     ClimbBetter: LongBool;                    // (unused in MM6)
     FixWaterWalkManaDrain: LongBool;          //
     KeepEmptyWands: LongBool;                 //
+    DontSkipSimpleMessage: LongBool;          // (unused in MM8)
   end;
 
 var
@@ -407,6 +409,7 @@ type
     Hint: array[1..103] of Char;
   end;
 
+  PPDlg = ^PDlg;
   PDlg = ^TDlg;
   TDlg = packed record
     Left, Top, Width, Height, Right_, Bottom_: int;
@@ -531,6 +534,9 @@ const
   __MouseItem = m6*$90E81C + m7*$AD458C + m8*$B7CA64;
   _MouseItemNum = pint(__MouseItem);
   _StatusText = PStatusTexts(m6*$55BC04 + m7*$5C32A8 + m8*$5DB758);
+  __TextInput = m6*$5F6E70 + m7*$69AD80 + m8*$6C8CD8;
+  _TextInput = pchar(__TextInput);
+  _TextInputChar = pbyte(m6*$5F6F71 + m7*$69AE81 + m8*$6C8DD9);
   _NeedUpdateStatus = pbool(m6*$4CB6B4 + m7*$5C343C + m8*$517B48);
   _NoMusicDialog = pbool(m6*$9DE394 + m7*$F8BA90 + m8*$FFDE88); // intro, win screen, High Council
   _PartyPos = PPoint3D(m6*$908C98 + m7*$ACD4EC + m8*$B21554);
@@ -556,6 +562,9 @@ const
   _HouseExitMap = pint(m6*$55BDA4 + m7*$5C3450 + m8*$5DB8FC);
   _HouseNPCCount = pint(m6*$53CB60 + m7*$5912A4 + m8*$5A5714);
   _HouseCurrentNPC = pint(m6*$551F94 + m7*$591270 + m8*$5A56E0);
+  _Dlg_House = PPDlg(m6*$4D50C4 + m7*$507A40 + m8*$519328);
+  __Dlg_SimpleMessage = m6*$4D50E4 + m7*$507A64 + m8*$519348;
+  _Dlg_SimpleMessage = PPDlg(__Dlg_SimpleMessage);
   _SpellBookSelectedSpell = pint(m6*$4CB214 + m7*$5063CC + m8*$517B1C);
   _SpellSounds = PWordArray(m6*$4C28E0 + m7*$4EDF30 + m8*$4FE128);
   _SpellInfo = PSpellInfoArray(m6*$4BDD6E + m7*$4E3C46 + m8*$4F486E);
@@ -695,6 +704,7 @@ procedure Draw8(ps: PByte; pd: PWord; ds, dd, w, h: int; pal: PWordArray);
 procedure Draw8t(ps: PByte; pd: PWord; ds, dd, w, h: int; pal: PWordArray);
 function LoadIcon(const name: string): int;
 function FindDlg(id: int): PDlg;
+procedure ExitScreen;
 function NewButtonMM8(id, action: int; actionInfo: int = 0; hintAction: int = 0): ptr;
 procedure SetupButtonMM8(btn: ptr; x, y: int; transp: Bool; normalPic: PChar = nil; pressedPic: PChar = nil; hoverPic: PChar = nil; disabledPic: PChar = nil; englishD: Bool = false);
 procedure AddToDlgMM8(dlg, btn: ptr);
@@ -1189,6 +1199,7 @@ begin
       {$IFDEF mm7}FixBarrels:= ReadBool('FixBarrels', true, false);{$ENDIF}
       FixWaterWalkManaDrain:= ReadBool('FixWaterWalkManaDrain', true, false);
       KeepEmptyWands:= ReadBool('KeepEmptyWands', true, false);
+      {$IFNDEF mm8}DontSkipSimpleMessage:= ReadBool('DontSkipSimpleMessage', true, false);{$ENDIF}
 
 {$IFDEF mm6}
       info:= 'Set this to 0 to disable loading of mm6text.dll';
@@ -1734,6 +1745,16 @@ begin
       exit;
   end;
   Result:= nil;
+end;
+
+procedure ExitScreen;
+begin
+  if (m8 = 0) or (_CurrentScreen^ = 13) and (pbyte($5CCCE4)^ = 0) then
+    AddAction(113, BoolToInt[_Dlg_House^ <> nil], 0)
+{$IFDEF mm8}
+  else if pint($100614C)^ <> 0 then
+    _ExitScreen;
+{$ENDIF}
 end;
 
 procedure CallPtr; // ecx, pfunc, params...

@@ -134,7 +134,7 @@ begin
           OpenInventory;
         end;
       7:
-        _ExitScreen;
+        ExitScreen;
     end;
 
   // Shared keys proc

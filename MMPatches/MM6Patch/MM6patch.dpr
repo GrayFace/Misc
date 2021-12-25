@@ -323,7 +323,13 @@ Version 2.5:
 
 Version 2.5.1:
 (MM6)
-[-] My bug: Crash if character doesn't have a bow due to "N/A" string not being initialized 
+[-] My bug: Crash if character doesn't have a bow due to "N/A" string not being initialized
+
+Version 2.5.2:
+(MM6-MM8)
+[*] Now Stats screen displays a condition that determines stats, unlike all other places
+(MM6, MM7)
+[-] DontSkipSimpleMessage
 
 Если загрузить сейв, где все рожи одинаковые, а потом сейв с разными, будут черные пятна на месте рож
 

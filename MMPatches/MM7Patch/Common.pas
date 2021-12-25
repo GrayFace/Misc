@@ -33,7 +33,6 @@ const
   __Party_Height = $ACCE3C;
   _Party_Height = pint(__Party_Height);
   _Party_EyeLevel = pint($ACCE44);
-  _EscKeyUnkCheck = pint($507A40);
   _TurnBased = pbool($ACD6B4);
   _TurnBasedPhase = pint($4F86DC);
   _TurnBasedObjectsInAir = $4F86F4;

@@ -281,9 +281,10 @@ begin
     BackupStatusTime:= 0;
   end;
   if (msg = WM_RBUTTONDOWN) and ExitTalkingWithRightButton then
-    if (_CurrentScreen^ in [4, 17, 18, 19]) or
-       (_CurrentScreen^ = 13) and ((_HouseScreen^ in [0, 1, 96, 101, 102, 103]) or (_HouseScreen^ = -1)) then
-      AddAction(113, 0, 0);
+    if (_CurrentScreen^ in [4, 17, 18]) or
+       (_CurrentScreen^ = 13) and ((_HouseScreen^ in [0, 1, 96, 101, 102, 103]) or (_HouseScreen^ = -1)) or
+       (_CurrentScreen^ = 19) and ((_Dlg_SimpleMessage^ = nil) or (_Dlg_SimpleMessage^.DlgParam <> $1A)) then
+      ExitScreen;
 
   Result:= WindowProcStd(w, msg, wp, lp);
 
@@ -1700,7 +1701,7 @@ var
 begin
   while _CurrentScreen^ in [4, 13] do
   begin
-    AddAction(113, 0, 0);
+    ExitScreen;
     last:= _SoundVolume^;
     _SoundVolume^:= 0;
     _ProcessActions;
@@ -1838,20 +1839,20 @@ const
   Eradicated  = 16;
   Zombie      = 17;
   CondOrder: array[0..17 - m6] of int = (Eradicated, Dead, Stoned, Unconscious,
-     Paralyzed, Asleep, Weak, Cursed, Disease3, Poison3, Disease2, Poison2,
-     Disease1, Poison1, Insane, Drunk, Afraid{$IFNDEF mm6}, Zombie{$ENDIF});
+     Paralyzed, Asleep, Weak, Cursed{$IFNDEF mm6}, Zombie{$ENDIF}, Disease3,
+     Poison3, Disease2, Poison2, Disease1, Poison1, Insane, Drunk, Afraid);
   OldCond = m6*$4C276C + m7*$4EDDA0 + m8*$4FDFA8;
   CodeStart = m6*$482D30 + m7*$48E9EC + m8*$48E127;
   CodeSize = m6*$482D74 + m7*$48EA13 + m8*$48E14E - CodeStart;
 {$IFDEF mm6}
-  ArrRef: array[0..7] of int = ($4133EF, $41365C, $4849B0, $4849D4, $484A34, $482D36, $482D5A, $482D6C);
-  CodeRef: array[0..3] of int = ($4145C0, $417124, $41AB1D, $42D410);
+  ArrRef: array[0..5] of int = ($4849B0, $4849D4, $484A34, $482D36, $482D5A, $482D6C);
+  CodeRef: array[0..2] of int = ($417124, $41AB1D, $42D410);
 {$ELSEIF defined(mm7)}
-  ArrRef: array[0..2] of int = ($418126, $48E9F2, $48EA0D);
-  CodeRef: array[0..4] of int = ($418A04, $41AA48, $41D583, $434E18, $490A1D);
+  ArrRef: array[0..1] of int = ($48E9F2, $48EA0D);
+  CodeRef: array[0..3] of int = ($41AA48, $41D583, $434E18, $490A1D);
 {$ELSE}
-  ArrRef: array[0..2] of int = ($417849, $48E12D, $48E148);
-  CodeRef: array[0..7] of int = ($4181A3, $41AAA5, $41CAD7, $4304E2, $43260A, $43278B, $48FB88, $4C915A);
+  ArrRef: array[0..1] of int = ($48E12D, $48E148);
+  CodeRef: array[0..6] of int = ($41AAA5, $41CAD7, $4304E2, $43260A, $43278B, $48FB88, $4C915A);
 {$IFEND}
   HookCode: TRSHookInfo = (old: CodeStart; t: RShtCall);
   HookArr: TRSHookInfo = (old: OldCond; newp: @CondOrder; t: RSht4);
@@ -3689,10 +3690,32 @@ asm
 @std:
 end;
 
+//----- Fix "Nothing here" after a simple message dialog
+
+procedure FixNothingHere;
+asm
+  test ecx, ecx
+  jnz @ok
+  pop eax
+  ret 4
+@ok:
+end;
+
+//----- Don't cancel simple message dialog after any input
+
+procedure DontSkipSimpleMessage;
+begin
+  if not (_TextInput^ in [' ', #13, #10, #0]) then
+  begin
+    _TextInput^:= #0;
+    _TextInputChar^:= 0;
+  end;
+end;
+
 //----- HooksList
 
 var
-  HooksCommon: array[1..75] of TRSHookInfo = (
+  HooksCommon: array[1..77] of TRSHookInfo = (
     (p: m6*$453ACE + m7*$463341 + m8*$461316; newp: @UpdateHintHook;
        t: RShtCallStore; Querry: hqFixStayingHints), // Fix element hints staying active in some dialogs
     (p: m6*$4226F8 + m7*$427E71 + m8*$4260A8; newp: @FixItemSpells;
@@ -3829,6 +3852,10 @@ var
     (p: m7*$49DB05 + m8*$49AFCD; size: 2), // Windows 10 incompatibility
     (p: m7*$41EF8F + m8*$41E500; newp: @FixIdMonEnergyDamage;
       t: RShtAfter; size: 7), // Show Energy damage type in monster info
+    (p: m7*$44530E + m8*$442504; newp: @FixNothingHere;
+      t: RShtCallBefore), // Fix "Nothing here" after a simple message dialog
+    (p: m6*$43AA82 + m7*$44519A; newp: @DontSkipSimpleMessage; t: RShtBefore;
+      size: 6 + m7; Querry: hqDontSkipSimpleMessage), // Don't cancel simple message dialog after any input
     ()
   );
 {$IFDEF MM6}
@@ -4298,6 +4325,8 @@ begin
     ApplyHooks(hqKeepEmptyWands);
   if Options.FixUnimplementedSpells then
     ApplyHooks(hqFixUnimplementedSpells);
+  if Options.DontSkipSimpleMessage then
+    ApplyHooks(hqDontSkipSimpleMessage);
 end;
 
 procedure ApplyMMHooksSW;

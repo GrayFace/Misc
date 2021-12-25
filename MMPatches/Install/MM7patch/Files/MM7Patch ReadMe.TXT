@@ -1,4 +1,4 @@
-GrayFace MM7 Patch v2.5.1
+GrayFace MM7 Patch v2.5.2
 By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
@@ -11,9 +11,18 @@ At the end of ReadMe you'll find info on how to report errors.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
 
+New in version 2.5.2:
+  << MM6 - MM8 >>
+[*] Now character's Stats screen displays a condition that determines stats, in all other places the most severe one is displayed.
+  << MM6, MM7 >>
+[-] Now simple message dialog (e.g. obelisk message) isn't cancelled by any key press. In MM7 the message also doesn't stay on the screen after being cancelled anymore. Add DontSkipSimpleMessage=0 to INI to disable this fix.
+  << MM7, MM8 >>
+[-] "Nothing here" was shown on the screen after a dialog with a guard.
+[-] My bug: List of all conditions wasn't displayed in right click menu for Condition in Stats screen.
+
 New in version 2.5.1:
   << MM7, MM8 >>
-[-] My bug: Energy damage wasn't displayed in identify monster dialog
+[-] My bug: Energy damage wasn't displayed in identify monster dialog.
 
 New in version 2.5:
   << MM6 - MM8 >>
