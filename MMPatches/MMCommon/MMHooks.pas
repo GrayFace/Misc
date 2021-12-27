@@ -1981,7 +1981,7 @@ asm
 {$IFDEF mm6}
   jnz @std
   cmp word ptr [ebx], 29  // Enchant Item
-  jnz @std
+  jnz @test
 {$ELSE}
 	jz @std
 	cmp ax, 4   // Fire Aura
@@ -1997,6 +1997,10 @@ asm
 @mine:
 	xor eax, eax
 	mov [esp], m6*$42274F + m7*$427ED4 + m8*$42610B
+{$IFDEF mm6}
+@test:
+  test eax, eax
+{$ENDIF}
 @std:
 end;
 

@@ -149,7 +149,7 @@
 			<VersionInfo Name="AutoIncBuild">False</VersionInfo>
 			<VersionInfo Name="MajorVer">2</VersionInfo>
 			<VersionInfo Name="MinorVer">5</VersionInfo>
-			<VersionInfo Name="Release">1</VersionInfo>
+			<VersionInfo Name="Release">3</VersionInfo>
 			<VersionInfo Name="Build">0</VersionInfo>
 			<VersionInfo Name="Debug">False</VersionInfo>
 			<VersionInfo Name="PreRelease">False</VersionInfo>
@@ -162,17 +162,14 @@
 		<VersionInfoKeys>
 			<VersionInfoKeys Name="CompanyName"></VersionInfoKeys>
 			<VersionInfoKeys Name="FileDescription">GrayFace MM6 Patch</VersionInfoKeys>
-			<VersionInfoKeys Name="FileVersion">2.5.1.0</VersionInfoKeys>
+			<VersionInfoKeys Name="FileVersion">2.5.3.0</VersionInfoKeys>
 			<VersionInfoKeys Name="InternalName"></VersionInfoKeys>
 			<VersionInfoKeys Name="LegalCopyright">Sergey Rozhenko (http://grayface.github.io)</VersionInfoKeys>
 			<VersionInfoKeys Name="LegalTrademarks"></VersionInfoKeys>
 			<VersionInfoKeys Name="OriginalFilename"></VersionInfoKeys>
 			<VersionInfoKeys Name="ProductName">GrayFace MM6 Patch</VersionInfoKeys>
-			<VersionInfoKeys Name="ProductVersion">2.5.1.0</VersionInfoKeys>
+			<VersionInfoKeys Name="ProductVersion">2.5.3.0</VersionInfoKeys>
 		</VersionInfoKeys>  
-    
-    
-    
     
     
     <Excluded_Packages>

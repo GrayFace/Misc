@@ -331,11 +331,14 @@ Version 2.5.2:
 (MM6, MM7)
 [-] DontSkipSimpleMessage
 
+Version 2.5.3:
+(MM6)
+[-] My bug: Targeting wasn't working when shooting or casting spells
+ 
+
 Если загрузить сейв, где все рожи одинаковые, а потом сейв с разными, будут черные пятна на месте рож
 
 AV in GetFloorHeight at 45E44D (see CH)
-
-Paralyzed targets do not take damage from Fireball and Rock Blast
 
 Реально ли сделать на экране навыков отображение действующих значений навыков:
 1) как в MM7 - приписочкой +5 в конце описания, или
