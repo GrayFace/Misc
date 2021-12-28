@@ -1367,6 +1367,137 @@ asm
 end;
 {$ENDIF}
 
+//----- Don't count artifacts generated in unopened chests as taken
+
+var
+  GenArtifactCondition: uint;
+
+procedure FixArtifactDenial;
+asm
+  mov eax, GenArtifactCondition
+  mov edx, [esp + 8]
+  or [edx + _ItemOff_Condition], eax
+end;
+
+procedure FixArtifactDenial6;
+asm
+  mov eax, GenArtifactCondition
+  mov dword ptr [ebp+14h], eax
+end;
+
+// mark: clear "ChestArtifact" condition, mark in ArtifactsFound
+// else: clear in ArtifactsFound. In case it wasn't marked in ArtifactsFound,
+//   clear "ChestArtifact" condition
+procedure CheckChestArtifact(var a: TItem; cond: int; mark: Boolean);
+var
+  off: Boolean;
+  i: int;
+  p: pchar;
+begin
+  if (a.Condition and cond) = 0 then
+    exit;
+  a.Condition:= a.Condition and not cond;
+  i:= a.Number - _ArtifactsFoundBase^;
+  p:= _pArtifactsFound^ + i;
+  off:= (i < _ArtifactsFoundCount^) and (p^ = #0);
+  if mark = off then
+  begin
+    pbyte(p)^:= BoolToInt[mark];
+    if not mark then
+      a.Condition:= a.Condition or _ItemCond_ChestArtifact;
+  end;
+end;
+
+procedure GenerateChestsHook(std: TProcedure);
+var
+  a: PChest;
+  i: int;
+begin
+  GenArtifactCondition:= _ItemCond_ChestArtifact + _ItemCond_Stolen;
+  std;
+  a:= ptr(_pChests^);
+  repeat
+    for i:= low(a.Items) to high(a.Items) do
+      CheckChestArtifact(a.Items[i], GenArtifactCondition, false);
+    inc(a);
+  until a = _pChestsEnd^;
+  GenArtifactCondition:= 0;
+end;
+
+procedure MarkChestArtifacts(a: PChest);
+var
+  i, h: int;
+begin
+  h:= pint(_pChestWidth^ + 4*a.Pic)^*pint(_pChestHeight^ + 4*a.Pic)^ - 1;
+  for i := 0 to h do
+    if a.Inventory[i] > 0 then
+      CheckChestArtifact(a.Items[a.Inventory[i]], _ItemCond_ChestArtifact, true);
+end;
+
+//----- Fix chests: place items that were left over
+
+procedure FixChest(p: pchar; chest: int);
+var
+  ItemsToPlace: array[0..139] of int;
+  placed: Boolean;
+  i, j, h: int;
+begin
+  h:= pint(_pChestWidth^ + 4*pword(p)^)^*pint(_pChestHeight^ + 4*pword(p)^)^ - 1;
+  inc(p, 4);
+  for i := 0 to 139 do
+    ItemsToPlace[i]:= pint(p + _ItemOff_Size*i)^;
+  inc(p, _ItemOff_Size*140);
+  for i := 0 to h do
+    if pint2(p + i*2)^ > 0 then
+      ItemsToPlace[pint2(p + i*2)^ - 1]:= 0;
+  placed:= false;
+  for i := 0 to 139 do
+    if ItemsToPlace[i] <> 0 then
+      for j := 0 to h do
+        if (pint2(p + j*2)^ = 0) and _Chest_CanPlaceItem(0, ItemsToPlace[i], j, chest) then
+        begin
+          _Chest_PlaceItem(0, i, j, chest);
+          placed:= true;
+          break;
+        end;
+  if placed then
+    MarkChestArtifacts(ptr(p));
+end;
+
+procedure FixChestHook6;
+asm
+  lea eax, $5E2580[ebp*4]
+  test byte ptr [eax + 2], 2
+  jz @exit
+  mov edx, edi
+  call FixChest
+  lea eax, [ecx + 1]
+  cmp eax, ecx
+@exit:
+end;
+
+procedure FixChestHook7;
+asm
+  test byte ptr [edi], 2
+  jz @exit
+  lea eax, [edi - 2]
+  mov edx, ecx
+  call FixChest
+  mov [esp], $42041C
+@exit:
+end;
+
+procedure FixChestHook8;
+asm
+  mov [ebp - $30], ebx
+  jz @exit
+  lea eax, [ebx - 2]
+  mov edx, ecx
+  call FixChest
+  mov [esp], $41F914
+@exit:
+end;
+
 //----- Fix chests by compacting
 
 function GetChestItemMask(p: pchar): string;
@@ -1387,9 +1518,9 @@ var
 begin
   kind:= pint(p + _ChestOff_Items + _ItemOff_Size*index)^;
   if kind = 0 then  exit;
-  chest:= int(p - _Chests) div _ChestOff_Size;
-  w:= pint(_ChestWidth + 4*pword(p)^)^;
-  h:= pint(_ChestHeight + 4*pword(p)^)^;
+  chest:= int(p - _pChests^) div _ChestOff_Size;
+  w:= pint(_pChestWidth^ + 4*pword(p)^)^;
+  h:= pint(_pChestHeight^ + 4*pword(p)^)^;
   inc(p, _ChestOff_Inventory);
   for y:= 0 to h - 1 do
     for x:= 0 to w - 1 do
@@ -1406,19 +1537,27 @@ var
   s: string;
   i: int;
 begin
-  s:= GetChestItemMask(p);
-  CopyMemory(@buf, p + _ChestOff_Inventory, 280);
-  ZeroMemory(p + _ChestOff_Inventory, 280);
-  for i:= 0 to 139 do
-    ChestPlaceItem(p, i);
-  if GetChestItemMask(p) > s then  exit;  // compact is better
-  CopyMemory(p + _ChestOff_Inventory, @buf, 280);
+  if FixChestsByCompacting then
+  begin
+    s:= GetChestItemMask(p);
+    CopyMemory(@buf, p + _ChestOff_Inventory, 280);
+    ZeroMemory(p + _ChestOff_Inventory, 280);
+    for i:= 0 to 139 do
+      ChestPlaceItem(p, i);
+    if GetChestItemMask(p) > s then  exit;  // compact is better
+    CopyMemory(p + _ChestOff_Inventory, @buf, 280);
+  end;
+  MarkChestArtifacts(ptr(p));
 end;
 
 procedure FixChestsCompact;
 asm
   push eax
-  add eax, m6*(_Chests + 2) - 2
+{$IFDEF mm6}
+  add eax, [_pChests]
+{$ELSE}
+  sub eax, 2
+{$ENDIF}
   call FixChestsCompactProc
   pop eax
 end;
@@ -1951,9 +2090,10 @@ end;
 
 procedure FixMonsterBlockShots;
 asm
-  mov ecx, [ebp - $10]
-  sub ecx, m7*$86 + m8*$8E
-  lea edx, [_MapMonsters + eax]
+  mov edx, [ebp - $10]
+  sub edx, m7*$86 + m8*$8E
+  mov ecx, [__pMapMonsters]
+  add ecx, eax
   call _Mon_IsAgainstMon
   test eax, eax
   push m7*$471724 + m8*$470282
@@ -2051,7 +2191,8 @@ end;
 
 procedure FixRemoveInvItemChest;
 asm
-  add eax, _Chests + _ChestOff_Inventory
+  add eax, [__pChests]
+  add eax, _ChestOff_Inventory
   {$IFDEF mm6}mov edx, [esp + $20 - 8]{$ENDIF}
   {$IFDEF mm7}mov edx, [ebp - $C]{$ENDIF}
   call RemoveInvItemChest
@@ -2617,7 +2758,7 @@ begin
     i:= GetMouseTarget;
     if i and 7 = 3 then
     begin
-      mon:= ptr(_MapMonsters + _MonOff_Size*(i div 8));
+      mon:= _pMapMonsters^ + _MonOff_Size*(i div 8);
       if not IsMonAlive(mon, true) then
         mon:= nil;
     end;
@@ -3719,7 +3860,7 @@ end;
 //----- HooksList
 
 var
-  HooksCommon: array[1..77] of TRSHookInfo = (
+  HooksCommon: array[1..80] of TRSHookInfo = (
     (p: m6*$453ACE + m7*$463341 + m8*$461316; newp: @UpdateHintHook;
        t: RShtCallStore; Querry: hqFixStayingHints), // Fix element hints staying active in some dialogs
     (p: m6*$4226F8 + m7*$427E71 + m8*$4260A8; newp: @FixItemSpells;
@@ -3860,6 +4001,12 @@ var
       t: RShtCallBefore), // Fix "Nothing here" after a simple message dialog
     (p: m6*$43AA82 + m7*$44519A; newp: @DontSkipSimpleMessage; t: RShtBefore;
       size: 6 + m7; Querry: hqDontSkipSimpleMessage), // Don't cancel simple message dialog after any input
+    (p: m7*$45694A + m8*$4541C9; newp: @FixArtifactDenial;
+      t: RShtCallBefore), // Don't count artifacts generated in unopened chests as taken
+    (p: m7*$450657 + m8*$44DD9A; newp: @FixArtifactDenial;
+      t: RShtCallBefore), // Don't count artifacts generated in unopened chests as taken
+    (p: m6*$456300 + m7*$450244 + m8*$44D96C; newp: @GenerateChestsHook;
+      t: RShtFunctionStart), // Don't count artifacts generated in unopened chests as taken
     ()
   );
 {$IFDEF MM6}
@@ -3951,10 +4098,13 @@ var
     (p: $43201A; newp: @FixMonsterSpellsMM6; t: RShtCall; Querry: hqFixMonsterSpells), // All spells were doing Fire damage
     (p: $450A2B; newp: @FixStartupCopyright; t: RShtCall; size: 6), // Fix copyright screen staying visible on startup
     (p: $42DFBF; newp: @UpdateAfterTab; t: RShtAfter), // Fix awards not updating when pressing Tab
+    (p: $41E52E; newp: @FixChestHook6; t: RShtCall; size: 8; Querry: hqFixChests), // Fix chests: place items that were left over
+    (p: $448AE7; newp: @FixArtifactDenial6; size: 7; t: RShtCall), // Don't count artifacts generated in unopened chests as taken
+    (p: $44A6D4; newp: ptr($44A70A); size: 6; t: RShtJmp), // Fix RandomizeArtifact in MM6
     ()
   );
 {$ELSEIF defined(MM7)}
-  Hooks: array[1..135] of TRSHookInfo = (
+  Hooks: array[1..136] of TRSHookInfo = (
     (p: $47B84E; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (monsters)
     (p: $47B296; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (items)
     (p: $47AD40; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (sprites)
@@ -4092,13 +4242,14 @@ var
     (p: $44800F; newp: @FixCallLeaveMap; t: RShtCallBefore), // Fix LeaveMap event not called on travel
     (p: $44C30F; newp: @FixCallLeaveMap; t: RShtCallBefore), // Fix LeaveMap event not called on travel
     (p: $4B6A96; newp: @FixCallLeaveMap; t: RShtCallBefore), // Fix LeaveMap event not called on travel
+    (p: $420412; newp: @FixChestHook7; t: RShtCall; Querry: hqFixChests), // Fix chests: place items that were left over
     ()
   );
 {$ELSE}
   FogRange: int;
   FogRangeFloat, FogRangeMul, FogRangeMul2: Single;
 
-  Hooks: array[1..134] of TRSHookInfo = (
+  Hooks: array[1..135] of TRSHookInfo = (
     (p: $47AB35; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Monsters not visible on the sides of the screen
     (p: $47A55E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Items not visible on the sides of the screen
     (p: $48B37E; old: $4D9557; newp: @AbsCheckOutdoor; t: RShtCall), // Effects not visible on the sides of the screen
@@ -4236,6 +4387,7 @@ var
     (p: $430BC3; newp: @FixCallLeaveMap; t: RShtCallBefore), // Fix LeaveMap event not called on travel
     (p: $445335; newp: @FixCallLeaveMap; t: RShtCallBefore), // Fix LeaveMap event not called on travel
     (p: $4B52F5; newp: @FixCallLeaveMap; t: RShtCallBefore), // Fix LeaveMap event not called on travel
+    (p: $41F90A; newp: @FixChestHook8; t: RShtCall; Querry: hqFixChests), // Fix chests: place items that were left over
     ()
   );
 {$IFEND}
@@ -4303,6 +4455,8 @@ begin
     ApplyHooks(hqPaperDollInChestsAndOldCloseRings);
   if Options.FixSFT then
     ApplyHooks(hqFixSFT);
+  if Options.FixChests then
+    ApplyHooks(hqFixChests);
   if Options.FixChestsByReorder then
     ApplyHooks(19);
   if Options.EnableAttackSpell then

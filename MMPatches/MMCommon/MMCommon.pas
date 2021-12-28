@@ -10,6 +10,7 @@ uses
 
 const
   hqPostponeIntro = 2;
+  hqFixChests = 11;
   hqFixObelisks = 26;
   hqWindowSize = 27;
   hqBorderless = 28;
@@ -248,7 +249,7 @@ var
   MouseLookChanged2, BorderlessTopmost: Boolean;
   DoubleSpeed: BOOL;
   {$IFNDEF mm6}
-  NoVideoDelays, DisableAsyncMouse, ShowTreeHints: Boolean;
+  NoVideoDelays, DisableAsyncMouse, ShowTreeHints, FixIndoorFOV: Boolean;
   TurnBasedWalkDelay, TreeHintsVal: int;
   MipmapsBase, MipmapsBasePat: TStringList;
   ViewMulFactor: ext = 1;
@@ -270,7 +271,7 @@ var
   UseMM7text, SupportMM7ResTool: Boolean;
   FlyNPCScreen: int = 4;
 {$ELSEIF defined(mm8)}
-  NoWaterShoreBumpsSW, FixQuickSpell, FixIndoorFOV: Boolean;
+  NoWaterShoreBumpsSW, FixQuickSpell: Boolean;
   MouseBorder, StartupCopyrightDelay: int;
 {$IFEND}
 
@@ -513,6 +514,29 @@ type
   PSpellInfoArray = ^TSpellInfoArray;
   TSpellInfoArray = array[0..99 + m8*33] of TSpellInfo;
 
+  PItem = ^TItem;
+  TItem = packed record
+    Number: int;
+    Bonus: int;
+    BonusStrength: int;
+    Bonus2: int;
+    Charges: int;
+    Condition: int;
+    BodyLocation: byte;
+    MaxCharges: byte;
+    Owner: byte;
+    unk: byte;
+    {$IFNDEF mm6}BonusExpireTime: int64;{$ENDIF}
+  end;
+
+  PChest = ^TChest;
+  TChest = packed record
+    Pic: int2;
+    Bits: uint2;
+    Items: array[1..140] of TItem;
+    Inventory: array[0..139] of int2;
+  end;
+
 {$IFDEF mm6}
   PSkills = PByteArray;
 {$ELSE}
@@ -593,6 +617,23 @@ const
   __MonstersLimit = m6*$4A35FA + m7*$4BBED6 + m8*$4BA086;
   _MonstersLimit = pint(__MonstersLimit);
   __MonstersSummonLimit = m6*$4A35FA + m7*$44F6FD + m8*$44CE1F;
+  __pMapMonsters = m6*$4014BB + m7*$40123A + m8*$40123F;
+  _pMapMonsters = ppchar(__pMapMonsters);
+  __pChestWidth = m6*$41DEC0 + m7*$41FE3D + m8*$41F2B1;
+  __pChestHeight = m6*$41DEC7 + m7*$41FE43 + m8*$41F2B7;
+  __pChests = m6*$41DEB9 + m7*$41FE31 + m8*$41F2A5;
+  __pChestsEnd = m6*$456695 + m7*$450537 + m8*$44DC7F;
+  _pChestWidth = ppchar(__pChestWidth);
+  _pChestHeight = ppchar(__pChestHeight);
+  _pChests = ppchar(__pChests);
+  _pChestsEnd = pptr(__pChestsEnd);
+  __pArtifactsFound = m6*$448A90 + m7*$4568F7 + m8*$454169;
+  _pArtifactsFound = ppchar(__pArtifactsFound);
+  __ArtifactsFoundBase = m6*$448ADF + m7*$45693A + m8*$4541C0;
+  _ArtifactsFoundBase = pint(__ArtifactsFoundBase);
+  __ArtifactsFoundCount = m6*$448A99 + m7*$456901 + m8*$454176;
+  _ArtifactsFoundCount = pbyte(__ArtifactsFoundCount);
+
 
   _ItemOff_Number = 0;
   _ItemOff_Bonus = 4;
@@ -607,9 +648,11 @@ const
   _ItemCond_TemporaryBonus = 8;
   _ItemCond_Stolen = $100*(1 - m6);
   _ItemCond_Hardened = $200*(1 - m6);
+  _ItemCond_ChestArtifact = $400;
 
   _ChestOff_Items = 4;
   _ChestOff_Inventory = 4 + _ItemOff_Size*140;
+  _ChestOff_Size = 284 + 140*_ItemOff_Size;
 
   _CharOff_ItemMainHand = m6*$142C + m7*$194C + m8*$1C08;
   _CharOff_Items = m6*$128 + m7*$1F0 + m8*$484; // The actual offset is bigger, because they're indexed from 1 instead of 0
@@ -1184,6 +1227,7 @@ begin
       FixIceBoltBlast:= ReadBool('FixIceBoltBlast', true, false);
       FixMonsterAttackTypes:= ReadBool('FixMonsterAttackTypes', true, false);
       IndoorAntiFov:= Round(300/ReadFloat('IndoorFovMul', 300/369, false));
+      FixIndoorFOV:= FixIndoorFOV or (IndoorAntiFov <> 369);
       FixSouldrinker:= ReadBool('FixSouldrinker', true, false);
       FixClubsDelay:= ReadBool('FixClubsDelay', true, false);
       ClimbBetter:= ReadBool('ClimbBetter', true, false);

@@ -53,7 +53,6 @@ const
   _ScreenBuffer = pptr($E31B54);
   _TimeDelta = pint($50BA7C);
   _Flying = pint($ACD53C);
-  _MapMonsters = $5FEFD8;
   _IsD3D = pbool($DF1A68);
   _startinwindow = pbool($DF1A6C);
   _PlayersArray = $ACD804;
@@ -132,10 +131,6 @@ const
 
   _Chest_CanPlaceItem: function(n1, itemType, pos, chest: int): BOOL = ptr($41FE1A);
   _Chest_PlaceItem: procedure(n1, itemIndex, pos, chest: int) = ptr($4200E7);
-  _ChestWidth = $4E2BEC;
-  _ChestHeight = $4E2C0C;
-  _Chests = $5E4FD0;
-  _ChestOff_Size = 5324;
 
   _Character_GetWeaponDelay: function(n1, n2: int; this:ptr; ranged: LongBool):int = ptr($48E19B);
   _Character_IsAlive: function(a1,a2, member:ptr):Bool = ptr($492C03);

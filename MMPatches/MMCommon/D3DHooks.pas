@@ -1016,7 +1016,7 @@ end;
 
 procedure FixIndoorFOVProcD3D(var v: Single);
 begin
-  if (m8 = 1) or IsLayoutActive then
+  if FixIndoorFOV or IsLayoutActive then
     with Options.RenderRect do
       v:= IndoorAntiFov*ViewMulFactor*DynamicFovFactor(Right - Left, Bottom - Top);
 end;
@@ -1483,7 +1483,7 @@ begin
     end;
     ApplyHooks(hqLayout);
   end;
-  if (Options.UILayout <> nil) or (IndoorAntiFov <> 369) {$IFDEF MM8}or FixIndoorFOV{$ENDIF} then
+  if (Options.UILayout <> nil) or FixIndoorFOV then
     ApplyHooks(hqFixIndoorFOV);
 end;
 

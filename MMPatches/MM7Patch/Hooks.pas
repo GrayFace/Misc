@@ -964,42 +964,6 @@ asm
   test byte ptr [$6BE1E4], $10
 end;
 
-//----- Fix chests: place items that were left over
-
-procedure FixChest(p, chest: int);
-var
-  ItemsToPlace: array[0..139] of int;
-  i, j, h: int;
-begin
-  h:= pint(_ChestWidth + 4*pword(p)^)^*pint(_ChestHeight + 4*pword(p)^)^ - 1;
-  inc(p, 4);
-  for i := 0 to 139 do
-    ItemsToPlace[i]:= pint(p + _ItemOff_Size*i)^;
-  inc(p, _ItemOff_Size*140);
-  for i := 0 to h do
-    if pint2(p + i*2)^ > 0 then
-      ItemsToPlace[pint2(p + i*2)^ - 1]:= 0;
-  for i := 0 to 139 do
-    if ItemsToPlace[i] <> 0 then
-      for j := 0 to h do
-        if (pint2(p + j*2)^ = 0) and _Chest_CanPlaceItem(0, ItemsToPlace[i], j, chest) then
-        begin
-          _Chest_PlaceItem(0, i, j, chest);
-          break;
-        end;
-end;
-
-procedure FixChestHook;
-asm
-  test byte ptr [edi], 2
-  jz @exit
-  lea eax, [edi - 2]
-  mov edx, ecx
-  call FixChest
-  mov [esp], $42041C
-@exit:
-end;
-
 //----- Limit blaster & bow speed with BlasterRecovery
 
 procedure FixBlasterSpeed;
@@ -3211,7 +3175,7 @@ end;
 //----- HooksList
 
 var
-  HooksList: array[1..325] of TRSHookInfo = (
+  HooksList: array[1..324] of TRSHookInfo = (
     (p: $45B0D1; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $4655FE; old: $452C75; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave file name localization
     (p: $45E5A4; old: $45E2D0; backup: @FillSaveSlotsStd; newp: @FillSaveSlotsHook; t: RShtCall), // Fix Save/Load Slots
@@ -3287,7 +3251,6 @@ var
     (p: $466E5D; newp: @ErrorHook3; t: RShtCall; size: 6), // Report errors
     (p: $4AA0CF; newp: @ChangeTrackHook; t: RShtCall; size: 7), // MusicLoopsCount
     (p: $432AC8; old: $7B; new: $71; t: RSht1), // Fix menu return
-    (p: $420412; newp: @FixChestHook; t: RShtCall; Querry: 11), // Fix chests: place items that were left over
     (p: $48E4E3; newp: @FixBlasterSpeed; t: RShtCall; size: 6), // Limit blaster & bow speed with BlasterRecovery
     (p: $466CD8; newp: @DDrawErrorHook; t: RShtJmp), // Ignore DDraw errors
     (p: $42262C; old: $D75; new: $22EB; t: RSht2), // Remove code left from MM6 (pretty harmless, but still a bug)
@@ -3625,8 +3588,6 @@ begin
     RSApplyHooks(HooksList, 9);
   if Options.ProgressiveDaggerTrippleDamage then
     RSApplyHooks(HooksList, 10);
-  if Options.FixChests then
-    RSApplyHooks(HooksList, 11);
   if Options.DataFiles then
     RSApplyHooks(HooksList, 12);
   if Options.FixGMStaff then

@@ -412,6 +412,15 @@ Version 2.5.2:
 [-] "Nothing here" was shown on the screen after a dialog with a guard
 [-] My bug: List of all conditions wasn't displayed in right click menu for Condition in Stats screen
 
+Version 2.5.4:
+(MM6-MM8)
+[-]
+(MM7, MM8)
+[-] My bug: FixMonstersBlockingShots didn't work right
+(MM7)
+[-] My bug: IndoorFovMul was only working in UILayout mode
+
+[!!] MM8  https://discord.com/channels/296507109997019137/296508593744773120/924945750427861033
 [!!] https://discord.com/channels/296507109997019137/296508593744773120/900738954477834260
 [!!] Configure controls like in MM6, keyboard layout-independant in-game Controls
 [!!] Show videos from MM6 without black bars, support HD videos
