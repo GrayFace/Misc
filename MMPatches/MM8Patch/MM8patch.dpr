@@ -394,6 +394,13 @@ Version 2.5.2:
 (MM8)
 [-] My bug: ExitDialogsWithRightButton was causing a crash in NPC/Guard dialog
 
+Version 2.5.4:
+(MM6-MM8)
+[-] Now when a location respawns, all artifacts generated in chests you've never opened get cleared from "obtained" artifacts list
+(MM7, MM8)
+[-] My bug: FixMonstersBlockingShots didn't work right
+[-] My bug: evt.MoveToMap didn't work from NPC dialog when there's no entrance dialog
+
 
 
 Version ?:

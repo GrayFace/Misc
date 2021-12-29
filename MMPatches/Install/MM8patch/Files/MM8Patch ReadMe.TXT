@@ -1,4 +1,4 @@
-GrayFace MM8 Patch v2.5.2
+GrayFace MM8 Patch v2.5.4
 By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
@@ -10,6 +10,14 @@ For all exploits the patch fixes an option to disable the fix shoud be described
 At the end of ReadMe you'll find info on how to report errors.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
+
+New in version 2.5.4:
+  << MM6 - MM8 >>
+[-] Now, when a location re-spawns, all artifacts generated in chests you've never opened get cleared from "obtained artifacts" list.
+  << MM7, MM8 >>
+[-] My bug: FixMonstersBlockingShots option didn't work right.
+  << Fixes in maps >>
+[-] Prison of the Lord of Water (d38): An artifact was being generated in an inaccessible chest, leading to it not being obtainable by the party anymore.
 
 New in version 2.5.2:
   << MM6 - MM8 >>
@@ -70,7 +78,7 @@ New in version 2.5:
 [*] 3DO and other logos are now shown when intro is postponed by NoIntro=1, unless NoIntoLogos=0 line is added to INI. You can cancel logos with Esc and still watch the intro.
   << MM7, MM8 >>
 [+] UI.txt: New FloatingScreens mode makes inventory, houses and other such screens open in a panel.
-[+] With IndoorFovMul hidden option you can specify the amount by which FOV is multiplied indoors. Default is 0.813.
+[+] With IndoorFovMul hidden option you can specify the amount by which FOV is multiplied indoors in Hardware mode. Default is 0.813.
 [+] TrueColorSprites hidden option, off by default to prevent 'out of memory' with HD sprites.
 [+] The game now doesn't crash on exit if d3dsprite.hwl and d3dbitmap.hwl are missing.
 [+] "Mapbkg" will be used as the background for minimap if present in *.icons.lod. This will help color blind people see blue dots on the minimap better.

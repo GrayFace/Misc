@@ -1037,42 +1037,6 @@ asm
   test byte ptr [$6F39A4], $10
 end;
 
-//----- Fix chests: place items that were left over
-
-procedure FixChest(p, chest: int);
-var
-  ItemsToPlace: array[0..139] of int;
-  i, j, h: int;
-begin
-  h:= pint(_ChestWidth + 4*pword(p)^)^*pint(_ChestHeight + 4*pword(p)^)^ - 1;
-  inc(p, 4);
-  for i := 0 to 139 do
-    ItemsToPlace[i]:= pint(p + _ItemOff_Size*i)^;
-  inc(p, _ItemOff_Size*140);
-  for i := 0 to h do
-    if pint2(p + i*2)^ > 0 then
-      ItemsToPlace[pint2(p + i*2)^ - 1]:= 0;
-  for i := 0 to 139 do
-    if ItemsToPlace[i] <> 0 then
-      for j := 0 to h do
-        if (pint2(p + j*2)^ = 0) and _Chest_CanPlaceItem(0, ItemsToPlace[i], j, chest) then
-        begin
-          _Chest_PlaceItem(0, i, j, chest);
-          break;
-        end;
-end;
-
-procedure FixChestHook;
-asm
-  mov [ebp - $30], ebx
-  jz @exit
-  lea eax, [ebx - 2]
-  mov edx, ecx
-  call FixChest
-  mov [esp], $41F914
-@exit:
-end;
-
 //----- Ignore DDraw errors
 
 procedure DDrawErrorHook;
@@ -3110,7 +3074,7 @@ end;
 //----- HooksList
 
 var
-  HooksList: array[1..315] of TRSHookInfo = (
+  HooksList: array[1..314] of TRSHookInfo = (
     (p: $458E18; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $463862; old: $450493; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave/quicksave filenames localization
     (p: $4CD509; t: RShtNop; size: 12), // Fix Save/Load Slots: it resets SaveSlot, SaveScroll
@@ -3200,7 +3164,6 @@ var
     (p: $464FDA; newp: @ErrorHook2; t: RShtCall; size: 6), // Report errors
     (p: $4652F4; newp: @ErrorHook3; t: RShtCall; size: 6), // Report errors
     (p: $4A862D; newp: @ChangeTrackHook; t: RShtCall; size: 7), // MusicLoopsCount
-    (p: $41F90A; newp: @FixChestHook; t: RShtCall; Querry: 11), // Fix chests: place items that were left over
     (p: $46516F; newp: @DDrawErrorHook; t: RShtJmp), // Ignore DDraw errors
     (p: $421847; old: $D75; new: $22EB; t: RSht2), // Remove code left from MM6
     (p: $4BE69E; old: $20; new: 8; t: RSht1), // Attacking big monsters D3D
@@ -3504,8 +3467,6 @@ begin
     RSApplyHooks(HooksList, 9);
   if Options.ProgressiveDaggerTrippleDamage then
     RSApplyHooks(HooksList, 10);
-  if Options.FixChests then
-    RSApplyHooks(HooksList, 11);
   if Options.DataFiles then
     RSApplyHooks(HooksList, 12);
   if Options.FixSkyBitmap then
