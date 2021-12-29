@@ -414,10 +414,12 @@ Version 2.5.2:
 
 Version 2.5.4:
 (MM6-MM8)
-[-]
+[-] Now when a location respawns, all artifacts generated in chests you've never opened get cleared from "obtained" artifacts list
 (MM7, MM8)
 [-] My bug: FixMonstersBlockingShots didn't work right
+[-] My bug: evt.MoveToMap didn't work from NPC dialog when there's no entrance dialog
 (MM7)
+[*] Since Titan's Stronghold has an unreachable chest with an artifact, I've disabled FixUnmarkedArtifacts by default
 [-] My bug: IndoorFovMul was only working in UILayout mode
 
 [!!] MM8  https://discord.com/channels/296507109997019137/296508593744773120/924945750427861033

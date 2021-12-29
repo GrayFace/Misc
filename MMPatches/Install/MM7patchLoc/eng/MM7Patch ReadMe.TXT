@@ -1,4 +1,4 @@
-GrayFace MM7 Patch v2.5.2
+GrayFace MM7 Patch v2.5.4
 By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
@@ -10,6 +10,17 @@ For all exploits the patch fixes an option to disable the fix shoud be described
 At the end of ReadMe you'll find info on how to report errors.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
+
+New in version 2.5.4:
+  << MM6 - MM8 >>
+[-] Now, when a location re-spawns, all artifacts generated in chests you've never opened get cleared from "obtained artifacts" list.
+  << MM7, MM8 >>
+[-] My bug: FixMonstersBlockingShots option didn't work right.
+  << MM7 >>
+[*] I've disabled FixUnmarkedArtifacts by default, because Titan's Stronghold had an unreachable chest with an artifact, still present in Rev4 mod or games started before this version of patch.
+[-] My bug: IndoorFovMul option was only working in UILayout mode.
+  << Fixes in maps >>
+[-] The Titans' Stronghold (d09), Temple of the Dark (t02): Artifacts could be generated in inaccessible chests, reducing the number of artifacts the party can get.
 
 New in version 2.5.2:
   << MM6 - MM8 >>
@@ -115,7 +126,7 @@ New in version 2.5:
 [-] If current fines are due, arcomage win/lose count wasn't added to awards.
 [-] Master Healer NPC was messing up player skills when activated.
 [-] Artifacts weren't generated properly as objects on the ground.
-[-] Artifacts generated in a specific way (as level 7 items) weren't marked as found. Add FixUnmarkedArtifacts=0 to INI to disable this fix.
+[-] Artifacts generated in a specific way (as level 7 items) weren't marked as found. Add FixUnmarkedArtifacts=1 to INI to enable this fix (since version 2.5.4 it's disabled by default).
 [-] Lich was becoming immune to elemental magic if resistances are 200+. Add FixLichImmune=0 to INI to disable this fix.
 [-] NPCs with an action ("Heal Party", cast spell etc.) had 1 non-interactive invisible dialog item at the bottom. It was shifting everything else up.
 [-] "Of David" enchantment wasn't working on bows.
@@ -136,8 +147,6 @@ New in version 2.5:
 [-] Upon completing Faerie Pipes quest it was recorded in Awards only of one player.
 [-] Dwarven guards and Behemoths were too fat and getting stuck in doorways.
 
-
-New in version 2.4.1:
 
 New in version 2.4:
   << MM6 - MM8 >>
