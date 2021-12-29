@@ -15,7 +15,7 @@ New in version 2.5.2:
   << MM6 - MM8 >>
 [*] Now character's Stats screen displays a condition that determines stats, in all other places the most severe one is displayed.
   << MM6, MM7 >>
-[-] Now simple message dialog (e.g. obelisk message) isn't cancelled by any key press. In MM7 the message also doesn't stay on the screen after being cancelled anymore. Add DontSkipSimpleMessage=0 to INI to disable this fix.
+[-] Now simple message dialog (e.g. obelisk message) isn't cancelled by pressing any key. In MM7 the message also doesn't stay on the screen after being cancelled anymore. Add DontSkipSimpleMessage=0 to INI to disable this fix.
   << MM7, MM8 >>
 [-] "Nothing here" was shown on the screen after a dialog with a guard.
 [-] My bug: List of all conditions wasn't displayed in right click menu for Condition in Stats screen.
@@ -73,7 +73,7 @@ New in version 2.5:
 [-] 'Charm' spell had wrong durations.
   << MM7, MM8 >>
 [+] UI.txt: New FloatingScreens mode makes inventory, houses and other such screens open in a panel.
-[+] With IndoorFovMul hidden option you can specify the amount by which FOV is multiplied indoors. Default is 0.813.
+[+] With IndoorFovMul hidden option you can specify the amount by which FOV is multiplied indoors in Hardware mode. Default is 0.813.
 [+] TrueColorSprites hidden option, off by default to prevent 'out of memory' with HD sprites.
 [+] The game now doesn't crash on exit if d3dsprite.hwl and d3dbitmap.hwl are missing.
 [+] "Mapbkg" will be used as the background for minimap if present in *.icons.lod. This will help color blind people see blue dots on the minimap better.

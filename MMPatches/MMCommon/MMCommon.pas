@@ -33,7 +33,7 @@ const
   hqPaperDollInChests2 = 45;
   hqPlaceChestItemsVertically = 46;
   hqFixInterfaceBugs2 = 47;
-  hqFixChestsByCompacting = 48;
+  //hqFixChestsByCompacting = 48;
   hqSpriteAngleCompensation = 49;
   hqTex32Bit = 50;
   hqTex32Bit2 = 51;
@@ -176,7 +176,7 @@ type
     MouseLookPermKey: int;                    //
     LastSoundSample: int;                     //
     WaterWalkDamage: int;                     // (unused in MM6)
-    FixUnmarkedArtifacts: LongBool;           // (MM7 only)
+    FixUnmarkedArtifacts: LongBool;           // (unused in MM8)
     FixClubsDelay: LongBool;                  // (unused in MM6)
     FixDarkTrainers: LongBool;                // (MM7 only)
     FixLightBolt: LongBool;                   // (unused in MM6)
@@ -610,6 +610,8 @@ const
   _DayOfMonth = pint(__DayOfMonth);
   _TimeHour = pint(__TimeHour);
   _TimeMinute = pint(__TimeMinute);
+  __SpritesCount = m6*$5B23C4 + m7*$69AC50 + m8*$6C8B58;
+  _SpritesCount = pint(__SpritesCount);
   __ObjectsCount = m6*$5E2180 + m7*$6650AC + m8*$692FB4;
   _ObjectsCount = pint(__ObjectsCount);
   __MonstersCount = m6*$5B22F8 + m7*$6650A8 + m8*$692FB0;
@@ -633,7 +635,8 @@ const
   _ArtifactsFoundBase = pint(__ArtifactsFoundBase);
   __ArtifactsFoundCount = m6*$448A99 + m7*$456901 + m8*$454176;
   _ArtifactsFoundCount = pbyte(__ArtifactsFoundCount);
-
+  _VisibleOutlinesSize = pint(m6*$48BFFA + m7*$49A571 + m8*$497A46);
+  _IndoorFacetsCount = pint(m6*$5F7D20 + m7*$6BE4C0 + m8*$6F3C80);
 
   _ItemOff_Number = 0;
   _ItemOff_Bonus = 4;
@@ -682,6 +685,7 @@ const
   _ObjOff_X = 4;
   _ObjOff_Y = 8;
   _ObjOff_Z = $C;
+  _ObjOff_Size = $70 - m6*$C;
 
   _Skill_Club = -m6 + m7*37 + m8*40;
   _Skill_Misc = m6*12 + m7*38 + m8*40;
@@ -1244,6 +1248,7 @@ begin
       FixWaterWalkManaDrain:= ReadBool('FixWaterWalkManaDrain', true, false);
       KeepEmptyWands:= ReadBool('KeepEmptyWands', true, false);
       {$IFNDEF mm8}DontSkipSimpleMessage:= ReadBool('DontSkipSimpleMessage', true, false);{$ENDIF}
+      {$IFNDEF mm8}FixUnmarkedArtifacts:= ReadBool('FixUnmarkedArtifacts', m7 = 0, false);{$ENDIF}
 
 {$IFDEF mm6}
       info:= 'Set this to 0 to disable loading of mm6text.dll';
@@ -1295,7 +1300,6 @@ begin
         UseMM7text:= ReadBool('UseMM7textDll', true);
       info:= '';
 
-      FixUnmarkedArtifacts:= ReadBool('FixUnmarkedArtifacts', true, false);
       FixDarkTrainers:= ReadBool('FixDarkTrainers', true, false);
 {$ENDIF}
       info:= '';

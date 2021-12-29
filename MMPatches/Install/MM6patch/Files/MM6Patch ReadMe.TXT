@@ -1,4 +1,4 @@
-GrayFace MM6 Patch v2.5.3
+GrayFace MM6 Patch v2.5.4
 By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
@@ -10,6 +10,14 @@ For all exploits the patch fixes an option to disable the fix shoud be described
 At the end of ReadMe you'll find info on how to report errors.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
+
+New in version 2.5.4:
+  << MM6 - MM8 >>
+[-] Now, when a location re-spawns, all artifacts generated in chests you've never opened get cleared from "obtained artifacts" list.
+  << MM6 >>
+[-] Routine for generation of artifacts exclusively (unused on standard maps) was completely broken. They get counted as found, which can be changed by adding FixUnmarkedArtifacts=0 to INI.
+  << Fixes in maps >>
+[-] Temple of Tsantsa (t3): Spear under a pillow in final area wasn't obtainable due to variables conflict.
 
 New in version 2.5.3:
   << MM6 >>

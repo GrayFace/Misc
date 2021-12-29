@@ -1371,67 +1371,163 @@ end;
 
 var
   GenArtifactCondition: uint;
+  GenArtifactFound: array of byte; // stores last 'found' array state,
+  // just in case a mod decides to mark found artifacts on a
+  // completely different basis
 
 procedure FixArtifactDenial;
 asm
   mov eax, GenArtifactCondition
-  mov edx, [esp + 8]
+{$IFDEF mm6}
+  mov [ebp + _ItemOff_Condition], eax
+{$ELSE}
+  mov edx, [esp + 4]
   or [edx + _ItemOff_Condition], eax
+{$ENDIF}
 end;
 
-procedure FixArtifactDenial6;
-asm
-  mov eax, GenArtifactCondition
-  mov dword ptr [ebp+14h], eax
-end;
-
-// mark: clear "ChestArtifact" condition, mark in ArtifactsFound
-// else: clear in ArtifactsFound. In case it wasn't marked in ArtifactsFound,
-//   clear "ChestArtifact" condition
-procedure CheckChestArtifact(var a: TItem; cond: int; mark: Boolean);
+// release: clear in ArtifactsFound, clear "ChestArtifact" condition 
+// else: check that it's been added to ArtifactsFound 
+procedure CheckChestArtifact(var a: TItem; cond: int; refund: Boolean);
 var
-  off: Boolean;
   i: int;
   p: pchar;
 begin
-  if (a.Condition and cond) = 0 then
+  if (a.Condition and cond) <> cond then
     exit;
   a.Condition:= a.Condition and not cond;
   i:= a.Number - _ArtifactsFoundBase^;
+  //zM(i, BoolToInt[refund]);
+  if i >= _ArtifactsFoundCount^ then
+    exit;
   p:= _pArtifactsFound^ + i;
-  off:= (i < _ArtifactsFoundCount^) and (p^ = #0);
-  if mark = off then
+  if refund then
+    p^:= #0
+  else if (p^ <> #0) and (GenArtifactFound[i] = 0) then
+    a.Condition:= a.Condition or _ItemCond_ChestArtifact;
+end;
+
+procedure CheckChests(a: PChest; n: int; cond: int = _ItemCond_ChestArtifact; refund: Boolean = true);
+var
+  i: int;
+begin
+  for n := n downto 1 do
   begin
-    pbyte(p)^:= BoolToInt[mark];
-    if not mark then
-      a.Condition:= a.Condition or _ItemCond_ChestArtifact;
+    for i:= low(a.Items) to high(a.Items) do
+      CheckChestArtifact(a.Items[i], cond, refund);
+    inc(a);
   end;
 end;
 
-procedure GenerateChestsHook(std: TProcedure);
-var
-  a: PChest;
-  i: int;
+procedure RefundChestArtifacts(p: PChest); stdcall;
 begin
-  GenArtifactCondition:= _ItemCond_ChestArtifact + _ItemCond_Stolen;
+  CheckChests(p, 1);
+end;
+
+procedure GenerateChestsHook(std: TProcedure);
+begin
+  GenArtifactCondition:= _ItemCond_ChestArtifact + $100;
+  SetLength(GenArtifactFound, _ArtifactsFoundCount^);
+  CopyMemory(ptr(GenArtifactFound), _pArtifactsFound^, _ArtifactsFoundCount^);
   std;
-  a:= ptr(_pChests^);
-  repeat
-    for i:= low(a.Items) to high(a.Items) do
-      CheckChestArtifact(a.Items[i], GenArtifactCondition, false);
-    inc(a);
-  until a = _pChestsEnd^;
+  SetLength(GenArtifactFound, _ArtifactsFoundCount^);  // to be sure
+  CheckChests(ptr(_pChests^), (_pChestsEnd^ - _pChests^) div _ChestOff_Size, GenArtifactCondition, false);
+  GenArtifactFound:= nil;
   GenArtifactCondition:= 0;
 end;
 
-procedure MarkChestArtifacts(a: PChest);
+procedure UnmarkChestArtifacts(a: PChest);
 var
   i, h: int;
 begin
   h:= pint(_pChestWidth^ + 4*a.Pic)^*pint(_pChestHeight^ + 4*a.Pic)^ - 1;
   for i := 0 to h do
     if a.Inventory[i] > 0 then
-      CheckChestArtifact(a.Items[a.Inventory[i]], _ItemCond_ChestArtifact, true);
+      with a.Items[a.Inventory[i]] do
+        Condition:= Condition and not _ItemCond_ChestArtifact;
+end;
+
+//function CountFound: int;
+//var
+//  i: int;
+//begin
+//  Result:= 0;
+//  for i := 0 to _ArtifactsFoundCount^ - 1 do
+//    if (_pArtifactsFound^ + i)^ <> #0 then
+//      inc(Result);
+//end;
+
+procedure RefillAnyProc(buf: pchar);
+begin
+  if m6 = 0 then
+    inc(buf, _SpritesCount^*2);
+  inc(buf, 4 + pint(buf)^*_MonOff_Size);
+  inc(buf, 4 + pint(buf)^*_ObjOff_Size);
+  //zM('Before: ' + IntToStr(CountFound));
+  CheckChests(ptr(buf + 4), pint(buf)^);
+  //zM('After: ' + IntToStr(CountFound));
+end;
+
+procedure RefillBlvProc(buf: pchar);
+begin
+  inc(buf, _VisibleOutlinesSize^ + (1 - m6)*_IndoorFacetsCount^*4);
+  RefillAnyProc(buf);
+end;
+
+var
+  OdmFacetBitsCount: int;
+
+procedure RefillOdmProc(buf: pchar);
+begin
+  inc(buf, 968*2 + OdmFacetBitsCount*4);
+  RefillAnyProc(buf);
+end;
+
+procedure RefillBlvHook;
+asm
+{$IFDEF mm6}
+  mov eax, ebx
+{$ELSE}
+  mov eax, [ebp - 4]
+{$ENDIF}
+  call RefillBlvProc
+end;
+
+procedure RefillOdmHook;
+asm
+{$IFDEF mm6}
+  mov eax, ebx
+{$ELSE}
+  mov eax, [esp + 12]
+{$ENDIF}
+  call RefillOdmProc
+end;
+
+procedure RefillOdmCountFacets;
+asm
+  mov OdmFacetBitsCount, ecx
+end;
+
+//----- Fix deliberately generated artifacts not marked as found
+
+procedure FixUnmarkedArtifacts;
+asm
+  // just to be sure:
+{$IFDEF mm6}
+  mov eax, [ebp]
+{$ELSE}
+  mov eax, [esp + 4]
+  mov eax, [eax]
+{$ENDIF}
+  sub eax, [__ArtifactsFoundBase]
+  add eax, [__pArtifactsFound]
+  mov byte ptr [eax], 1
+  jmp FixArtifactDenial
+end;
+
+procedure FixRandomizeArtifact6;
+asm
+  mov edx, [__pArtifactsFound]
 end;
 
 //----- Fix chests: place items that were left over
@@ -1461,7 +1557,7 @@ begin
           break;
         end;
   if placed then
-    MarkChestArtifacts(ptr(p));
+    UnmarkChestArtifacts(ptr(p));
 end;
 
 procedure FixChestHook6;
@@ -1547,14 +1643,14 @@ begin
     if GetChestItemMask(p) > s then  exit;  // compact is better
     CopyMemory(p + _ChestOff_Inventory, @buf, 280);
   end;
-  MarkChestArtifacts(ptr(p));
+  UnmarkChestArtifacts(ptr(p));
 end;
 
 procedure FixChestsCompact;
 asm
   push eax
 {$IFDEF mm6}
-  add eax, [_pChests]
+  add eax, [__pChests]
 {$ELSE}
   sub eax, 2
 {$ENDIF}
@@ -1850,7 +1946,7 @@ end;
 
 procedure CloseNPCDialog2;
 begin
-  if (_CurrentScreen^ <> 4) and (m6 = 0) or (_CurrentScreen^ <> 13) then  exit;
+  if (_CurrentScreen^ <> 4) and ((m6 = 0) or (_CurrentScreen^ <> 13)) then  exit;
   CloseNPCDialog;
   _NeedRedraw^:= 0;
 end;
@@ -2142,14 +2238,6 @@ asm
   test eax, eax
 {$ENDIF}
 @std:
-end;
-
-//----- Fix deliberately generated artifacts not marked as found
-// In MM6 this routine ignores ArtifactsFound completely.
-
-procedure FixUnmarkedArtifacts;
-asm
-  mov byte ptr [$ACD3FE + eax], 1
 end;
 
 //----- Fix item picture change causing inventory corruption
@@ -3860,7 +3948,7 @@ end;
 //----- HooksList
 
 var
-  HooksCommon: array[1..80] of TRSHookInfo = (
+  HooksCommon: array[1..83] of TRSHookInfo = (
     (p: m6*$453ACE + m7*$463341 + m8*$461316; newp: @UpdateHintHook;
        t: RShtCallStore; Querry: hqFixStayingHints), // Fix element hints staying active in some dialogs
     (p: m6*$4226F8 + m7*$427E71 + m8*$4260A8; newp: @FixItemSpells;
@@ -4002,15 +4090,21 @@ var
     (p: m6*$43AA82 + m7*$44519A; newp: @DontSkipSimpleMessage; t: RShtBefore;
       size: 6 + m7; Querry: hqDontSkipSimpleMessage), // Don't cancel simple message dialog after any input
     (p: m7*$45694A + m8*$4541C9; newp: @FixArtifactDenial;
-      t: RShtCallBefore), // Don't count artifacts generated in unopened chests as taken
-    (p: m7*$450657 + m8*$44DD9A; newp: @FixArtifactDenial;
-      t: RShtCallBefore), // Don't count artifacts generated in unopened chests as taken
+      t: RShtBefore), // Don't count artifacts generated in unopened chests as taken
     (p: m6*$456300 + m7*$450244 + m8*$44D96C; newp: @GenerateChestsHook;
       t: RShtFunctionStart), // Don't count artifacts generated in unopened chests as taken
+    (p: m6*$48BEF2 + m7*$49A59C + m8*$497A69; newp: @RefillBlvHook;
+      t: RShtCallBefore), // Don't count artifacts generated in unopened chests as taken
+    (p: m7*$47E5A0 + m8*$47DAA8; newp: @RefillOdmHook;
+      t: RShtCallBefore), // Don't count artifacts generated in unopened chests as taken
+    (p: m7*$47E520 + m8*$47DA26; newp: @RefillOdmCountFacets;
+      t: RShtBefore; size: 6), // Don't count artifacts generated in unopened chests as taken
+    (p: m6*$44A75C + m7*$450657; newp: @FixUnmarkedArtifacts;
+      t: RShtBefore; size: 5 + m6; Querry: hqFixUnmarkedArtifacts), // Fix deliberately generated artifacts not marked as found
     ()
   );
 {$IFDEF MM6}
-  Hooks: array[1..88] of TRSHookInfo = (
+  Hooks: array[1..94] of TRSHookInfo = (
     (p: $457567; newp: @WindowWidth; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $45757D; newp: @WindowHeight; newref: true; t: RSht4; Querry: hqWindowSize), // Configure window size
     (p: $454340; newp: @WindowProcHook; t: RShtFunctionStart; size: 8), // Window procedure hook
@@ -4055,7 +4149,7 @@ var
     (p: $419F63; newp: @KeyControlCheckInvis; t: RShtBefore; size: 6), // Don't allow using invisible topics with keyboard
     (p: $41146D; newp: @EnchantItemRightClick; t: RShtAfter), // Allow right click in item spell dialogs
     (p: $41E092; newp: @ChestVerticalHook6; t: RShtCall; Querry: hqPlaceChestItemsVertically), // Place items in chests vertically
-    (p: $41E4D7; newp: @FixChestsCompact; t: RShtAfter; size: 7; Querry: hqFixChestsByCompacting), // Fix chests by compacting
+    (p: $41E4D7; newp: @FixChestsCompact; t: RShtAfter; size: 7), // Fix chests by compacting
     (p: $46B73E; newp: @SpritesAngleHook6; t: RShtCallStore; Querry: hqSpriteAngleCompensation), // Sprite angle compensation
     (p: $4348BA; newp: @SpritesAngleHook6; t: RShtCallStore; Querry: hqSpriteAngleCompensation), // Sprite angle compensation
     (p: $44417B; old: $7F; new: $7D; t: RSht1; Querry: hqFixSFT), // SFT.bin was animated incorrectly (first frame was longer, last frame was shorter)
@@ -4099,12 +4193,15 @@ var
     (p: $450A2B; newp: @FixStartupCopyright; t: RShtCall; size: 6), // Fix copyright screen staying visible on startup
     (p: $42DFBF; newp: @UpdateAfterTab; t: RShtAfter), // Fix awards not updating when pressing Tab
     (p: $41E52E; newp: @FixChestHook6; t: RShtCall; size: 8; Querry: hqFixChests), // Fix chests: place items that were left over
-    (p: $448AE7; newp: @FixArtifactDenial6; size: 7; t: RShtCall), // Don't count artifacts generated in unopened chests as taken
-    (p: $44A6D4; newp: ptr($44A70A); size: 6; t: RShtJmp), // Fix RandomizeArtifact in MM6
+    (p: $44A6D4; newp: ptr($44A70A); t: RShtJmp; size: 6), // Fix RandomizeArtifact in MM6
+    (p: $44A72F; old: 31; new: 30; t: RSht1), // Fix RandomizeArtifact in MM6
+    (p: $44A715; newp: @FixRandomizeArtifact6; t: RShtBefore; size: 6), // Fix RandomizeArtifact in MM6
+    (p: $448AE7; newp: @FixArtifactDenial; t: RShtCall; size: 7), // Don't count artifacts generated in unopened chests as taken
+    (p: $46DADD; newp: @RefillOdmHook; t: RShtBefore), // Don't count artifacts generated in unopened chests as taken
     ()
   );
 {$ELSEIF defined(MM7)}
-  Hooks: array[1..136] of TRSHookInfo = (
+  Hooks: array[1..134] of TRSHookInfo = (
     (p: $47B84E; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (monsters)
     (p: $47B296; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (items)
     (p: $47AD40; old: $4CA62E; newp: @AbsCheckOutdoor; t: RShtCall), // Support any FOV outdoor (sprites)
@@ -4149,7 +4246,7 @@ var
     (p: $4397C0; newp: @FixGMAxeHook1; t: RShtBefore; size: 7), // Fix GM Axe
     (p: $439CDA; newp: @FixGMAxeHook2; t: RShtCallStore), // Fix GM Axe
     (p: $439D57; newp: @ParalyzedStr; t: RSht4), // Fix GM Axe
-    (p: $42031F; newp: @FixChestsCompact; t: RShtAfter; size: 6; Querry: hqFixChestsByCompacting), // Fix chests by compacting
+    (p: $42031F; newp: @FixChestsCompact; t: RShtAfter; size: 6), // Fix chests by compacting
     (p: $47BB77; newp: @SpritesAngleHook; t: RShtBefore; size: 7; Querry: hqSpriteAngleCompensation), // Sprite angle compensation
     (p: $440D76; newp: @SpritesAngleHook2; t: RShtBefore; size: 7; Querry: hqSpriteAngleCompensation), // Sprite angle compensation
     (p: $44D93B; old: $7F; new: $7D; t: RSht1; Querry: hqFixSFT), // SFT.bin was animated incorrectly (first frame was longer, last frame was shorter)
@@ -4187,7 +4284,6 @@ var
     (p: $47E787; old: $4CA780; newp: @FixReadFacetBit; t: RShtCall), // Restore AnimatedTFT bit from Odm rather than Ddm to avoid crash
     (p: $4716EE; newp: @FixMonsterBlockShots; t: RShtJmp; size: 7; Querry: hqFixMonsterBlockShots), // Fix monsters blocking shots of other monsters
     (p: $43951B; newp: @FixFarMonstersAppearGreen; t: RShtBefore; size: 12), // Fix monsters shot at from a distance appearing green on minimap
-    (p: $450657; newp: @FixUnmarkedArtifacts; t: RShtBefore; Querry: hqFixUnmarkedArtifacts), // Fix deliberately generated artifacts not marked as found
     (p: $48DF0C; newp: @FixMonStealDisplay; t: RShtAfter; size: 6), // Don't show stealing animation if nothing's stolen
     //(p: $426D46; size: 12), // Demonstrate recovered stolen items
     (p: $426D49; newp: @FixStolenLootHint; t: RShtCallStore), // Show that stolen item was found
@@ -4239,7 +4335,6 @@ var
     (p: $462B21; newp: @FixStartupCopyright; t: RShtCall; size: 6), // Fix copyright screen staying visible on startup
     (p: $433259; newp: @UpdateAfterTab; t: RShtAfter), // Fix awards not updating when pressing Tab
     (p: $433324; newp: @FixCallLeaveMap; t: RShtCallBefore), // Fix LeaveMap event not called on travel
-    (p: $44800F; newp: @FixCallLeaveMap; t: RShtCallBefore), // Fix LeaveMap event not called on travel
     (p: $44C30F; newp: @FixCallLeaveMap; t: RShtCallBefore), // Fix LeaveMap event not called on travel
     (p: $4B6A96; newp: @FixCallLeaveMap; t: RShtCallBefore), // Fix LeaveMap event not called on travel
     (p: $420412; newp: @FixChestHook7; t: RShtCall; Querry: hqFixChests), // Fix chests: place items that were left over
@@ -4291,7 +4386,7 @@ var
     (p: $4371A0; newp: @FixGMAxeHook1; t: RShtBefore), // Fix GM Axe
     (p: $437798; newp: @FixGMAxeHook2; t: RShtCallStore), // Fix GM Axe
     (p: $43780E; newp: @ParalyzedStr; t: RSht4), // Fix GM Axe
-    (p: $41F808; newp: @FixChestsCompact; t: RShtAfter; size: 6; Querry: hqFixChestsByCompacting), // Fix chests by compacting
+    (p: $41F808; newp: @FixChestsCompact; t: RShtAfter; size: 6), // Fix chests by compacting
     (p: $47AE66; newp: @SpritesAngleHook; t: RShtBefore; size: 7; Querry: hqSpriteAngleCompensation), // Sprite angle compensation
     (p: $43DCC2; newp: @SpritesAngleHook2; t: RShtBefore; size: 7; Querry: hqSpriteAngleCompensation), // Sprite angle compensation
     (p: $44B020; old: $7F; new: $7D; t: RSht1; Querry: hqFixSFT), // SFT.bin was animated incorrectly (first frame was longer, last frame was shorter)
@@ -4385,9 +4480,9 @@ var
     (p: $48CA86; newp: @FixBowSkillDamageBonusStat; t: RShtCall; size: 6), // Fix +Bow skill items not affecting damage on GM
     (p: $48CAEE; newp: @FixBowSkillDamageBonusStat; t: RShtCall; size: 6), // Fix +Bow skill items not affecting damage on GM
     (p: $430BC3; newp: @FixCallLeaveMap; t: RShtCallBefore), // Fix LeaveMap event not called on travel
-    (p: $445335; newp: @FixCallLeaveMap; t: RShtCallBefore), // Fix LeaveMap event not called on travel
     (p: $4B52F5; newp: @FixCallLeaveMap; t: RShtCallBefore), // Fix LeaveMap event not called on travel
     (p: $41F90A; newp: @FixChestHook8; t: RShtCall; Querry: hqFixChests), // Fix chests: place items that were left over
+    (p: $44DD9A; newp: @FixArtifactDenial; t: RShtBefore), // Don't count artifacts generated in unopened chests as taken
     ()
   );
 {$IFEND}
@@ -4411,8 +4506,6 @@ begin
     ApplyHooks(hqBorderless);
   if PlaceChestItemsVertically then
     ApplyHooks(hqPlaceChestItemsVertically);
-  if FixChestsByCompacting then
-    ApplyHooks(hqFixChestsByCompacting);
   if SpriteAngleCompensation then
     ApplyHooks(hqSpriteAngleCompensation);
   if SpriteInteractIgnoreId then
@@ -4607,6 +4700,8 @@ begin
     ScreenDirty:= false;
 end;
 
+exports
+  RefundChestArtifacts;
 initialization
 finalization
   if EmptyCur <> 0 then

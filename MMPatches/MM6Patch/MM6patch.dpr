@@ -334,7 +334,13 @@ Version 2.5.2:
 Version 2.5.3:
 (MM6)
 [-] My bug: Targeting wasn't working when shooting or casting spells
- 
+
+Version 2.5.4:
+(MM6-MM8)
+[-] Now when a location respawns, all artifacts generated in chests you've never opened get cleared from "obtained" artifacts list
+(MM6)
+[-] Routine for intentional generation of artifacts was completely broken
+
 
 Если загрузить сейв, где все рожи одинаковые, а потом сейв с разными, будут черные пятна на месте рож
 

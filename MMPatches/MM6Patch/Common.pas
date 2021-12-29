@@ -52,7 +52,6 @@ const
   _ScreenBuffer = pptr($9B108C);
   _TimeDelta = pint($4D519C);
   _Flying = pint($908CE8);
-  _MapMonsters = $56F478;
   _Mouse_X = pint($6A6120);
   _Mouse_Y = pint($6A6124);
   _ScanlineOffset = PPIntegerArray($41F431);
@@ -114,10 +113,6 @@ const
 
   _Chest_CanPlaceItem: function(n1, itemType, pos, chest: int): BOOL = ptr($41DE90);
   _Chest_PlaceItem: procedure(n1, itemIndex, pos, chest: int) = ptr($41E210);
-  _ChestWidth = $4BD18C;
-  _ChestHeight = $4BD1AC;
-  _Chests = $5E2580;
-  _ChestOff_Size = 4204;
 
   _Character_GetWeaponDelay: function(n1, n2: int; this:ptr; ranged: LongBool):int = ptr($481A80);
   _Character_IsAlive: function(a1,a2, member:ptr):Bool = ptr($4876E0);

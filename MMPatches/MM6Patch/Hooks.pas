@@ -1017,43 +1017,6 @@ asm
   mov al, byte ptr [$6107D8]
 end;
 
-//----- Fix chests: place items that were left over
-
-procedure FixChest(p, chest: int);
-var
-  ItemsToPlace: array[0..139] of int;
-  i, j, h: int;
-begin
-  h:= pint(_ChestWidth + 4*pword(p)^)^*pint(_ChestHeight + 4*pword(p)^)^ - 1;
-  inc(p, 4);
-  for i := 0 to 139 do
-    ItemsToPlace[i]:= pint(p + _ItemOff_Size*i)^;
-  inc(p, _ItemOff_Size*140);
-  for i := 0 to h do
-    if pint2(p + i*2)^ > 0 then
-      ItemsToPlace[pint2(p + i*2)^ - 1]:= 0;
-  for i := 0 to 139 do
-    if ItemsToPlace[i] <> 0 then
-      for j := 0 to h do
-        if (pint2(p + j*2)^ = 0) and _Chest_CanPlaceItem(0, ItemsToPlace[i], j, chest) then
-        begin
-          _Chest_PlaceItem(0, i, j, chest);
-          break;
-        end;
-end;
-
-procedure FixChestHook;
-asm
-  lea eax, $5E2580[ebp*4]
-  test byte ptr [eax + 2], 2
-  jz @exit
-  mov edx, edi
-  call FixChest
-  lea eax, [ecx + 1]
-  cmp eax, ecx
-@exit:
-end;
-
 //----- Limit blaster & bow speed with BlasterRecovery
 
 procedure FixBlasterSpeed;
@@ -2947,7 +2910,7 @@ end;
 //----- HooksList
 
 var
-  HooksList: array[1..256] of TRSHookInfo = (
+  HooksList: array[1..255] of TRSHookInfo = (
     (p: $42ADE7; newp: @RunWalkHook; t: RShtCall), // Run/Walk check
     (p: $453AD3; old: $42ADA0; newp: @KeysHook; t: RShtCall), // My keys handler
     (p: $45456E; old: $417F90; newp: @WindowProcCharHook; t: RShtCall), // Map Keys
@@ -3022,7 +2985,6 @@ var
     (p: $458ACF; old: $45B850; backup: @ErrorHook2Std; newp: @ErrorHook2; t: RShtCall), // Report errors
     (p: $48EA30; newp: @ChangeTrackHook; t: RShtCall), // MusicLoopsCount
     (p: $4AE273; newp: @_sprintfex; newref: true; t: RShtJmp; size: 6; Querry: 6), // Buka localization
-    (p: $41E52E; newp: @FixChestHook; t: RShtCall; size: 8; Querry: 11), // Fix chests: place items that were left over
     (p: $481E8F; newp: @FixBlasterSpeed; t: RShtJmp), // Limit blaster & bow speed with BlasterRecovery
     (p: $420178; new: $42021E; t: RShtJmp; size: 6; Querry: hqNoPlayerSwap), // Remove buggy character swapping (with Ctrl + click)
     (p: $48FD66; newp: @StereoHook; t: RShtCall; size: 9), // Support stereo MP3
@@ -3274,8 +3236,6 @@ begin
     RSApplyHooks(HooksList, 5);
   if Options.ProgressiveDaggerTrippleDamage then
     RSApplyHooks(HooksList, 10);
-  if Options.FixChests then
-    RSApplyHooks(HooksList, 11);
   if Options.DataFiles then
     RSApplyHooks(HooksList, 12);
   if Options.FixTimers then
