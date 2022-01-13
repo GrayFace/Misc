@@ -341,6 +341,13 @@ Version 2.5.4:
 (MM6)
 [-] Routine for intentional generation of artifacts was completely broken
 
+Version 2.5.5:
+(MM6-MM8)
+[-] My bug: Possible corruption when taking an item from character's inventory
+[-] My bug: FixChests option got broken by 2.5.4 changes
+(MM7, MM8)
+[*] FixUnmarkedArtifacts now also respects the 13 artifacts limit imposed by the game
+
 
 Если загрузить сейв, где все рожи одинаковые, а потом сейв с разными, будут черные пятна на месте рож
 

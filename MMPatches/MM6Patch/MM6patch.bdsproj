@@ -170,10 +170,6 @@
 			<VersionInfoKeys Name="ProductName">GrayFace MM6 Patch</VersionInfoKeys>
 			<VersionInfoKeys Name="ProductVersion">2.5.3.0</VersionInfoKeys>
 		</VersionInfoKeys>  
-    
-    
-    
-    
     <Excluded_Packages>
       <Excluded_Packages Name="C:\Documents and Settings\Serg\Мои документы\Borland Studio Projects\Bpl\dclrx2006.bpl">File C:\Documents and Settings\Serg\Мои документы\Borland Studio Projects\Bpl\dclrx2006.bpl not found</Excluded_Packages>
       <Excluded_Packages Name="C:\Documents and Settings\Serg\Мои документы\Borland Studio Projects\Bpl\dclrxbd2006.bpl">File C:\Documents and Settings\Serg\Мои документы\Borland Studio Projects\Bpl\dclrxbd2006.bpl not found</Excluded_Packages>
