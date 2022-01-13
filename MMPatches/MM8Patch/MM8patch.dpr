@@ -401,6 +401,11 @@ Version 2.5.4:
 [-] My bug: FixMonstersBlockingShots didn't work right
 [-] My bug: evt.MoveToMap didn't work from NPC dialog when there's no entrance dialog
 
+Version 2.5.5:
+(MM6-MM8)
+[-] My bug: Possible corruption when taking an item from character's inventory
+[-] My bug: FixChests option got broken by 2.5.4 changes
+
 
 
 Version ?:

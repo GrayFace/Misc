@@ -1,8 +1,8 @@
 
  Start         Length     Name                   Class
- 0001:032C1000 00049050H .text                   CODE
+ 0001:032C1000 00049074H .text                   CODE
  0002:0330B000 00000734H .itext                  ICODE
- 0003:0330C000 00009E68H .data                   DATA
+ 0003:0330C000 00009E9CH .data                   DATA
  0004:03316000 00198A00H .bss                    BSS
  0005:00000000 00000000H .tls                    TLS
 
@@ -46,9 +46,9 @@ Detailed map of segments
  0001:0002FB9C 00005B3B C=CODE     S=.text    G=(none)   M=MMLayout ACBP=A9
  0001:000356D8 00003090 C=CODE     S=.text    G=(none)   M=LayoutSupport ACBP=A9
  0001:00038768 00007534 C=CODE     S=.text    G=(none)   M=D3DHooks ACBP=A9
- 0001:0003FC9C 00004F2F C=CODE     S=.text    G=(none)   M=MMHooks  ACBP=A9
- 0001:00044BCC 000042EC C=CODE     S=.text    G=(none)   M=Hooks    ACBP=A9
- 0001:00048EB8 00000198 C=CODE     S=.text    G=(none)   M=MM8patch ACBP=A9
+ 0001:0003FC9C 00004F53 C=CODE     S=.text    G=(none)   M=MMHooks  ACBP=A9
+ 0001:00044BF0 000042EC C=CODE     S=.text    G=(none)   M=Hooks    ACBP=A9
+ 0001:00048EDC 00000198 C=CODE     S=.text    G=(none)   M=MM8patch ACBP=A9
  0002:00000000 00000095 C=ICODE    S=.itext   G=(none)   M=System   ACBP=A9
  0002:00000098 00000011 C=ICODE    S=.itext   G=(none)   M=Windows  ACBP=A9
  0002:000000AC 00000088 C=ICODE    S=.itext   G=(none)   M=SysUtils ACBP=A9
@@ -100,8 +100,8 @@ Detailed map of segments
  0003:00001A68 0000013C C=DATA     S=.data    G=DGROUP   M=MMLayout ACBP=A9
  0003:00001BA4 00000004 C=DATA     S=.data    G=DGROUP   M=LayoutSupport ACBP=A9
  0003:00001BA8 00000F64 C=DATA     S=.data    G=DGROUP   M=D3DHooks ACBP=A9
- 0003:00002B0C 00002DD4 C=DATA     S=.data    G=DGROUP   M=MMHooks  ACBP=A9
- 0003:000058E0 000040B0 C=DATA     S=.data    G=DGROUP   M=Hooks    ACBP=A9
+ 0003:00002B0C 00002E08 C=DATA     S=.data    G=DGROUP   M=MMHooks  ACBP=A9
+ 0003:00005914 000040B0 C=DATA     S=.data    G=DGROUP   M=Hooks    ACBP=A9
  0004:00000000 000027EC C=BSS      S=.bss     G=DGROUP   M=System   ACBP=A9
  0004:000027EC 00000010 C=BSS      S=.bss     G=DGROUP   M=SysInit  ACBP=A9
  0004:000027FC 00000008 C=BSS      S=.bss     G=DGROUP   M=Windows  ACBP=A9
@@ -854,294 +854,294 @@ Detailed map of segments
  0002:00000460       GraphUtil.GraphUtil
  0003:00000F18       GraphUtil.WebNamedColors
  0004:00187B88       Hooks..1
- 0003:0000597C       Hooks.Add
- 0001:000468AC       Hooks.AddLodRecord
- 0001:00048630       Hooks.AdvInnCrashFix
- 0001:00045C34       Hooks.AppendDebugLog
- 0001:00048BA4       Hooks.ApplyDeferredHooks
+ 0003:000059B0       Hooks.Add
+ 0001:000468D0       Hooks.AddLodRecord
+ 0001:00048654       Hooks.AdvInnCrashFix
+ 0001:00045C58       Hooks.AppendDebugLog
+ 0001:00048BC8       Hooks.ApplyDeferredHooks
  0004:001989FC       Hooks.ArtBonusBefore
- 0001:000457D0       Hooks.AttackDescriptionHook
- 0001:0004569C       Hooks.AttackDescriptionProc
+ 0001:000457F4       Hooks.AttackDescriptionHook
+ 0001:000456C0       Hooks.AttackDescriptionProc
  0004:00187DA0       Hooks.AttackDescriptionStd
- 0001:00046758       Hooks.AutoColor16Hook
- 0001:00046764       Hooks.AutoColor16Hook2
- 0001:00046680       Hooks.AutoColor16Proc
+ 0001:0004677C       Hooks.AutoColor16Hook
+ 0001:00046788       Hooks.AutoColor16Hook2
+ 0001:000466A4       Hooks.AutoColor16Proc
  0004:00187DF0       Hooks.AutoColor16Std
  0004:00187DF4       Hooks.AutoColor16Std2
- 0001:000467FC       Hooks.AutorunHook
- 0001:00046774       Hooks.AutorunProc
- 0001:0004846C       Hooks.BinkDrawHook1
- 0001:00048484       Hooks.BinkDrawHook2
- 0001:00048448       Hooks.BinkDrawProc1
- 0001:0004849C       Hooks.BinkLoadHook
- 0003:00005978       Hooks.bpp
- 0003:000058E4       Hooks.c1
- 0003:000058E8       Hooks.c2
- 0003:000058EC       Hooks.c3
- 0003:000058F0       Hooks.c4
- 0001:000481C0       Hooks.CanSellItemHook
- 0001:000481EC       Hooks.CanSellItemHook2
- 0001:000455E8       Hooks.CapsLockHook
- 0001:00045F7C       Hooks.ChangeTrackHook
- 0003:000059AC       Hooks.CheckBit
- 0001:00045688       Hooks.CheckNextMemberHook
+ 0001:00046820       Hooks.AutorunHook
+ 0001:00046798       Hooks.AutorunProc
+ 0001:00048490       Hooks.BinkDrawHook1
+ 0001:000484A8       Hooks.BinkDrawHook2
+ 0001:0004846C       Hooks.BinkDrawProc1
+ 0001:000484C0       Hooks.BinkLoadHook
+ 0003:000059AC       Hooks.bpp
+ 0003:00005918       Hooks.c1
+ 0003:0000591C       Hooks.c2
+ 0003:00005920       Hooks.c3
+ 0003:00005924       Hooks.c4
+ 0001:000481E4       Hooks.CanSellItemHook
+ 0001:00048210       Hooks.CanSellItemHook2
+ 0001:0004560C       Hooks.CapsLockHook
+ 0001:00045FA0       Hooks.ChangeTrackHook
+ 0003:000059E0       Hooks.CheckBit
+ 0001:000456AC       Hooks.CheckNextMemberHook
  0004:00187BA0       Hooks.ChooseSaveSlotBackup
- 0001:00045158       Hooks.ChooseSaveSlotHook
- 0001:0004514C       Hooks.ChooseSaveSlotProc
- 0001:00045B18       Hooks.Crash1Hook
- 0001:00045B64       Hooks.Crash1Hook2
+ 0001:0004517C       Hooks.ChooseSaveSlotHook
+ 0001:00045170       Hooks.ChooseSaveSlotProc
+ 0001:00045B3C       Hooks.Crash1Hook
+ 0001:00045B88       Hooks.Crash1Hook2
  0004:00187DBC       Hooks.Crash1Std
  0004:0018C610       Hooks.CurRemainder
  0004:001989F4       Hooks.CursorTarget
  0004:00187DF8       Hooks.CustomLods
- 0003:0000596C       Hooks.CVis_get_object_zbuf_val
- 0001:00045BBC       Hooks.DaggerTrippleHook
- 0001:00045F9C       Hooks.DDrawErrorHook
- 0001:000485B4       Hooks.DeathMovieHook
- 0001:00048578       Hooks.DeathMovieProc
- 0001:00046634       Hooks.DefaultSmoothTurnHook
- 0001:000469C0       Hooks.DoLoadCustomLod
- 0001:00046C30       Hooks.DoLoadCustomLods
- 0001:00046284       Hooks.DoorStateSwitchHook
- 0001:000459F0       Hooks.DoubleSpeedHook
+ 0003:000059A0       Hooks.CVis_get_object_zbuf_val
+ 0001:00045BE0       Hooks.DaggerTrippleHook
+ 0001:00045FC0       Hooks.DDrawErrorHook
+ 0001:000485D8       Hooks.DeathMovieHook
+ 0001:0004859C       Hooks.DeathMovieProc
+ 0001:00046658       Hooks.DefaultSmoothTurnHook
+ 0001:000469E4       Hooks.DoLoadCustomLod
+ 0001:00046C54       Hooks.DoLoadCustomLods
+ 0001:000462A8       Hooks.DoorStateSwitchHook
+ 0001:00045A14       Hooks.DoubleSpeedHook
  0004:00187DAC       Hooks.DoubleSpeedStd
- 0001:000482A4       Hooks.DrawMovieHook
- 0001:00045BAC       Hooks.ElderaxeHook
+ 0001:000482C8       Hooks.DrawMovieHook
+ 0001:00045BD0       Hooks.ElderaxeHook
  0004:00187DC0       Hooks.ElderaxeStd
- 0003:000059C4       Hooks.EndTurnBased
- 0001:00045F0C       Hooks.ErrorHook1
- 0001:00045F30       Hooks.ErrorHook2
- 0001:00045F54       Hooks.ErrorHook3
- 0001:00045DD0       Hooks.ErrorProc
- 0001:00048208       Hooks.ExitCrashHook
- 0001:00046010       Hooks.ExtendSpriteLimits
- 0001:00046188       Hooks.FacetCheckHook
- 0001:00046198       Hooks.FacetCheckHook2
- 0001:000461A8       Hooks.FacetCheckHook3
- 0001:00045A70       Hooks.FeatherFallHook
+ 0003:000059F8       Hooks.EndTurnBased
+ 0001:00045F30       Hooks.ErrorHook1
+ 0001:00045F54       Hooks.ErrorHook2
+ 0001:00045F78       Hooks.ErrorHook3
+ 0001:00045DF4       Hooks.ErrorProc
+ 0001:0004822C       Hooks.ExitCrashHook
+ 0001:00046034       Hooks.ExtendSpriteLimits
+ 0001:000461AC       Hooks.FacetCheckHook
+ 0001:000461BC       Hooks.FacetCheckHook2
+ 0001:000461CC       Hooks.FacetCheckHook3
+ 0001:00045A94       Hooks.FeatherFallHook
  0004:00187DB4       Hooks.FeatherFallStd
- 0001:00044FE0       Hooks.FillSaveSlotsAfter
- 0001:00044F7C       Hooks.FillSaveSlotsBefore
- 0001:00045134       Hooks.FillSaveSlotsHook
+ 0001:00045004       Hooks.FillSaveSlotsAfter
+ 0001:00044FA0       Hooks.FillSaveSlotsBefore
+ 0001:00045158       Hooks.FillSaveSlotsHook
  0004:00187B9C       Hooks.FillSaveSlotsStd
- 0001:00048DEC       Hooks.Finalization
- 0001:00045974       Hooks.FindActiveMember
- 0001:000468E4       Hooks.FindInLod
- 0001:000468DC       Hooks.FindInLodAndSeek
- 0001:000469A4       Hooks.FindInLodAndSeekHook
- 0001:000469AC       Hooks.FindInLodHook
- 0001:000468F8       Hooks.FindInLodProc
- 0001:000487FC       Hooks.FixArtifactBonuses1
- 0001:00048820       Hooks.FixArtifactBonuses2
- 0001:0004813C       Hooks.FixBlitCopy
- 0001:000480D0       Hooks.FixBlitCopyProc
- 0001:00048840       Hooks.FixCheckItems
- 0001:000460D4       Hooks.FixCreditsPause
- 0001:000484CC       Hooks.FixDivCrash1
- 0001:00048500       Hooks.FixDivCrash2
- 0001:00048164       Hooks.FixDragonTargeting
- 0001:000480B0       Hooks.FixFullScreenBlink
- 0001:00048724       Hooks.FixIndoorFOVProcSW
- 0001:00047D78       Hooks.FixItemsTxtHook
- 0001:000477D0       Hooks.FixItemsTxtProc
- 0001:0004821C       Hooks.FixLava1
- 0001:00048228       Hooks.FixLava2
- 0001:00046640       Hooks.FixLeaveMapDieHook
- 0001:000484B0       Hooks.FixMipmapsMemLeak
- 0001:00048154       Hooks.FixMonsterSummon
- 0001:00048064       Hooks.FixMovementNerf
- 0001:0004823C       Hooks.FixObelisk
- 0001:0004825C       Hooks.FixObelisk2
- 0001:0004884C       Hooks.FixOfAcid
- 0001:000462A4       Hooks.FixPrismaticBug
+ 0001:00048E10       Hooks.Finalization
+ 0001:00045998       Hooks.FindActiveMember
+ 0001:00046908       Hooks.FindInLod
+ 0001:00046900       Hooks.FindInLodAndSeek
+ 0001:000469C8       Hooks.FindInLodAndSeekHook
+ 0001:000469D0       Hooks.FindInLodHook
+ 0001:0004691C       Hooks.FindInLodProc
+ 0001:00048820       Hooks.FixArtifactBonuses1
+ 0001:00048844       Hooks.FixArtifactBonuses2
+ 0001:00048160       Hooks.FixBlitCopy
+ 0001:000480F4       Hooks.FixBlitCopyProc
+ 0001:00048864       Hooks.FixCheckItems
+ 0001:000460F8       Hooks.FixCreditsPause
+ 0001:000484F0       Hooks.FixDivCrash1
+ 0001:00048524       Hooks.FixDivCrash2
+ 0001:00048188       Hooks.FixDragonTargeting
+ 0001:000480D4       Hooks.FixFullScreenBlink
+ 0001:00048748       Hooks.FixIndoorFOVProcSW
+ 0001:00047D9C       Hooks.FixItemsTxtHook
+ 0001:000477F4       Hooks.FixItemsTxtProc
+ 0001:00048240       Hooks.FixLava1
+ 0001:0004824C       Hooks.FixLava2
+ 0001:00046664       Hooks.FixLeaveMapDieHook
+ 0001:000484D4       Hooks.FixMipmapsMemLeak
+ 0001:00048178       Hooks.FixMonsterSummon
+ 0001:00048088       Hooks.FixMovementNerf
+ 0001:00048260       Hooks.FixObelisk
+ 0001:00048280       Hooks.FixObelisk2
+ 0001:00048870       Hooks.FixOfAcid
+ 0001:000462C8       Hooks.FixPrismaticBug
  0004:00187DD8       Hooks.FixPrismaticBugStd
- 0001:00048778       Hooks.FixRestEncounter
- 0001:0004776C       Hooks.FixSkyBitmap
- 0001:00047780       Hooks.FixSkyLen
+ 0001:0004879C       Hooks.FixRestEncounter
+ 0001:00047790       Hooks.FixSkyBitmap
+ 0001:000477A4       Hooks.FixSkyLen
  0004:0019897C       Hooks.FixSkyLenOld
- 0001:000477B8       Hooks.FixSmallScaleSprites
- 0001:000484C0       Hooks.FixSpritesInMonInfo
- 0001:00047694       Hooks.FixStrafe1
- 0001:000476B4       Hooks.FixStrafe2
- 0001:000476D8       Hooks.FixStrafeMonster1
- 0001:000476F4       Hooks.FixStrafeMonster2
- 0001:00047710       Hooks.FixStrafeObject1
- 0001:0004772C       Hooks.FixStrafeObject2
- 0001:000476C4       Hooks.FixStrafePlayer
- 0001:000477A8       Hooks.FixTelepathy
- 0001:00047F3C       Hooks.FixTimerRetriggerHook1
- 0001:00047F48       Hooks.FixTimerRetriggerHook2
- 0001:00047F7C       Hooks.FixTimerSetupHook1
- 0001:00047F90       Hooks.FixTimerSetupHook2
- 0001:00047EDC       Hooks.FixTimerValidate
- 0001:000487E0       Hooks.FixTurnBasedHire
- 0001:00048554       Hooks.FixTurnBasedWalking
- 0001:00046B94       Hooks.FreeCustomLod
- 0001:00046C20       Hooks.GetCustomLodsList
- 0001:00046C28       Hooks.GetLodRecords
- 0001:00048534       Hooks.GetRestoredRect
- 0001:00047DA0       Hooks.GetTimerKind
- 0001:00045BD0       Hooks.HasteWeakCheck
- 0001:00045C0C       Hooks.HasteWeakHook
+ 0001:000477DC       Hooks.FixSmallScaleSprites
+ 0001:000484E4       Hooks.FixSpritesInMonInfo
+ 0001:000476B8       Hooks.FixStrafe1
+ 0001:000476D8       Hooks.FixStrafe2
+ 0001:000476FC       Hooks.FixStrafeMonster1
+ 0001:00047718       Hooks.FixStrafeMonster2
+ 0001:00047734       Hooks.FixStrafeObject1
+ 0001:00047750       Hooks.FixStrafeObject2
+ 0001:000476E8       Hooks.FixStrafePlayer
+ 0001:000477CC       Hooks.FixTelepathy
+ 0001:00047F60       Hooks.FixTimerRetriggerHook1
+ 0001:00047F6C       Hooks.FixTimerRetriggerHook2
+ 0001:00047FA0       Hooks.FixTimerSetupHook1
+ 0001:00047FB4       Hooks.FixTimerSetupHook2
+ 0001:00047F00       Hooks.FixTimerValidate
+ 0001:00048804       Hooks.FixTurnBasedHire
+ 0001:00048578       Hooks.FixTurnBasedWalking
+ 0001:00046BB8       Hooks.FreeCustomLod
+ 0001:00046C44       Hooks.GetCustomLodsList
+ 0001:00046C4C       Hooks.GetLodRecords
+ 0001:00048558       Hooks.GetRestoredRect
+ 0001:00047DC4       Hooks.GetTimerKind
+ 0001:00045BF4       Hooks.HasteWeakCheck
+ 0001:00045C30       Hooks.HasteWeakHook
  0004:00187DCC       Hooks.HaveIt
- 0001:00047748       Hooks.HDWTRCountHook
- 0001:00045C14       Hooks.HeraldsBootsHook
- 0001:00048A14       Hooks.HookAll
+ 0001:0004776C       Hooks.HDWTRCountHook
+ 0001:00045C38       Hooks.HeraldsBootsHook
+ 0001:00048A38       Hooks.HookAll
  0002:000005CC       Hooks.Hooks
- 0003:000059C8       Hooks.HooksList
- 0001:00046564       Hooks.IDMonHook
- 0001:00046508       Hooks.IDMonProc
+ 0003:000059FC       Hooks.HooksList
+ 0001:00046588       Hooks.IDMonHook
+ 0001:0004652C       Hooks.IDMonProc
  0004:00187DDC       Hooks.IDMonStr
- 0001:00045654       Hooks.InactiveMemberEventsHook
- 0001:000455F0       Hooks.InactiveMemberEventsProc
+ 0001:00045678       Hooks.InactiveMemberEventsHook
+ 0001:00045614       Hooks.InactiveMemberEventsProc
  0004:001989F8       Hooks.IsArtBonus
- 0001:00044F18       Hooks.KeysHook
- 0001:00044DC8       Hooks.KeysProc
+ 0001:00044F3C       Hooks.KeysHook
+ 0001:00044DEC       Hooks.KeysProc
  0004:00187B8C       Hooks.LastMusicStatus
  0004:001989EC       Hooks.LastTurnBasedWalk
  0004:00187DC8       Hooks.LastUnhandledExceptionFilter
- 0001:00046604       Hooks.LBHook
- 0001:00046614       Hooks.LBHook2
+ 0001:00046628       Hooks.LBHook
+ 0001:00046638       Hooks.LBHook2
  0004:00187DE8       Hooks.LBOld2
- 0001:00046808       Hooks.LloydAutosaveFix
- 0001:00046B64       Hooks.LoadCustomLod
- 0001:00046D20       Hooks.LoadCustomLods
- 0001:00046E6C       Hooks.LoadCustomLodsD3D
- 0001:00047034       Hooks.LoadLodsHook
+ 0001:0004682C       Hooks.LloydAutosaveFix
+ 0001:00046B88       Hooks.LoadCustomLod
+ 0001:00046D44       Hooks.LoadCustomLods
+ 0001:00046E90       Hooks.LoadCustomLodsD3D
+ 0001:00047058       Hooks.LoadLodsHook
  0004:0018C600       Hooks.LoadLodsOld
- 0001:0004615C       Hooks.LoadSoundHook
- 0001:00045FA4       Hooks.LoadSpriteD3DHook2
- 0001:00045FB8       Hooks.LoadSpriteD3DHook3
- 0001:00045FD8       Hooks.LoadSpriteD3DHook4
- 0003:00005990       Hooks.LodClean
- 0001:00045954       Hooks.LodFileEvtOrStr
- 0001:00045920       Hooks.LodFilesHook
- 0001:00045804       Hooks.LodFilesProc
- 0001:00045940       Hooks.LodFileStoreSize
- 0003:00005980       Hooks.LodLoad
- 0003:00005988       Hooks.LodLoadChapter
+ 0001:00046180       Hooks.LoadSoundHook
+ 0001:00045FC8       Hooks.LoadSpriteD3DHook2
+ 0001:00045FDC       Hooks.LoadSpriteD3DHook3
+ 0001:00045FFC       Hooks.LoadSpriteD3DHook4
+ 0003:000059C4       Hooks.LodClean
+ 0001:00045978       Hooks.LodFileEvtOrStr
+ 0001:00045944       Hooks.LodFilesHook
+ 0001:00045828       Hooks.LodFilesProc
+ 0001:00045964       Hooks.LodFileStoreSize
+ 0003:000059B4       Hooks.LodLoad
+ 0003:000059BC       Hooks.LodLoadChapter
  0004:00187DFC       Hooks.LodRecords
- 0001:0004611C       Hooks.MemoryFreeHook
- 0001:00046108       Hooks.MemoryFreeProc
- 0001:00046110       Hooks.MemoryInitHook
- 0001:0004612C       Hooks.MemoryNewHook
- 0001:000460E0       Hooks.MemoryNewProc
- 0001:000485C8       Hooks.MinimapZoomHook
+ 0001:00046140       Hooks.MemoryFreeHook
+ 0001:0004612C       Hooks.MemoryFreeProc
+ 0001:00046134       Hooks.MemoryInitHook
+ 0001:00046150       Hooks.MemoryNewHook
+ 0001:00046104       Hooks.MemoryNewProc
+ 0001:000485EC       Hooks.MinimapZoomHook
  0004:0018C628       Hooks.MonsterStrafe
- 0001:00045AB8       Hooks.MouseBorderHook
- 0001:000464CC       Hooks.MouseLookFlyHook1
- 0001:000464EC       Hooks.MouseLookFlyHook2
- 0001:000462D0       Hooks.MouseLookFlyProc
- 0001:00045B98       Hooks.MovieHook
- 0003:000059B4       Hooks.movs
+ 0001:00045ADC       Hooks.MouseBorderHook
+ 0001:000464F0       Hooks.MouseLookFlyHook1
+ 0001:00046510       Hooks.MouseLookFlyHook2
+ 0001:000462F4       Hooks.MouseLookFlyProc
+ 0001:00045BBC       Hooks.MovieHook
+ 0003:000059E8       Hooks.movs
  0004:00187B90       Hooks.MusicLoopsLeft
- 0001:00048660       Hooks.MyLoadCursor
+ 0001:00048684       Hooks.MyLoadCursor
  0004:00187DC4       Hooks.MyRaiseExceptionProc
- 0001:00048078       Hooks.NoMonsterJumpDown1
- 0001:0004809C       Hooks.NoMonsterJumpDown2
+ 0001:0004809C       Hooks.NoMonsterJumpDown1
+ 0001:000480C0       Hooks.NoMonsterJumpDown2
  0004:0019898C       Hooks.NoMonsterJumpDownLim
- 0001:000461C0       Hooks.NoVertexFacetHook
- 0001:000461D4       Hooks.NoVertexFacetHook2
+ 0001:000461E4       Hooks.NoVertexFacetHook
+ 0001:000461F8       Hooks.NoVertexFacetHook2
  0004:00193B58       Hooks.ObjectStrafe
  0004:001989F0       Hooks.oldDeathMovie
  0004:00198978       Hooks.OldMoveStructInit
  0004:00198980       Hooks.OldStart
- 0003:00005970       Hooks.OnMapLeave
- 0001:00047648       Hooks.OpenBikSmkHook
- 0001:0004738C       Hooks.OpenCustomVids
- 0001:00044BCC       Hooks.OpenInventory
- 0001:00047304       Hooks.OpenVid
- 0001:00047584       Hooks.OpenVidsHook
- 0001:00047470       Hooks.OpenVidsProc
- 0003:000058E0       Hooks.opNew
- 0001:000461E8       Hooks.PalettesHook
- 0001:00046580       Hooks.PaletteSMulHook
+ 0003:000059A4       Hooks.OnMapLeave
+ 0001:0004766C       Hooks.OpenBikSmkHook
+ 0001:000473B0       Hooks.OpenCustomVids
+ 0001:00044BF0       Hooks.OpenInventory
+ 0001:00047328       Hooks.OpenVid
+ 0001:000475A8       Hooks.OpenVidsHook
+ 0001:00047494       Hooks.OpenVidsProc
+ 0003:00005914       Hooks.opNew
+ 0001:0004620C       Hooks.PalettesHook
+ 0001:000465A4       Hooks.PaletteSMulHook
  0004:00198990       Hooks.Party_FloorDist
- 0003:00005958       Hooks.PatchCount
- 0003:000058F8       Hooks.PatchPtr
+ 0003:0000598C       Hooks.PatchCount
+ 0003:0000592C       Hooks.PatchPtr
  0004:0018C614       Hooks.PlayerStrafe
- 0001:00048784       Hooks.PostponeIntroHook
- 0001:00046208       Hooks.PressSpaceHook
+ 0001:000487A8       Hooks.PostponeIntroHook
+ 0001:0004622C       Hooks.PressSpaceHook
  0004:00187DD4       Hooks.PressSpaceStd
- 0001:00044C4C       Hooks.QuickLoad
- 0001:00045598       Hooks.QuickSaveDrawHook
- 0001:000455A8       Hooks.QuickSaveDrawHook2
- 0001:000455B8       Hooks.QuickSaveDrawHook3
- 0001:000455CC       Hooks.QuickSaveDrawHook4
- 0001:00045508       Hooks.QuickSaveDrawProc
- 0001:000452BC       Hooks.QuicksaveHook
- 0001:000454E8       Hooks.QuickSaveNamesHook
- 0001:000453E4       Hooks.QuickSaveNamesProc
+ 0001:00044C70       Hooks.QuickLoad
+ 0001:000455BC       Hooks.QuickSaveDrawHook
+ 0001:000455CC       Hooks.QuickSaveDrawHook2
+ 0001:000455DC       Hooks.QuickSaveDrawHook3
+ 0001:000455F0       Hooks.QuickSaveDrawHook4
+ 0001:0004552C       Hooks.QuickSaveDrawProc
+ 0001:000452E0       Hooks.QuicksaveHook
+ 0001:0004550C       Hooks.QuickSaveNamesHook
+ 0001:00045408       Hooks.QuickSaveNamesProc
  0004:00187BA8       Hooks.QuickSaveNamesTmp
- 0001:0004517C       Hooks.QuicksaveProc
- 0001:000453D0       Hooks.QuickSaveSlotHook
- 0001:000452CC       Hooks.QuickSaveSlotProc
- 0001:00048900       Hooks.ReadDisables
- 0001:000459DC       Hooks.ReputationHook
+ 0001:000451A0       Hooks.QuicksaveProc
+ 0001:000453F4       Hooks.QuickSaveSlotHook
+ 0001:000452F0       Hooks.QuickSaveSlotProc
+ 0001:00048924       Hooks.ReadDisables
+ 0001:00045A00       Hooks.ReputationHook
  0004:00187DA8       Hooks.ReputationHookStd
- 0001:00045AA0       Hooks.ResistancesHook
+ 0001:00045AC4       Hooks.ResistancesHook
  0004:00187DB8       Hooks.ResistancesStd
  0004:00187BA4       Hooks.SaveBackup
- 0001:00045170       Hooks.SaveHook
+ 0001:00045194       Hooks.SaveHook
  0004:00187B98       Hooks.SaveName
- 0001:00044F24       Hooks.SaveNamesHook
+ 0001:00044F48       Hooks.SaveNamesHook
  0004:00187B94       Hooks.SaveNamesStd
- 0003:000058F4       Hooks.SaveSpecial
+ 0003:00005928       Hooks.SaveSpecial
  0004:001989BC       Hooks.Scale320
  0004:00198994       Hooks.Scale640
- 0001:00048274       Hooks.ScreenToClientHook
- 0001:0004598C       Hooks.ScrollTestMember
+ 0001:00048298       Hooks.ScreenToClientHook
+ 0001:000459B0       Hooks.ScrollTestMember
  0004:00187DA4       Hooks.ScrollTestMemberStd
- 0001:00045960       Hooks.SecondHandDaggerHook
- 0001:00047594       Hooks.SelectVidFile
- 0003:000059B0       Hooks.SetBit
- 0001:0004658C       Hooks.SetTPTime
- 0001:000457E8       Hooks.ShootDescriptionHook
- 0001:000483AC       Hooks.SmackDrawHook1
- 0001:00048400       Hooks.SmackDrawHook2
- 0001:00048390       Hooks.SmackDrawProc1
- 0001:000483BC       Hooks.SmackDrawProc2
- 0001:00048420       Hooks.SmackLoadHook
+ 0001:00045984       Hooks.SecondHandDaggerHook
+ 0001:000475B8       Hooks.SelectVidFile
+ 0003:000059E4       Hooks.SetBit
+ 0001:000465B0       Hooks.SetTPTime
+ 0001:0004580C       Hooks.ShootDescriptionHook
+ 0001:000483D0       Hooks.SmackDrawHook1
+ 0001:00048424       Hooks.SmackDrawHook2
+ 0001:000483B4       Hooks.SmackDrawProc1
+ 0001:000483E0       Hooks.SmackDrawProc2
+ 0001:00048444       Hooks.SmackLoadHook
  0004:001989E4       Hooks.SmkBmp
  0004:001989E8       Hooks.SmkScanline
- 0001:00046144       Hooks.SpellsTxtHook
+ 0001:00046168       Hooks.SpellsTxtHook
  0004:00187DD0       Hooks.SpellsTxtStd
- 0001:00047798       Hooks.StartHook
- 0001:00046570       Hooks.StatColorFixHook
- 0003:000059A8       Hooks.std
- 0001:00047658       Hooks.StrafeOrWalkHook
- 0001:00048648       Hooks.TabHook
+ 0001:000477BC       Hooks.StartHook
+ 0001:00046594       Hooks.StatColorFixHook
+ 0003:000059DC       Hooks.std
+ 0001:0004767C       Hooks.StrafeOrWalkHook
+ 0001:0004866C       Hooks.TabHook
  0004:00187BAC       Hooks.TextBuffer
- 0001:00046170       Hooks.TextureCheckHook
- 0001:0004617C       Hooks.TextureCheckHook2
- 0001:00048640       Hooks.TFTWaterHook
- 0003:00005994       Hooks.TimerPeriods
- 0001:00047DBC       Hooks.TimerSetTriggerTime
- 0001:0004685C       Hooks.TPAutosaveFix
+ 0001:00046194       Hooks.TextureCheckHook
+ 0001:000461A0       Hooks.TextureCheckHook2
+ 0001:00048664       Hooks.TFTWaterHook
+ 0003:000059C8       Hooks.TimerPeriods
+ 0001:00047DE0       Hooks.TimerSetTriggerTime
+ 0001:00046880       Hooks.TPAutosaveFix
  0004:00198984       Hooks.TPDelay
- 0001:00047FAC       Hooks.TPDelayHook1
- 0001:0004800C       Hooks.TPDelayHook2
- 0001:00047FC8       Hooks.TPDelayProc2
- 0001:000465D4       Hooks.TPHook
- 0001:000465E4       Hooks.TPHook2
+ 0001:00047FD0       Hooks.TPDelayHook1
+ 0001:00048030       Hooks.TPDelayHook2
+ 0001:00047FEC       Hooks.TPDelayProc2
+ 0001:000465F8       Hooks.TPHook
+ 0001:00046608       Hooks.TPHook2
  0004:00198988       Hooks.TPMember
  0004:00187DE4       Hooks.TPOld2
- 0001:00046598       Hooks.TPProc2
+ 0001:000465BC       Hooks.TPProc2
  0004:00187DE0       Hooks.TPTime
  0004:00187DEC       Hooks.TravelGold
- 0001:0004664C       Hooks.TravelGoldFixHook1
- 0001:0004666C       Hooks.TravelGoldFixHook2
- 0001:000487CC       Hooks.TreeHintsHook
- 0003:00005974       Hooks.TrySubtract
- 0001:00045A4C       Hooks.TurnSpeedHook
+ 0001:00046670       Hooks.TravelGoldFixHook1
+ 0001:00046690       Hooks.TravelGoldFixHook2
+ 0001:000487F0       Hooks.TreeHintsHook
+ 0003:000059A8       Hooks.TrySubtract
+ 0001:00045A70       Hooks.TurnSpeedHook
  0004:00187DB0       Hooks.TurnSpeedStd
- 0001:00045D1C       Hooks.UnhandledException
- 0001:00047EB8       Hooks.UpdatePeriodicTimer
+ 0001:00045D40       Hooks.UnhandledException
+ 0001:00047EDC       Hooks.UpdatePeriodicTimer
  0004:0018C608       Hooks.VidFiles
  0004:0018C60C       Hooks.VidHandles
  0004:0018C604       Hooks.VidList
- 0001:00045970       Hooks.WeaponRecoveryBonusHook
- 0003:000059A4       Hooks.__ftol
+ 0001:00045994       Hooks.WeaponRecoveryBonusHook
+ 0003:000059D8       Hooks.__ftol
  0004:000033A4       IniFiles..8
  0001:00015860       IniFiles..EIniFileException
  0001:000158C0       IniFiles..TCustomIniFile
@@ -1239,7 +1239,7 @@ Detailed map of segments
  0003:00000B20       Math.Max
  0001:000141D0       Math.Power
  0001:0001414C       Math.SinCos
- 0001:00048EB8       MM8patch.Finalization
+ 0001:00048EDC       MM8patch.Finalization
  0002:0000068C       MM8patch.MM8patch
  0004:000651CC       MMCommon..1
  0001:00026020       MMCommon.AddAction
@@ -1438,165 +1438,166 @@ Detailed map of segments
  0001:0003FE7C       MMHooks.AbsCheckIndoor
  0001:0003FC9C       MMHooks.AbsCheckOutdoor
  0004:00187888       MMHooks.AllowMovieQuickLoad
- 0001:00044464       MMHooks.ApplyHooks
- 0001:000445EC       MMHooks.ApplyMMDeferredHooks
- 0001:0004449C       MMHooks.ApplyMMHooks
- 0001:00044784       MMHooks.ApplyMMHooksLodsLoaded
- 0001:0004476C       MMHooks.ApplyMMHooksSW
+ 0001:00044488       MMHooks.ApplyHooks
+ 0001:00044610       MMHooks.ApplyMMDeferredHooks
+ 0001:000444C0       MMHooks.ApplyMMHooks
+ 0001:000447A8       MMHooks.ApplyMMHooksLodsLoaded
+ 0001:00044790       MMHooks.ApplyMMHooksSW
  0004:0018788C       MMHooks.ArrowCur
  0003:00002BC4       MMHooks.ArrRef
- 0001:00043118       MMHooks.ASpellBookAction
- 0001:000434A4       MMHooks.ASpellClickMon
+ 0001:00043140       MMHooks.ASpellBookAction
+ 0001:000434CC       MMHooks.ASpellClickMon
  0004:00187A00       MMHooks.ASpellHint
- 0001:000434B0       MMHooks.ASpellHintMM8
+ 0001:000434D8       MMHooks.ASpellHintMM8
  0003:00002C54       MMHooks.ASpellIcon
  0003:00002C58       MMHooks.ASpellIconDn
  0004:001879FC       MMHooks.ASpellIconHover
- 0001:0004335C       MMHooks.ASpellPopAction
+ 0001:00043384       MMHooks.ASpellPopAction
  0004:001879F8       MMHooks.ASpellPressed
- 0001:00043394       MMHooks.AttackKeyHook
+ 0001:000433BC       MMHooks.AttackKeyHook
  0004:001878A4       MMHooks.BackupStatusStr
  0004:001878A0       MMHooks.BackupStatusTime
  0003:00002B24       MMHooks.Begin2D
  0003:00002C88       MMHooks.blast
  0003:00002B0C       MMHooks.Btn
- 0001:0004305C       MMHooks.BuildSpellBook
- 0001:000430D0       MMHooks.BuildSpellBookHook
+ 0001:00043084       MMHooks.BuildSpellBook
+ 0001:000430F8       MMHooks.BuildSpellBookHook
  0001:00041A90       MMHooks.CheckChestArtifact
  0001:00041AE4       MMHooks.CheckChests
  0001:0003FEA0       MMHooks.CheckKey
- 0001:00044484       MMHooks.CheckMMHooks
+ 0001:000444A8       MMHooks.CheckMMHooks
  0001:0003FEB0       MMHooks.CheckMouseKey
  0001:000407E4       MMHooks.CheckMouseLook
- 0001:000443A8       MMHooks.CheckNoWaterWalkDrain
+ 0001:000443CC       MMHooks.CheckNoWaterWalkDrain
  0001:0003FEDC       MMHooks.CheckRightPressed
- 0001:00042984       MMHooks.CheckSpriteD3D
+ 0001:000429B0       MMHooks.CheckSpriteD3D
  0004:001879CC       MMHooks.ChestBtn
  0004:001879C8       MMHooks.ChestBtnPos
  0003:00002B1C       MMHooks.ChestBtnPosMine
- 0001:00041E88       MMHooks.ChestPlaceItem
+ 0001:00041EB4       MMHooks.ChestPlaceItem
  0001:00041960       MMHooks.ChestVerticalHook
  0001:000411C0       MMHooks.ClearKeyStatesHook
- 0001:000429AC       MMHooks.CloseNPCDialog
- 0001:000429EC       MMHooks.CloseNPCDialog2
+ 0001:000429D8       MMHooks.CloseNPCDialog
+ 0001:00042A18       MMHooks.CloseNPCDialog2
  0003:00002BCC       MMHooks.CodeRef
  0001:0003FEF4       MMHooks.CommonKeysProc
  0003:00002B7C       MMHooks.CondOrder
- 0001:00043D5C       MMHooks.CreateFileHook
- 0001:00043CA4       MMHooks.CreateTempFileProc
- 0001:0004299C       MMHooks.D3DErrorMessageHook
- 0001:00043AB8       MMHooks.DeadShowItemInfoProc
- 0001:00043DA0       MMHooks.DeleteFileHook
- 0001:00043C24       MMHooks.DelFromCache
- 0001:000441F0       MMHooks.DoFixBuffTime
- 0001:00042C60       MMHooks.DoFixConditionPriorities
- 0001:00044310       MMHooks.DoFixMonsterAttackCorpse
- 0001:00044438       MMHooks.DontSkipSimpleMessage
- 0001:00043A88       MMHooks.DoShowItemInfo
- 0001:00042960       MMHooks.DrawDoneHook
- 0001:000427F0       MMHooks.DrawEffectsHook
- 0001:00044A24       MMHooks.DrawMyInterface
+ 0001:00043D84       MMHooks.CreateFileHook
+ 0001:00043CCC       MMHooks.CreateTempFileProc
+ 0001:000429C8       MMHooks.D3DErrorMessageHook
+ 0001:00043AE0       MMHooks.DeadShowItemInfoProc
+ 0001:00043DC8       MMHooks.DeleteFileHook
+ 0001:00043C4C       MMHooks.DelFromCache
+ 0001:00044214       MMHooks.DoFixBuffTime
+ 0001:00042C8C       MMHooks.DoFixConditionPriorities
+ 0001:00044334       MMHooks.DoFixMonsterAttackCorpse
+ 0001:0004445C       MMHooks.DontSkipSimpleMessage
+ 0001:00043AB0       MMHooks.DoShowItemInfo
+ 0001:0004298C       MMHooks.DrawDoneHook
+ 0001:0004281C       MMHooks.DrawEffectsHook
+ 0001:00044A48       MMHooks.DrawMyInterface
  0001:00041654       MMHooks.DrawPaperDollStuff
  0001:000412F4       MMHooks.DrawScaled
- 0001:000437E4       MMHooks.DrawShooter
+ 0001:0004380C       MMHooks.DrawShooter
  0004:001879A0       MMHooks.EmptyCur
- 0001:000443F8       MMHooks.EmptyWandProc
+ 0001:0004441C       MMHooks.EmptyWandProc
  0001:00041950       MMHooks.EnchantItemRightClick
  0003:00002B28       MMHooks.End2D
- 0001:0004411C       MMHooks.EquipOnSpearHook
+ 0001:00044140       MMHooks.EquipOnSpearHook
  0003:00002C5C       MMHooks.f
- 0001:000430D8       MMHooks.FetchSpellSound
- 0001:00044AE4       MMHooks.Finalization
- 0001:000420A0       MMHooks.FindSprite
- 0001:00042064       MMHooks.FindSprite
- 0001:00044110       MMHooks.FixAcidBurst
- 0001:00044144       MMHooks.FixArcomage
+ 0001:00043100       MMHooks.FetchSpellSound
+ 0001:00044B08       MMHooks.Finalization
+ 0001:000420CC       MMHooks.FindSprite
+ 0001:00042090       MMHooks.FindSprite
+ 0001:00044134       MMHooks.FixAcidBurst
+ 0001:00044168       MMHooks.FixArcomage
  0001:00041A80       MMHooks.FixArtifactDenial
- 0001:00043A24       MMHooks.FixAttackMonster
- 0001:000442B4       MMHooks.FixBerserkHitParty
- 0001:000442C4       MMHooks.FixBerserkHitParty2
- 0001:000442E4       MMHooks.FixBerserkHitParty3
- 0001:00044168       MMHooks.FixBowSkillDamageBonus8
- 0001:00044178       MMHooks.FixBowSkillDamageBonusStat
- 0001:00044184       MMHooks.FixBright5AM
- 0001:0004429C       MMHooks.FixBuffTime
- 0001:00044374       MMHooks.FixCallLeaveMap
- 0001:00041CF0       MMHooks.FixChest
- 0001:00041E14       MMHooks.FixChestHook8
- 0001:00042058       MMHooks.FixChestsCompact
- 0001:00041F7C       MMHooks.FixChestsCompactProc
- 0001:00042C18       MMHooks.FixChestSmartHook
- 0001:00042A08       MMHooks.FixChestSmartProc
- 0001:000441E4       MMHooks.FixClubs
- 0001:00042C28       MMHooks.FixCompareBuff
- 0001:00043A54       MMHooks.FixDeadDisplayInventory
- 0001:00043A68       MMHooks.FixDeadIdentifyItemProc
- 0001:00042E98       MMHooks.FixFarMonstersAppearGreen
+ 0001:00043A4C       MMHooks.FixAttackMonster
+ 0001:000442D8       MMHooks.FixBerserkHitParty
+ 0001:000442E8       MMHooks.FixBerserkHitParty2
+ 0001:00044308       MMHooks.FixBerserkHitParty3
+ 0001:0004418C       MMHooks.FixBowSkillDamageBonus8
+ 0001:0004419C       MMHooks.FixBowSkillDamageBonusStat
+ 0001:000441A8       MMHooks.FixBright5AM
+ 0001:000442C0       MMHooks.FixBuffTime
+ 0001:00044398       MMHooks.FixCallLeaveMap
+ 0001:00041D1C       MMHooks.FixChest
+ 0001:00041E40       MMHooks.FixChestHook8
+ 0001:00042084       MMHooks.FixChestsCompact
+ 0001:00041FA8       MMHooks.FixChestsCompactProc
+ 0001:00042C44       MMHooks.FixChestSmartHook
+ 0001:00042A34       MMHooks.FixChestSmartProc
+ 0001:00044208       MMHooks.FixClubs
+ 0001:00042C54       MMHooks.FixCompareBuff
+ 0001:00043A7C       MMHooks.FixDeadDisplayInventory
+ 0001:00043A90       MMHooks.FixDeadIdentifyItemProc
+ 0001:00042EC4       MMHooks.FixFarMonstersAppearGreen
  0001:000419BC       MMHooks.FixGMAxeHook1
  0001:00041A18       MMHooks.FixGMAxeHook2
  0001:0004197C       MMHooks.FixGMAxeProc1
  0001:000419D0       MMHooks.FixGMAxeProc2
- 0001:0004441C       MMHooks.FixIdMonEnergyDamage
- 0001:000441E0       MMHooks.FixItemGeneration
- 0001:00043AC4       MMHooks.FixItemsAssassinsBarbarians
- 0001:00042EB4       MMHooks.FixItemSpells
- 0001:00044354       MMHooks.FixLightBolt
+ 0001:00044440       MMHooks.FixIdMonEnergyDamage
+ 0001:00044204       MMHooks.FixItemGeneration
+ 0001:00043AEC       MMHooks.FixItemsAssassinsBarbarians
+ 0001:00042EE0       MMHooks.FixItemSpells
+ 0001:00044378       MMHooks.FixLightBolt
  0001:000414BC       MMHooks.FixLoadBitmapInPlace
- 0001:00043F28       MMHooks.FixMonEnergyDamage
- 0001:00043FB0       MMHooks.FixMonMissiles
- 0001:00043F3C       MMHooks.FixMonMissilesProc
- 0001:00042FB8       MMHooks.FixMonStealDisplay
- 0001:00044334       MMHooks.FixMonsterAttackCorpse
- 0001:00042E78       MMHooks.FixMonsterBlockShots
- 0001:00044394       MMHooks.FixMonstersBodyAttack
- 0001:00043FBC       MMHooks.FixMonsterSpells
- 0001:00043AF8       MMHooks.FixMonstersSpellGM
- 0001:00044380       MMHooks.FixMonstersSummon
- 0001:00042C50       MMHooks.FixNoHWL
- 0001:0004442C       MMHooks.FixNothingHere
- 0001:000442A8       MMHooks.FixPotionBreakItem
- 0001:00043A50       MMHooks.FixQSpellPointsCheck
- 0001:00042E5C       MMHooks.FixReadFacetBit
- 0001:00042F50       MMHooks.FixRemoveInvItemChest
- 0001:00042F08       MMHooks.FixRemoveInvItemPlayer
- 0001:00043FC8       MMHooks.FixShrapmetal
- 0001:00044108       MMHooks.FixSouldrinkerHook
- 0001:000440C0       MMHooks.FixSpritesWrapAround
- 0001:00042FD8       MMHooks.FixStolenLootHint
- 0001:00044400       MMHooks.FixUnimplementedSpells
+ 0001:00043F50       MMHooks.FixMonEnergyDamage
+ 0001:00043FD8       MMHooks.FixMonMissiles
+ 0001:00043F64       MMHooks.FixMonMissilesProc
+ 0001:00042FE0       MMHooks.FixMonStealDisplay
+ 0001:00044358       MMHooks.FixMonsterAttackCorpse
+ 0001:00042EA4       MMHooks.FixMonsterBlockShots
+ 0001:000443B8       MMHooks.FixMonstersBodyAttack
+ 0001:00043FE4       MMHooks.FixMonsterSpells
+ 0001:00043B20       MMHooks.FixMonstersSpellGM
+ 0001:000443A4       MMHooks.FixMonstersSummon
+ 0001:00042C7C       MMHooks.FixNoHWL
+ 0001:00044450       MMHooks.FixNothingHere
+ 0001:000442CC       MMHooks.FixPotionBreakItem
+ 0001:00043A78       MMHooks.FixQSpellPointsCheck
+ 0001:00042E88       MMHooks.FixReadFacetBit
+ 0001:00042F78       MMHooks.FixRemoveInvItemChest
+ 0001:00042F30       MMHooks.FixRemoveInvItemPlayer
+ 0001:00043FEC       MMHooks.FixShrapmetal
+ 0001:0004412C       MMHooks.FixSouldrinkerHook
+ 0001:000440E4       MMHooks.FixSpritesWrapAround
+ 0001:00043000       MMHooks.FixStolenLootHint
+ 0001:00044424       MMHooks.FixUnimplementedSpells
  0001:00041CD4       MMHooks.FixUnmarkedArtifacts
- 0001:00044158       MMHooks.FixWaterWalkDamage
- 0001:000443E8       MMHooks.FixWaterWalkManaDrain
- 0001:00043A38       MMHooks.FixZeroRecovery
- 0001:00042C40       MMHooks.FixZeroVertexFacet1
+ 0001:00041CF0       MMHooks.FixUnmarkedArtifactsMax
+ 0001:0004417C       MMHooks.FixWaterWalkDamage
+ 0001:0004440C       MMHooks.FixWaterWalkManaDrain
+ 0001:00043A60       MMHooks.FixZeroRecovery
+ 0001:00042C6C       MMHooks.FixZeroVertexFacet1
  0004:00187B74       MMHooks.FogRange
  0004:00187B78       MMHooks.FogRangeFloat
  0004:00187B7C       MMHooks.FogRangeMul
  0004:00187B80       MMHooks.FogRangeMul2
- 0001:00043FCC       MMHooks.FreeSpaceCheck
+ 0001:00043FF0       MMHooks.FreeSpaceCheck
  0004:00187B54       MMHooks.FTempFilesCache
  0004:001879DC       MMHooks.GenArtifactCondition
  0004:001879E0       MMHooks.GenArtifactFound
  0001:00041B50       MMHooks.GenerateChestsHook
- 0001:00041E2C       MMHooks.GetChestItemMask
+ 0001:00041E58       MMHooks.GetChestItemMask
  0001:0003FD4C       MMHooks.GetCoordCorrectionIndoorX
  0001:0003FDE4       MMHooks.GetCoordCorrectionIndoorY
  0001:00040618       MMHooks.GetMLookCenter
  0001:000405C8       MMHooks.GetMLookPoint
  0004:0018789C       MMHooks.GetRawInputData
  0001:0003FCF4       MMHooks.GetRelCoordMulIndoor
- 0001:000430F8       MMHooks.GetSpName
+ 0001:00043120       MMHooks.GetSpName
  0004:001879F0       MMHooks.HintDelay
  0003:00002C1C       MMHooks.HookArr
  0003:00002BE8       MMHooks.HookCode
- 0001:00043A30       MMHooks.HookHitDistantMonster
- 0003:00003D74       MMHooks.Hooks
+ 0001:00043A58       MMHooks.HookHitDistantMonster
+ 0003:00003DA8       MMHooks.Hooks
  0003:00002C98       MMHooks.HooksCommon
  0004:00187B58       MMHooks.HouseAnimBuf
  0004:00187B5C       MMHooks.HouseAnimParams
- 0001:00043B38       MMHooks.IceBoltBlastFix
- 0001:00042F6C       MMHooks.InactivePlayerActFix
- 0001:0004277C       MMHooks.IsEffectSprite
+ 0001:00043B60       MMHooks.IceBoltBlastFix
+ 0001:00042F94       MMHooks.InactivePlayerActFix
+ 0001:000427A8       MMHooks.IsEffectSprite
  0001:000414C4       MMHooks.IsLayoutActive
  0003:00002C90       MMHooks.IsMonOfKind
  0004:00187B51       MMHooks.IsReadTempFile
@@ -1613,12 +1614,12 @@ Detailed map of segments
  0004:001879D4       MMHooks.KeyControlMouseBlockScreen
  0004:001879C4       MMHooks.LastChestMember
  0004:001879C0       MMHooks.LastMouseItem
- 0001:0004491C       MMHooks.LoadInterface
+ 0001:00044940       MMHooks.LoadInterface
  0001:00040CEC       MMHooks.LoadMLookBmp
  0001:00041880       MMHooks.LoadSaveEnter8
  0004:00187984       MMHooks.MCenter
  0004:001879F4       MMHooks.MinimapBkgBmp
- 0001:0004302C       MMHooks.MinimapBkgHook
+ 0001:00043054       MMHooks.MinimapBkgHook
  0004:0018798C       MMHooks.MLastPos
  0004:001879A8       MMHooks.MLookBmp
  0004:001879AC       MMHooks.MLookBmpShooter
@@ -1636,10 +1637,10 @@ Detailed map of segments
  0004:00187994       MMHooks.MLookTempPos
  0002:00000590       MMHooks.MMHooks
  0004:00187B28       MMHooks.MonSpritesMulBuf
- 0001:00043B80       MMHooks.MonSpritesSizeHW
- 0001:00043B5C       MMHooks.MonSpritesSizeSW
- 0001:00043B6C       MMHooks.MonSpritesSizeSW2
- 0001:00043AE4       MMHooks.MonsterIsAliveHook
+ 0001:00043BA8       MMHooks.MonSpritesSizeHW
+ 0001:00043B84       MMHooks.MonSpritesSizeSW
+ 0001:00043B94       MMHooks.MonSpritesSizeSW2
+ 0001:00043B0C       MMHooks.MonsterIsAliveHook
  0001:00040C98       MMHooks.MouseLookHook
  0001:00040CD8       MMHooks.MouseLookHook2
  0001:00041140       MMHooks.MouseLookHook3
@@ -1650,13 +1651,13 @@ Detailed map of segments
  0001:00040044       MMHooks.MyClipCursor
  0003:00002B18       MMHooks.myXor
  0001:000411E4       MMHooks.NeedScreenDraw
- 0001:00044844       MMHooks.NeedWindowSize
- 0001:00043DBC       MMHooks.NoGammaPcxHook
- 0001:000440F8       MMHooks.NoVertexHook
+ 0001:00044868       MMHooks.NeedWindowSize
+ 0001:00043DE4       MMHooks.NoGammaPcxHook
+ 0001:0004411C       MMHooks.NoVertexHook
  0004:001879E8       MMHooks.ObjectByPixelBackup
  0004:001879E4       MMHooks.OdmFacetBitsCount
  0003:00002C94       MMHooks.OnLeaveMap
- 0001:00044794       MMHooks.OnLoaded
+ 0001:000447B8       MMHooks.OnLoaded
  0001:00041818       MMHooks.PaperDollInChestsClick
  0001:0004174C       MMHooks.PaperDollInChestsDraw
  0001:00041618       MMHooks.PaperDollInChestsDrawExit
@@ -1668,8 +1669,8 @@ Detailed map of segments
  0001:00040A88       MMHooks.Partial
  0001:00040AB4       MMHooks.ProcessMouseLook
  0001:00040C14       MMHooks.ProcessRawMouseLook
- 0001:000433C4       MMHooks.QSpellKeyHook
- 0001:000433DC       MMHooks.QSpellUseHook
+ 0001:000433EC       MMHooks.QSpellKeyHook
+ 0001:00043404       MMHooks.QSpellUseHook
  0003:00002C8C       MMHooks.range
  0001:00041C50       MMHooks.RefillAnyProc
  0001:00041CB4       MMHooks.RefillBlvHook
@@ -1679,53 +1680,53 @@ Detailed map of segments
  0001:00041C9C       MMHooks.RefillOdmProc
  0001:00041B34       MMHooks.RefundChestArtifacts
  0004:00187898       MMHooks.RegisterRawInputDevices
- 0001:00042ED8       MMHooks.RemoveInvItem
- 0001:00042F1C       MMHooks.RemoveInvItemChest
- 0001:00043A44       MMHooks.RMBColorItems
- 0001:000424AC       MMHooks.SaveGameBugHook
+ 0001:00042F04       MMHooks.RemoveInvItem
+ 0001:00042F44       MMHooks.RemoveInvItemChest
+ 0001:00043A6C       MMHooks.RMBColorItems
+ 0001:000424D8       MMHooks.SaveGameBugHook
  0004:00187B84       MMHooks.ScreenDirty
  0004:001879B8       MMHooks.ScreenDraw
  0004:001879BC       MMHooks.ScreenDrawScanline
- 0001:00043D94       MMHooks.SetReadTempFile
- 0001:00043D88       MMHooks.SetTempFile
- 0001:0004359C       MMHooks.ShooterCheckKey
- 0001:000436E4       MMHooks.ShooterCheckKeyHook
- 0001:0004373C       MMHooks.ShooterCheckMon
- 0001:00043788       MMHooks.ShooterCheckMonDirection
- 0001:000439EC       MMHooks.ShooterCreateProjectile
- 0001:000436F8       MMHooks.ShooterEachTickHook
- 0001:0004376C       MMHooks.ShooterFindMon
- 0001:000439AC       MMHooks.ShooterFixProjectilePos
+ 0001:00043DBC       MMHooks.SetReadTempFile
+ 0001:00043DB0       MMHooks.SetTempFile
+ 0001:000435C4       MMHooks.ShooterCheckKey
+ 0001:0004370C       MMHooks.ShooterCheckKeyHook
+ 0001:00043764       MMHooks.ShooterCheckMon
+ 0001:000437B0       MMHooks.ShooterCheckMonDirection
+ 0001:00043A14       MMHooks.ShooterCreateProjectile
+ 0001:00043720       MMHooks.ShooterEachTickHook
+ 0001:00043794       MMHooks.ShooterFindMon
+ 0001:000439D4       MMHooks.ShooterFixProjectilePos
  0001:00040088       MMHooks.ShooterPress
  0004:00187B24       MMHooks.ShooterQSpell
- 0001:000437A4       MMHooks.ShooterRightClick
- 0001:000437C4       MMHooks.ShooterSetSwordMon
- 0001:000437DC       MMHooks.ShooterSetSwordMonHook
+ 0001:000437CC       MMHooks.ShooterRightClick
+ 0001:000437EC       MMHooks.ShooterSetSwordMon
+ 0001:00043804       MMHooks.ShooterSetSwordMonHook
  0003:00002C74       MMHooks.ShooterSwordCheckMul
  0003:00002C60       MMHooks.ShooterSwordIconNames
  0004:00187B10       MMHooks.ShooterSwordIcons
  0004:00187B08       MMHooks.ShooterSwordMon
  0004:00187B0C       MMHooks.ShooterSwordTime
  0004:00187893       MMHooks.SkipMouseLook
- 0001:00043ED0       MMHooks.SmackDoFrameHook
- 0001:00043EC4       MMHooks.SmackToBufferHook
- 0001:00043E08       MMHooks.SmackToBufferProc
- 0001:00042488       MMHooks.SpritesAngleHook
- 0001:0004249C       MMHooks.SpritesAngleHook2
- 0001:000420F8       MMHooks.SpritesAngleProc
+ 0001:00043EF8       MMHooks.SmackDoFrameHook
+ 0001:00043EEC       MMHooks.SmackToBufferHook
+ 0001:00043E30       MMHooks.SmackToBufferProc
+ 0001:000424B4       MMHooks.SpritesAngleHook
+ 0001:000424C8       MMHooks.SpritesAngleHook2
+ 0001:00042124       MMHooks.SpritesAngleProc
  0001:00040690       MMHooks.StartRawMouseLook
  0001:00040568       MMHooks.SwitchToFullscreenHook
  0001:000404E4       MMHooks.SwitchToWindowedHook
- 0001:00043BE8       MMHooks.TempFilesCache
+ 0001:00043C10       MMHooks.TempFilesCache
  0004:00187B00       MMHooks.TestedASpell
  0001:000414D4       MMHooks.TransformMouseCoord
  0001:00041530       MMHooks.TransformMousePos
- 0001:00044194       MMHooks.TravelDelayHook1
- 0001:000441A0       MMHooks.TravelDelayHook2
- 0001:000441AC       MMHooks.TravelDelayHook3
- 0001:00043418       MMHooks.TryASpell
+ 0001:000441B8       MMHooks.TravelDelayHook1
+ 0001:000441C4       MMHooks.TravelDelayHook2
+ 0001:000441D0       MMHooks.TravelDelayHook3
+ 0001:00043440       MMHooks.TryASpell
  0001:00041C00       MMHooks.UnmarkChestArtifacts
- 0001:00042D68       MMHooks.UpdateHintHook
+ 0001:00042D94       MMHooks.UpdateHintHook
  0001:0004170C       MMHooks.UpdatePaperDoll
  0004:00187B04       MMHooks.WasASpell
  0004:00187891       MMHooks.WasMouseLookOn
@@ -4947,353 +4948,354 @@ Detailed map of segments
  0001:00041CC0       MMHooks.RefillOdmHook
  0001:00041CCC       MMHooks.RefillOdmCountFacets
  0001:00041CD4       MMHooks.FixUnmarkedArtifacts
- 0001:00041CF0       MMHooks.FixChest
- 0001:00041E14       MMHooks.FixChestHook8
- 0001:00041E2C       MMHooks.GetChestItemMask
- 0001:00041E88       MMHooks.ChestPlaceItem
- 0001:00041F7C       MMHooks.FixChestsCompactProc
- 0001:00042058       MMHooks.FixChestsCompact
- 0001:00042064       MMHooks.FindSprite
- 0001:000420A0       MMHooks.FindSprite
- 0001:000420F8       MMHooks.SpritesAngleProc
- 0001:00042488       MMHooks.SpritesAngleHook
- 0001:0004249C       MMHooks.SpritesAngleHook2
- 0001:000424AC       MMHooks.SaveGameBugHook
- 0001:0004277C       MMHooks.IsEffectSprite
- 0001:000427F0       MMHooks.DrawEffectsHook
- 0001:00042960       MMHooks.DrawDoneHook
- 0001:00042984       MMHooks.CheckSpriteD3D
- 0001:0004299C       MMHooks.D3DErrorMessageHook
- 0001:000429AC       MMHooks.CloseNPCDialog
- 0001:000429EC       MMHooks.CloseNPCDialog2
- 0001:00042A08       MMHooks.FixChestSmartProc
- 0001:00042C18       MMHooks.FixChestSmartHook
- 0001:00042C28       MMHooks.FixCompareBuff
- 0001:00042C40       MMHooks.FixZeroVertexFacet1
- 0001:00042C50       MMHooks.FixNoHWL
- 0001:00042C60       MMHooks.DoFixConditionPriorities
- 0001:00042D68       MMHooks.UpdateHintHook
- 0001:00042E5C       MMHooks.FixReadFacetBit
- 0001:00042E78       MMHooks.FixMonsterBlockShots
- 0001:00042E98       MMHooks.FixFarMonstersAppearGreen
- 0001:00042EB4       MMHooks.FixItemSpells
- 0001:00042ED8       MMHooks.RemoveInvItem
- 0001:00042F08       MMHooks.FixRemoveInvItemPlayer
- 0001:00042F1C       MMHooks.RemoveInvItemChest
- 0001:00042F50       MMHooks.FixRemoveInvItemChest
- 0001:00042F6C       MMHooks.InactivePlayerActFix
- 0001:00042FB8       MMHooks.FixMonStealDisplay
- 0001:00042FD8       MMHooks.FixStolenLootHint
- 0001:0004302C       MMHooks.MinimapBkgHook
- 0001:0004305C       MMHooks.BuildSpellBook
- 0001:000430D0       MMHooks.BuildSpellBookHook
- 0001:000430D8       MMHooks.FetchSpellSound
- 0001:000430F8       MMHooks.GetSpName
- 0001:00043118       MMHooks.ASpellBookAction
- 0001:0004335C       MMHooks.ASpellPopAction
- 0001:00043394       MMHooks.AttackKeyHook
- 0001:000433C4       MMHooks.QSpellKeyHook
- 0001:000433DC       MMHooks.QSpellUseHook
- 0001:00043418       MMHooks.TryASpell
- 0001:000434A4       MMHooks.ASpellClickMon
- 0001:000434B0       MMHooks.ASpellHintMM8
- 0001:0004359C       MMHooks.ShooterCheckKey
- 0001:000436E4       MMHooks.ShooterCheckKeyHook
- 0001:000436F8       MMHooks.ShooterEachTickHook
- 0001:0004373C       MMHooks.ShooterCheckMon
- 0001:0004376C       MMHooks.ShooterFindMon
- 0001:00043788       MMHooks.ShooterCheckMonDirection
- 0001:000437A4       MMHooks.ShooterRightClick
- 0001:000437C4       MMHooks.ShooterSetSwordMon
- 0001:000437DC       MMHooks.ShooterSetSwordMonHook
- 0001:000437E4       MMHooks.DrawShooter
- 0001:000439AC       MMHooks.ShooterFixProjectilePos
- 0001:000439EC       MMHooks.ShooterCreateProjectile
- 0001:00043A24       MMHooks.FixAttackMonster
- 0001:00043A30       MMHooks.HookHitDistantMonster
- 0001:00043A38       MMHooks.FixZeroRecovery
- 0001:00043A44       MMHooks.RMBColorItems
- 0001:00043A50       MMHooks.FixQSpellPointsCheck
- 0001:00043A54       MMHooks.FixDeadDisplayInventory
- 0001:00043A68       MMHooks.FixDeadIdentifyItemProc
- 0001:00043A88       MMHooks.DoShowItemInfo
- 0001:00043AB8       MMHooks.DeadShowItemInfoProc
- 0001:00043AC4       MMHooks.FixItemsAssassinsBarbarians
- 0001:00043AE4       MMHooks.MonsterIsAliveHook
- 0001:00043AF8       MMHooks.FixMonstersSpellGM
- 0001:00043B38       MMHooks.IceBoltBlastFix
- 0001:00043B5C       MMHooks.MonSpritesSizeSW
- 0001:00043B6C       MMHooks.MonSpritesSizeSW2
- 0001:00043B80       MMHooks.MonSpritesSizeHW
- 0001:00043BE8       MMHooks.TempFilesCache
- 0001:00043C24       MMHooks.DelFromCache
- 0001:00043CA4       MMHooks.CreateTempFileProc
- 0001:00043D5C       MMHooks.CreateFileHook
- 0001:00043D88       MMHooks.SetTempFile
- 0001:00043D94       MMHooks.SetReadTempFile
- 0001:00043DA0       MMHooks.DeleteFileHook
- 0001:00043DBC       MMHooks.NoGammaPcxHook
- 0001:00043E08       MMHooks.SmackToBufferProc
- 0001:00043EC4       MMHooks.SmackToBufferHook
- 0001:00043ED0       MMHooks.SmackDoFrameHook
- 0001:00043F28       MMHooks.FixMonEnergyDamage
- 0001:00043F3C       MMHooks.FixMonMissilesProc
- 0001:00043FB0       MMHooks.FixMonMissiles
- 0001:00043FBC       MMHooks.FixMonsterSpells
- 0001:00043FC8       MMHooks.FixShrapmetal
- 0001:00043FCC       MMHooks.FreeSpaceCheck
- 0001:000440C0       MMHooks.FixSpritesWrapAround
- 0001:000440F8       MMHooks.NoVertexHook
- 0001:00044108       MMHooks.FixSouldrinkerHook
- 0001:00044110       MMHooks.FixAcidBurst
- 0001:0004411C       MMHooks.EquipOnSpearHook
- 0001:00044144       MMHooks.FixArcomage
- 0001:00044158       MMHooks.FixWaterWalkDamage
- 0001:00044168       MMHooks.FixBowSkillDamageBonus8
- 0001:00044178       MMHooks.FixBowSkillDamageBonusStat
- 0001:00044184       MMHooks.FixBright5AM
- 0001:00044194       MMHooks.TravelDelayHook1
- 0001:000441A0       MMHooks.TravelDelayHook2
- 0001:000441AC       MMHooks.TravelDelayHook3
- 0001:000441E0       MMHooks.FixItemGeneration
- 0001:000441E4       MMHooks.FixClubs
- 0001:000441F0       MMHooks.DoFixBuffTime
- 0001:0004429C       MMHooks.FixBuffTime
- 0001:000442A8       MMHooks.FixPotionBreakItem
- 0001:000442B4       MMHooks.FixBerserkHitParty
- 0001:000442C4       MMHooks.FixBerserkHitParty2
- 0001:000442E4       MMHooks.FixBerserkHitParty3
- 0001:00044310       MMHooks.DoFixMonsterAttackCorpse
- 0001:00044334       MMHooks.FixMonsterAttackCorpse
- 0001:00044354       MMHooks.FixLightBolt
- 0001:00044374       MMHooks.FixCallLeaveMap
- 0001:00044380       MMHooks.FixMonstersSummon
- 0001:00044394       MMHooks.FixMonstersBodyAttack
- 0001:000443A8       MMHooks.CheckNoWaterWalkDrain
- 0001:000443E8       MMHooks.FixWaterWalkManaDrain
- 0001:000443F8       MMHooks.EmptyWandProc
- 0001:00044400       MMHooks.FixUnimplementedSpells
- 0001:0004441C       MMHooks.FixIdMonEnergyDamage
- 0001:0004442C       MMHooks.FixNothingHere
- 0001:00044438       MMHooks.DontSkipSimpleMessage
- 0001:00044464       MMHooks.ApplyHooks
- 0001:00044484       MMHooks.CheckMMHooks
- 0001:0004449C       MMHooks.ApplyMMHooks
- 0001:000445EC       MMHooks.ApplyMMDeferredHooks
- 0001:0004476C       MMHooks.ApplyMMHooksSW
- 0001:00044784       MMHooks.ApplyMMHooksLodsLoaded
- 0001:00044794       MMHooks.OnLoaded
- 0001:00044844       MMHooks.NeedWindowSize
- 0001:0004491C       MMHooks.LoadInterface
- 0001:00044A24       MMHooks.DrawMyInterface
- 0001:00044AE4       MMHooks.Finalization
- 0001:00044BCC       Hooks.OpenInventory
- 0001:00044C4C       Hooks.QuickLoad
- 0001:00044DC8       Hooks.KeysProc
- 0001:00044F18       Hooks.KeysHook
- 0001:00044F24       Hooks.SaveNamesHook
- 0001:00044F7C       Hooks.FillSaveSlotsBefore
- 0001:00044FE0       Hooks.FillSaveSlotsAfter
- 0001:00045134       Hooks.FillSaveSlotsHook
- 0001:0004514C       Hooks.ChooseSaveSlotProc
- 0001:00045158       Hooks.ChooseSaveSlotHook
- 0001:00045170       Hooks.SaveHook
- 0001:0004517C       Hooks.QuicksaveProc
- 0001:000452BC       Hooks.QuicksaveHook
- 0001:000452CC       Hooks.QuickSaveSlotProc
- 0001:000453D0       Hooks.QuickSaveSlotHook
- 0001:000453E4       Hooks.QuickSaveNamesProc
- 0001:000454E8       Hooks.QuickSaveNamesHook
- 0001:00045508       Hooks.QuickSaveDrawProc
- 0001:00045598       Hooks.QuickSaveDrawHook
- 0001:000455A8       Hooks.QuickSaveDrawHook2
- 0001:000455B8       Hooks.QuickSaveDrawHook3
- 0001:000455CC       Hooks.QuickSaveDrawHook4
- 0001:000455E8       Hooks.CapsLockHook
- 0001:000455F0       Hooks.InactiveMemberEventsProc
- 0001:00045654       Hooks.InactiveMemberEventsHook
- 0001:00045688       Hooks.CheckNextMemberHook
- 0001:0004569C       Hooks.AttackDescriptionProc
- 0001:000457D0       Hooks.AttackDescriptionHook
- 0001:000457E8       Hooks.ShootDescriptionHook
- 0001:00045804       Hooks.LodFilesProc
- 0001:00045920       Hooks.LodFilesHook
- 0001:00045940       Hooks.LodFileStoreSize
- 0001:00045954       Hooks.LodFileEvtOrStr
- 0001:00045960       Hooks.SecondHandDaggerHook
- 0001:00045970       Hooks.WeaponRecoveryBonusHook
- 0001:00045974       Hooks.FindActiveMember
- 0001:0004598C       Hooks.ScrollTestMember
- 0001:000459DC       Hooks.ReputationHook
- 0001:000459F0       Hooks.DoubleSpeedHook
- 0001:00045A4C       Hooks.TurnSpeedHook
- 0001:00045A70       Hooks.FeatherFallHook
- 0001:00045AA0       Hooks.ResistancesHook
- 0001:00045AB8       Hooks.MouseBorderHook
- 0001:00045B18       Hooks.Crash1Hook
- 0001:00045B64       Hooks.Crash1Hook2
- 0001:00045B98       Hooks.MovieHook
- 0001:00045BAC       Hooks.ElderaxeHook
- 0001:00045BBC       Hooks.DaggerTrippleHook
- 0001:00045BD0       Hooks.HasteWeakCheck
- 0001:00045C0C       Hooks.HasteWeakHook
- 0001:00045C14       Hooks.HeraldsBootsHook
- 0001:00045C34       Hooks.AppendDebugLog
- 0001:00045D1C       Hooks.UnhandledException
- 0001:00045DD0       Hooks.ErrorProc
- 0001:00045F0C       Hooks.ErrorHook1
- 0001:00045F30       Hooks.ErrorHook2
- 0001:00045F54       Hooks.ErrorHook3
- 0001:00045F7C       Hooks.ChangeTrackHook
- 0001:00045F9C       Hooks.DDrawErrorHook
- 0001:00045FA4       Hooks.LoadSpriteD3DHook2
- 0001:00045FB8       Hooks.LoadSpriteD3DHook3
- 0001:00045FD8       Hooks.LoadSpriteD3DHook4
- 0001:00046010       Hooks.ExtendSpriteLimits
- 0001:000460D4       Hooks.FixCreditsPause
- 0001:000460E0       Hooks.MemoryNewProc
- 0001:00046108       Hooks.MemoryFreeProc
- 0001:00046110       Hooks.MemoryInitHook
- 0001:0004611C       Hooks.MemoryFreeHook
- 0001:0004612C       Hooks.MemoryNewHook
- 0001:00046144       Hooks.SpellsTxtHook
- 0001:0004615C       Hooks.LoadSoundHook
- 0001:00046170       Hooks.TextureCheckHook
- 0001:0004617C       Hooks.TextureCheckHook2
- 0001:00046188       Hooks.FacetCheckHook
- 0001:00046198       Hooks.FacetCheckHook2
- 0001:000461A8       Hooks.FacetCheckHook3
- 0001:000461C0       Hooks.NoVertexFacetHook
- 0001:000461D4       Hooks.NoVertexFacetHook2
- 0001:000461E8       Hooks.PalettesHook
- 0001:00046208       Hooks.PressSpaceHook
- 0001:00046284       Hooks.DoorStateSwitchHook
- 0001:000462A4       Hooks.FixPrismaticBug
- 0001:000462D0       Hooks.MouseLookFlyProc
- 0001:000464CC       Hooks.MouseLookFlyHook1
- 0001:000464EC       Hooks.MouseLookFlyHook2
- 0001:00046508       Hooks.IDMonProc
- 0001:00046564       Hooks.IDMonHook
- 0001:00046570       Hooks.StatColorFixHook
- 0001:00046580       Hooks.PaletteSMulHook
- 0001:0004658C       Hooks.SetTPTime
- 0001:00046598       Hooks.TPProc2
- 0001:000465D4       Hooks.TPHook
- 0001:000465E4       Hooks.TPHook2
- 0001:00046604       Hooks.LBHook
- 0001:00046614       Hooks.LBHook2
- 0001:00046634       Hooks.DefaultSmoothTurnHook
- 0001:00046640       Hooks.FixLeaveMapDieHook
- 0001:0004664C       Hooks.TravelGoldFixHook1
- 0001:0004666C       Hooks.TravelGoldFixHook2
- 0001:00046680       Hooks.AutoColor16Proc
- 0001:00046758       Hooks.AutoColor16Hook
- 0001:00046764       Hooks.AutoColor16Hook2
- 0001:00046774       Hooks.AutorunProc
- 0001:000467FC       Hooks.AutorunHook
- 0001:00046808       Hooks.LloydAutosaveFix
- 0001:0004685C       Hooks.TPAutosaveFix
- 0001:000468AC       Hooks.AddLodRecord
- 0001:000468DC       Hooks.FindInLodAndSeek
- 0001:000468E4       Hooks.FindInLod
- 0001:000468F8       Hooks.FindInLodProc
- 0001:000469A4       Hooks.FindInLodAndSeekHook
- 0001:000469AC       Hooks.FindInLodHook
- 0001:000469C0       Hooks.DoLoadCustomLod
- 0001:00046B64       Hooks.LoadCustomLod
- 0001:00046B94       Hooks.FreeCustomLod
- 0001:00046C20       Hooks.GetCustomLodsList
- 0001:00046C28       Hooks.GetLodRecords
- 0001:00046C30       Hooks.DoLoadCustomLods
- 0001:00046D20       Hooks.LoadCustomLods
- 0001:00046E6C       Hooks.LoadCustomLodsD3D
- 0001:00047034       Hooks.LoadLodsHook
- 0001:00047304       Hooks.OpenVid
- 0001:0004738C       Hooks.OpenCustomVids
- 0001:00047470       Hooks.OpenVidsProc
- 0001:00047584       Hooks.OpenVidsHook
- 0001:00047594       Hooks.SelectVidFile
- 0001:00047648       Hooks.OpenBikSmkHook
- 0001:00047658       Hooks.StrafeOrWalkHook
- 0001:00047694       Hooks.FixStrafe1
- 0001:000476B4       Hooks.FixStrafe2
- 0001:000476C4       Hooks.FixStrafePlayer
- 0001:000476D8       Hooks.FixStrafeMonster1
- 0001:000476F4       Hooks.FixStrafeMonster2
- 0001:00047710       Hooks.FixStrafeObject1
- 0001:0004772C       Hooks.FixStrafeObject2
- 0001:00047748       Hooks.HDWTRCountHook
- 0001:0004776C       Hooks.FixSkyBitmap
- 0001:00047780       Hooks.FixSkyLen
- 0001:00047798       Hooks.StartHook
- 0001:000477A8       Hooks.FixTelepathy
- 0001:000477B8       Hooks.FixSmallScaleSprites
- 0001:000477D0       Hooks.FixItemsTxtProc
- 0001:00047D78       Hooks.FixItemsTxtHook
- 0001:00047DA0       Hooks.GetTimerKind
- 0001:00047DBC       Hooks.TimerSetTriggerTime
- 0001:00047EB8       Hooks.UpdatePeriodicTimer
- 0001:00047EDC       Hooks.FixTimerValidate
- 0001:00047F3C       Hooks.FixTimerRetriggerHook1
- 0001:00047F48       Hooks.FixTimerRetriggerHook2
- 0001:00047F7C       Hooks.FixTimerSetupHook1
- 0001:00047F90       Hooks.FixTimerSetupHook2
- 0001:00047FAC       Hooks.TPDelayHook1
- 0001:00047FC8       Hooks.TPDelayProc2
- 0001:0004800C       Hooks.TPDelayHook2
- 0001:00048064       Hooks.FixMovementNerf
- 0001:00048078       Hooks.NoMonsterJumpDown1
- 0001:0004809C       Hooks.NoMonsterJumpDown2
- 0001:000480B0       Hooks.FixFullScreenBlink
- 0001:000480D0       Hooks.FixBlitCopyProc
- 0001:0004813C       Hooks.FixBlitCopy
- 0001:00048154       Hooks.FixMonsterSummon
- 0001:00048164       Hooks.FixDragonTargeting
- 0001:000481C0       Hooks.CanSellItemHook
- 0001:000481EC       Hooks.CanSellItemHook2
- 0001:00048208       Hooks.ExitCrashHook
- 0001:0004821C       Hooks.FixLava1
- 0001:00048228       Hooks.FixLava2
- 0001:0004823C       Hooks.FixObelisk
- 0001:0004825C       Hooks.FixObelisk2
- 0001:00048274       Hooks.ScreenToClientHook
- 0001:000482A4       Hooks.DrawMovieHook
- 0001:00048390       Hooks.SmackDrawProc1
- 0001:000483AC       Hooks.SmackDrawHook1
- 0001:000483BC       Hooks.SmackDrawProc2
- 0001:00048400       Hooks.SmackDrawHook2
- 0001:00048420       Hooks.SmackLoadHook
- 0001:00048448       Hooks.BinkDrawProc1
- 0001:0004846C       Hooks.BinkDrawHook1
- 0001:00048484       Hooks.BinkDrawHook2
- 0001:0004849C       Hooks.BinkLoadHook
- 0001:000484B0       Hooks.FixMipmapsMemLeak
- 0001:000484C0       Hooks.FixSpritesInMonInfo
- 0001:000484CC       Hooks.FixDivCrash1
- 0001:00048500       Hooks.FixDivCrash2
- 0001:00048534       Hooks.GetRestoredRect
- 0001:00048554       Hooks.FixTurnBasedWalking
- 0001:00048578       Hooks.DeathMovieProc
- 0001:000485B4       Hooks.DeathMovieHook
- 0001:000485C8       Hooks.MinimapZoomHook
- 0001:00048630       Hooks.AdvInnCrashFix
- 0001:00048640       Hooks.TFTWaterHook
- 0001:00048648       Hooks.TabHook
- 0001:00048660       Hooks.MyLoadCursor
- 0001:00048724       Hooks.FixIndoorFOVProcSW
- 0001:00048778       Hooks.FixRestEncounter
- 0001:00048784       Hooks.PostponeIntroHook
- 0001:000487CC       Hooks.TreeHintsHook
- 0001:000487E0       Hooks.FixTurnBasedHire
- 0001:000487FC       Hooks.FixArtifactBonuses1
- 0001:00048820       Hooks.FixArtifactBonuses2
- 0001:00048840       Hooks.FixCheckItems
- 0001:0004884C       Hooks.FixOfAcid
- 0001:00048900       Hooks.ReadDisables
- 0001:00048A14       Hooks.HookAll
- 0001:00048BA4       Hooks.ApplyDeferredHooks
- 0001:00048DEC       Hooks.Finalization
- 0001:00048EB8       MM8patch.Finalization
+ 0001:00041CF0       MMHooks.FixUnmarkedArtifactsMax
+ 0001:00041D1C       MMHooks.FixChest
+ 0001:00041E40       MMHooks.FixChestHook8
+ 0001:00041E58       MMHooks.GetChestItemMask
+ 0001:00041EB4       MMHooks.ChestPlaceItem
+ 0001:00041FA8       MMHooks.FixChestsCompactProc
+ 0001:00042084       MMHooks.FixChestsCompact
+ 0001:00042090       MMHooks.FindSprite
+ 0001:000420CC       MMHooks.FindSprite
+ 0001:00042124       MMHooks.SpritesAngleProc
+ 0001:000424B4       MMHooks.SpritesAngleHook
+ 0001:000424C8       MMHooks.SpritesAngleHook2
+ 0001:000424D8       MMHooks.SaveGameBugHook
+ 0001:000427A8       MMHooks.IsEffectSprite
+ 0001:0004281C       MMHooks.DrawEffectsHook
+ 0001:0004298C       MMHooks.DrawDoneHook
+ 0001:000429B0       MMHooks.CheckSpriteD3D
+ 0001:000429C8       MMHooks.D3DErrorMessageHook
+ 0001:000429D8       MMHooks.CloseNPCDialog
+ 0001:00042A18       MMHooks.CloseNPCDialog2
+ 0001:00042A34       MMHooks.FixChestSmartProc
+ 0001:00042C44       MMHooks.FixChestSmartHook
+ 0001:00042C54       MMHooks.FixCompareBuff
+ 0001:00042C6C       MMHooks.FixZeroVertexFacet1
+ 0001:00042C7C       MMHooks.FixNoHWL
+ 0001:00042C8C       MMHooks.DoFixConditionPriorities
+ 0001:00042D94       MMHooks.UpdateHintHook
+ 0001:00042E88       MMHooks.FixReadFacetBit
+ 0001:00042EA4       MMHooks.FixMonsterBlockShots
+ 0001:00042EC4       MMHooks.FixFarMonstersAppearGreen
+ 0001:00042EE0       MMHooks.FixItemSpells
+ 0001:00042F04       MMHooks.RemoveInvItem
+ 0001:00042F30       MMHooks.FixRemoveInvItemPlayer
+ 0001:00042F44       MMHooks.RemoveInvItemChest
+ 0001:00042F78       MMHooks.FixRemoveInvItemChest
+ 0001:00042F94       MMHooks.InactivePlayerActFix
+ 0001:00042FE0       MMHooks.FixMonStealDisplay
+ 0001:00043000       MMHooks.FixStolenLootHint
+ 0001:00043054       MMHooks.MinimapBkgHook
+ 0001:00043084       MMHooks.BuildSpellBook
+ 0001:000430F8       MMHooks.BuildSpellBookHook
+ 0001:00043100       MMHooks.FetchSpellSound
+ 0001:00043120       MMHooks.GetSpName
+ 0001:00043140       MMHooks.ASpellBookAction
+ 0001:00043384       MMHooks.ASpellPopAction
+ 0001:000433BC       MMHooks.AttackKeyHook
+ 0001:000433EC       MMHooks.QSpellKeyHook
+ 0001:00043404       MMHooks.QSpellUseHook
+ 0001:00043440       MMHooks.TryASpell
+ 0001:000434CC       MMHooks.ASpellClickMon
+ 0001:000434D8       MMHooks.ASpellHintMM8
+ 0001:000435C4       MMHooks.ShooterCheckKey
+ 0001:0004370C       MMHooks.ShooterCheckKeyHook
+ 0001:00043720       MMHooks.ShooterEachTickHook
+ 0001:00043764       MMHooks.ShooterCheckMon
+ 0001:00043794       MMHooks.ShooterFindMon
+ 0001:000437B0       MMHooks.ShooterCheckMonDirection
+ 0001:000437CC       MMHooks.ShooterRightClick
+ 0001:000437EC       MMHooks.ShooterSetSwordMon
+ 0001:00043804       MMHooks.ShooterSetSwordMonHook
+ 0001:0004380C       MMHooks.DrawShooter
+ 0001:000439D4       MMHooks.ShooterFixProjectilePos
+ 0001:00043A14       MMHooks.ShooterCreateProjectile
+ 0001:00043A4C       MMHooks.FixAttackMonster
+ 0001:00043A58       MMHooks.HookHitDistantMonster
+ 0001:00043A60       MMHooks.FixZeroRecovery
+ 0001:00043A6C       MMHooks.RMBColorItems
+ 0001:00043A78       MMHooks.FixQSpellPointsCheck
+ 0001:00043A7C       MMHooks.FixDeadDisplayInventory
+ 0001:00043A90       MMHooks.FixDeadIdentifyItemProc
+ 0001:00043AB0       MMHooks.DoShowItemInfo
+ 0001:00043AE0       MMHooks.DeadShowItemInfoProc
+ 0001:00043AEC       MMHooks.FixItemsAssassinsBarbarians
+ 0001:00043B0C       MMHooks.MonsterIsAliveHook
+ 0001:00043B20       MMHooks.FixMonstersSpellGM
+ 0001:00043B60       MMHooks.IceBoltBlastFix
+ 0001:00043B84       MMHooks.MonSpritesSizeSW
+ 0001:00043B94       MMHooks.MonSpritesSizeSW2
+ 0001:00043BA8       MMHooks.MonSpritesSizeHW
+ 0001:00043C10       MMHooks.TempFilesCache
+ 0001:00043C4C       MMHooks.DelFromCache
+ 0001:00043CCC       MMHooks.CreateTempFileProc
+ 0001:00043D84       MMHooks.CreateFileHook
+ 0001:00043DB0       MMHooks.SetTempFile
+ 0001:00043DBC       MMHooks.SetReadTempFile
+ 0001:00043DC8       MMHooks.DeleteFileHook
+ 0001:00043DE4       MMHooks.NoGammaPcxHook
+ 0001:00043E30       MMHooks.SmackToBufferProc
+ 0001:00043EEC       MMHooks.SmackToBufferHook
+ 0001:00043EF8       MMHooks.SmackDoFrameHook
+ 0001:00043F50       MMHooks.FixMonEnergyDamage
+ 0001:00043F64       MMHooks.FixMonMissilesProc
+ 0001:00043FD8       MMHooks.FixMonMissiles
+ 0001:00043FE4       MMHooks.FixMonsterSpells
+ 0001:00043FEC       MMHooks.FixShrapmetal
+ 0001:00043FF0       MMHooks.FreeSpaceCheck
+ 0001:000440E4       MMHooks.FixSpritesWrapAround
+ 0001:0004411C       MMHooks.NoVertexHook
+ 0001:0004412C       MMHooks.FixSouldrinkerHook
+ 0001:00044134       MMHooks.FixAcidBurst
+ 0001:00044140       MMHooks.EquipOnSpearHook
+ 0001:00044168       MMHooks.FixArcomage
+ 0001:0004417C       MMHooks.FixWaterWalkDamage
+ 0001:0004418C       MMHooks.FixBowSkillDamageBonus8
+ 0001:0004419C       MMHooks.FixBowSkillDamageBonusStat
+ 0001:000441A8       MMHooks.FixBright5AM
+ 0001:000441B8       MMHooks.TravelDelayHook1
+ 0001:000441C4       MMHooks.TravelDelayHook2
+ 0001:000441D0       MMHooks.TravelDelayHook3
+ 0001:00044204       MMHooks.FixItemGeneration
+ 0001:00044208       MMHooks.FixClubs
+ 0001:00044214       MMHooks.DoFixBuffTime
+ 0001:000442C0       MMHooks.FixBuffTime
+ 0001:000442CC       MMHooks.FixPotionBreakItem
+ 0001:000442D8       MMHooks.FixBerserkHitParty
+ 0001:000442E8       MMHooks.FixBerserkHitParty2
+ 0001:00044308       MMHooks.FixBerserkHitParty3
+ 0001:00044334       MMHooks.DoFixMonsterAttackCorpse
+ 0001:00044358       MMHooks.FixMonsterAttackCorpse
+ 0001:00044378       MMHooks.FixLightBolt
+ 0001:00044398       MMHooks.FixCallLeaveMap
+ 0001:000443A4       MMHooks.FixMonstersSummon
+ 0001:000443B8       MMHooks.FixMonstersBodyAttack
+ 0001:000443CC       MMHooks.CheckNoWaterWalkDrain
+ 0001:0004440C       MMHooks.FixWaterWalkManaDrain
+ 0001:0004441C       MMHooks.EmptyWandProc
+ 0001:00044424       MMHooks.FixUnimplementedSpells
+ 0001:00044440       MMHooks.FixIdMonEnergyDamage
+ 0001:00044450       MMHooks.FixNothingHere
+ 0001:0004445C       MMHooks.DontSkipSimpleMessage
+ 0001:00044488       MMHooks.ApplyHooks
+ 0001:000444A8       MMHooks.CheckMMHooks
+ 0001:000444C0       MMHooks.ApplyMMHooks
+ 0001:00044610       MMHooks.ApplyMMDeferredHooks
+ 0001:00044790       MMHooks.ApplyMMHooksSW
+ 0001:000447A8       MMHooks.ApplyMMHooksLodsLoaded
+ 0001:000447B8       MMHooks.OnLoaded
+ 0001:00044868       MMHooks.NeedWindowSize
+ 0001:00044940       MMHooks.LoadInterface
+ 0001:00044A48       MMHooks.DrawMyInterface
+ 0001:00044B08       MMHooks.Finalization
+ 0001:00044BF0       Hooks.OpenInventory
+ 0001:00044C70       Hooks.QuickLoad
+ 0001:00044DEC       Hooks.KeysProc
+ 0001:00044F3C       Hooks.KeysHook
+ 0001:00044F48       Hooks.SaveNamesHook
+ 0001:00044FA0       Hooks.FillSaveSlotsBefore
+ 0001:00045004       Hooks.FillSaveSlotsAfter
+ 0001:00045158       Hooks.FillSaveSlotsHook
+ 0001:00045170       Hooks.ChooseSaveSlotProc
+ 0001:0004517C       Hooks.ChooseSaveSlotHook
+ 0001:00045194       Hooks.SaveHook
+ 0001:000451A0       Hooks.QuicksaveProc
+ 0001:000452E0       Hooks.QuicksaveHook
+ 0001:000452F0       Hooks.QuickSaveSlotProc
+ 0001:000453F4       Hooks.QuickSaveSlotHook
+ 0001:00045408       Hooks.QuickSaveNamesProc
+ 0001:0004550C       Hooks.QuickSaveNamesHook
+ 0001:0004552C       Hooks.QuickSaveDrawProc
+ 0001:000455BC       Hooks.QuickSaveDrawHook
+ 0001:000455CC       Hooks.QuickSaveDrawHook2
+ 0001:000455DC       Hooks.QuickSaveDrawHook3
+ 0001:000455F0       Hooks.QuickSaveDrawHook4
+ 0001:0004560C       Hooks.CapsLockHook
+ 0001:00045614       Hooks.InactiveMemberEventsProc
+ 0001:00045678       Hooks.InactiveMemberEventsHook
+ 0001:000456AC       Hooks.CheckNextMemberHook
+ 0001:000456C0       Hooks.AttackDescriptionProc
+ 0001:000457F4       Hooks.AttackDescriptionHook
+ 0001:0004580C       Hooks.ShootDescriptionHook
+ 0001:00045828       Hooks.LodFilesProc
+ 0001:00045944       Hooks.LodFilesHook
+ 0001:00045964       Hooks.LodFileStoreSize
+ 0001:00045978       Hooks.LodFileEvtOrStr
+ 0001:00045984       Hooks.SecondHandDaggerHook
+ 0001:00045994       Hooks.WeaponRecoveryBonusHook
+ 0001:00045998       Hooks.FindActiveMember
+ 0001:000459B0       Hooks.ScrollTestMember
+ 0001:00045A00       Hooks.ReputationHook
+ 0001:00045A14       Hooks.DoubleSpeedHook
+ 0001:00045A70       Hooks.TurnSpeedHook
+ 0001:00045A94       Hooks.FeatherFallHook
+ 0001:00045AC4       Hooks.ResistancesHook
+ 0001:00045ADC       Hooks.MouseBorderHook
+ 0001:00045B3C       Hooks.Crash1Hook
+ 0001:00045B88       Hooks.Crash1Hook2
+ 0001:00045BBC       Hooks.MovieHook
+ 0001:00045BD0       Hooks.ElderaxeHook
+ 0001:00045BE0       Hooks.DaggerTrippleHook
+ 0001:00045BF4       Hooks.HasteWeakCheck
+ 0001:00045C30       Hooks.HasteWeakHook
+ 0001:00045C38       Hooks.HeraldsBootsHook
+ 0001:00045C58       Hooks.AppendDebugLog
+ 0001:00045D40       Hooks.UnhandledException
+ 0001:00045DF4       Hooks.ErrorProc
+ 0001:00045F30       Hooks.ErrorHook1
+ 0001:00045F54       Hooks.ErrorHook2
+ 0001:00045F78       Hooks.ErrorHook3
+ 0001:00045FA0       Hooks.ChangeTrackHook
+ 0001:00045FC0       Hooks.DDrawErrorHook
+ 0001:00045FC8       Hooks.LoadSpriteD3DHook2
+ 0001:00045FDC       Hooks.LoadSpriteD3DHook3
+ 0001:00045FFC       Hooks.LoadSpriteD3DHook4
+ 0001:00046034       Hooks.ExtendSpriteLimits
+ 0001:000460F8       Hooks.FixCreditsPause
+ 0001:00046104       Hooks.MemoryNewProc
+ 0001:0004612C       Hooks.MemoryFreeProc
+ 0001:00046134       Hooks.MemoryInitHook
+ 0001:00046140       Hooks.MemoryFreeHook
+ 0001:00046150       Hooks.MemoryNewHook
+ 0001:00046168       Hooks.SpellsTxtHook
+ 0001:00046180       Hooks.LoadSoundHook
+ 0001:00046194       Hooks.TextureCheckHook
+ 0001:000461A0       Hooks.TextureCheckHook2
+ 0001:000461AC       Hooks.FacetCheckHook
+ 0001:000461BC       Hooks.FacetCheckHook2
+ 0001:000461CC       Hooks.FacetCheckHook3
+ 0001:000461E4       Hooks.NoVertexFacetHook
+ 0001:000461F8       Hooks.NoVertexFacetHook2
+ 0001:0004620C       Hooks.PalettesHook
+ 0001:0004622C       Hooks.PressSpaceHook
+ 0001:000462A8       Hooks.DoorStateSwitchHook
+ 0001:000462C8       Hooks.FixPrismaticBug
+ 0001:000462F4       Hooks.MouseLookFlyProc
+ 0001:000464F0       Hooks.MouseLookFlyHook1
+ 0001:00046510       Hooks.MouseLookFlyHook2
+ 0001:0004652C       Hooks.IDMonProc
+ 0001:00046588       Hooks.IDMonHook
+ 0001:00046594       Hooks.StatColorFixHook
+ 0001:000465A4       Hooks.PaletteSMulHook
+ 0001:000465B0       Hooks.SetTPTime
+ 0001:000465BC       Hooks.TPProc2
+ 0001:000465F8       Hooks.TPHook
+ 0001:00046608       Hooks.TPHook2
+ 0001:00046628       Hooks.LBHook
+ 0001:00046638       Hooks.LBHook2
+ 0001:00046658       Hooks.DefaultSmoothTurnHook
+ 0001:00046664       Hooks.FixLeaveMapDieHook
+ 0001:00046670       Hooks.TravelGoldFixHook1
+ 0001:00046690       Hooks.TravelGoldFixHook2
+ 0001:000466A4       Hooks.AutoColor16Proc
+ 0001:0004677C       Hooks.AutoColor16Hook
+ 0001:00046788       Hooks.AutoColor16Hook2
+ 0001:00046798       Hooks.AutorunProc
+ 0001:00046820       Hooks.AutorunHook
+ 0001:0004682C       Hooks.LloydAutosaveFix
+ 0001:00046880       Hooks.TPAutosaveFix
+ 0001:000468D0       Hooks.AddLodRecord
+ 0001:00046900       Hooks.FindInLodAndSeek
+ 0001:00046908       Hooks.FindInLod
+ 0001:0004691C       Hooks.FindInLodProc
+ 0001:000469C8       Hooks.FindInLodAndSeekHook
+ 0001:000469D0       Hooks.FindInLodHook
+ 0001:000469E4       Hooks.DoLoadCustomLod
+ 0001:00046B88       Hooks.LoadCustomLod
+ 0001:00046BB8       Hooks.FreeCustomLod
+ 0001:00046C44       Hooks.GetCustomLodsList
+ 0001:00046C4C       Hooks.GetLodRecords
+ 0001:00046C54       Hooks.DoLoadCustomLods
+ 0001:00046D44       Hooks.LoadCustomLods
+ 0001:00046E90       Hooks.LoadCustomLodsD3D
+ 0001:00047058       Hooks.LoadLodsHook
+ 0001:00047328       Hooks.OpenVid
+ 0001:000473B0       Hooks.OpenCustomVids
+ 0001:00047494       Hooks.OpenVidsProc
+ 0001:000475A8       Hooks.OpenVidsHook
+ 0001:000475B8       Hooks.SelectVidFile
+ 0001:0004766C       Hooks.OpenBikSmkHook
+ 0001:0004767C       Hooks.StrafeOrWalkHook
+ 0001:000476B8       Hooks.FixStrafe1
+ 0001:000476D8       Hooks.FixStrafe2
+ 0001:000476E8       Hooks.FixStrafePlayer
+ 0001:000476FC       Hooks.FixStrafeMonster1
+ 0001:00047718       Hooks.FixStrafeMonster2
+ 0001:00047734       Hooks.FixStrafeObject1
+ 0001:00047750       Hooks.FixStrafeObject2
+ 0001:0004776C       Hooks.HDWTRCountHook
+ 0001:00047790       Hooks.FixSkyBitmap
+ 0001:000477A4       Hooks.FixSkyLen
+ 0001:000477BC       Hooks.StartHook
+ 0001:000477CC       Hooks.FixTelepathy
+ 0001:000477DC       Hooks.FixSmallScaleSprites
+ 0001:000477F4       Hooks.FixItemsTxtProc
+ 0001:00047D9C       Hooks.FixItemsTxtHook
+ 0001:00047DC4       Hooks.GetTimerKind
+ 0001:00047DE0       Hooks.TimerSetTriggerTime
+ 0001:00047EDC       Hooks.UpdatePeriodicTimer
+ 0001:00047F00       Hooks.FixTimerValidate
+ 0001:00047F60       Hooks.FixTimerRetriggerHook1
+ 0001:00047F6C       Hooks.FixTimerRetriggerHook2
+ 0001:00047FA0       Hooks.FixTimerSetupHook1
+ 0001:00047FB4       Hooks.FixTimerSetupHook2
+ 0001:00047FD0       Hooks.TPDelayHook1
+ 0001:00047FEC       Hooks.TPDelayProc2
+ 0001:00048030       Hooks.TPDelayHook2
+ 0001:00048088       Hooks.FixMovementNerf
+ 0001:0004809C       Hooks.NoMonsterJumpDown1
+ 0001:000480C0       Hooks.NoMonsterJumpDown2
+ 0001:000480D4       Hooks.FixFullScreenBlink
+ 0001:000480F4       Hooks.FixBlitCopyProc
+ 0001:00048160       Hooks.FixBlitCopy
+ 0001:00048178       Hooks.FixMonsterSummon
+ 0001:00048188       Hooks.FixDragonTargeting
+ 0001:000481E4       Hooks.CanSellItemHook
+ 0001:00048210       Hooks.CanSellItemHook2
+ 0001:0004822C       Hooks.ExitCrashHook
+ 0001:00048240       Hooks.FixLava1
+ 0001:0004824C       Hooks.FixLava2
+ 0001:00048260       Hooks.FixObelisk
+ 0001:00048280       Hooks.FixObelisk2
+ 0001:00048298       Hooks.ScreenToClientHook
+ 0001:000482C8       Hooks.DrawMovieHook
+ 0001:000483B4       Hooks.SmackDrawProc1
+ 0001:000483D0       Hooks.SmackDrawHook1
+ 0001:000483E0       Hooks.SmackDrawProc2
+ 0001:00048424       Hooks.SmackDrawHook2
+ 0001:00048444       Hooks.SmackLoadHook
+ 0001:0004846C       Hooks.BinkDrawProc1
+ 0001:00048490       Hooks.BinkDrawHook1
+ 0001:000484A8       Hooks.BinkDrawHook2
+ 0001:000484C0       Hooks.BinkLoadHook
+ 0001:000484D4       Hooks.FixMipmapsMemLeak
+ 0001:000484E4       Hooks.FixSpritesInMonInfo
+ 0001:000484F0       Hooks.FixDivCrash1
+ 0001:00048524       Hooks.FixDivCrash2
+ 0001:00048558       Hooks.GetRestoredRect
+ 0001:00048578       Hooks.FixTurnBasedWalking
+ 0001:0004859C       Hooks.DeathMovieProc
+ 0001:000485D8       Hooks.DeathMovieHook
+ 0001:000485EC       Hooks.MinimapZoomHook
+ 0001:00048654       Hooks.AdvInnCrashFix
+ 0001:00048664       Hooks.TFTWaterHook
+ 0001:0004866C       Hooks.TabHook
+ 0001:00048684       Hooks.MyLoadCursor
+ 0001:00048748       Hooks.FixIndoorFOVProcSW
+ 0001:0004879C       Hooks.FixRestEncounter
+ 0001:000487A8       Hooks.PostponeIntroHook
+ 0001:000487F0       Hooks.TreeHintsHook
+ 0001:00048804       Hooks.FixTurnBasedHire
+ 0001:00048820       Hooks.FixArtifactBonuses1
+ 0001:00048844       Hooks.FixArtifactBonuses2
+ 0001:00048864       Hooks.FixCheckItems
+ 0001:00048870       Hooks.FixOfAcid
+ 0001:00048924       Hooks.ReadDisables
+ 0001:00048A38       Hooks.HookAll
+ 0001:00048BC8       Hooks.ApplyDeferredHooks
+ 0001:00048E10       Hooks.Finalization
+ 0001:00048EDC       MM8patch.Finalization
  0002:00000000       System.System
  0002:00000098       Windows.Windows
  0002:000000AC       SysUtils.SysUtils
@@ -5524,31 +5526,31 @@ Detailed map of segments
  0003:00002C90       MMHooks.IsMonOfKind
  0003:00002C94       MMHooks.OnLeaveMap
  0003:00002C98       MMHooks.HooksCommon
- 0003:00003D74       MMHooks.Hooks
- 0003:000058E0       Hooks.opNew
- 0003:000058E4       Hooks.c1
- 0003:000058E8       Hooks.c2
- 0003:000058EC       Hooks.c3
- 0003:000058F0       Hooks.c4
- 0003:000058F4       Hooks.SaveSpecial
- 0003:000058F8       Hooks.PatchPtr
- 0003:00005958       Hooks.PatchCount
- 0003:0000596C       Hooks.CVis_get_object_zbuf_val
- 0003:00005970       Hooks.OnMapLeave
- 0003:00005974       Hooks.TrySubtract
- 0003:00005978       Hooks.bpp
- 0003:0000597C       Hooks.Add
- 0003:00005980       Hooks.LodLoad
- 0003:00005988       Hooks.LodLoadChapter
- 0003:00005990       Hooks.LodClean
- 0003:00005994       Hooks.TimerPeriods
- 0003:000059A4       Hooks.__ftol
- 0003:000059A8       Hooks.std
- 0003:000059AC       Hooks.CheckBit
- 0003:000059B0       Hooks.SetBit
- 0003:000059B4       Hooks.movs
- 0003:000059C4       Hooks.EndTurnBased
- 0003:000059C8       Hooks.HooksList
+ 0003:00003DA8       MMHooks.Hooks
+ 0003:00005914       Hooks.opNew
+ 0003:00005918       Hooks.c1
+ 0003:0000591C       Hooks.c2
+ 0003:00005920       Hooks.c3
+ 0003:00005924       Hooks.c4
+ 0003:00005928       Hooks.SaveSpecial
+ 0003:0000592C       Hooks.PatchPtr
+ 0003:0000598C       Hooks.PatchCount
+ 0003:000059A0       Hooks.CVis_get_object_zbuf_val
+ 0003:000059A4       Hooks.OnMapLeave
+ 0003:000059A8       Hooks.TrySubtract
+ 0003:000059AC       Hooks.bpp
+ 0003:000059B0       Hooks.Add
+ 0003:000059B4       Hooks.LodLoad
+ 0003:000059BC       Hooks.LodLoadChapter
+ 0003:000059C4       Hooks.LodClean
+ 0003:000059C8       Hooks.TimerPeriods
+ 0003:000059D8       Hooks.__ftol
+ 0003:000059DC       Hooks.std
+ 0003:000059E0       Hooks.CheckBit
+ 0003:000059E4       Hooks.SetBit
+ 0003:000059E8       Hooks.movs
+ 0003:000059F8       Hooks.EndTurnBased
+ 0003:000059FC       Hooks.HooksList
  0004:00000000       System.DispCallByIDProc
  0004:00000004       System.ExceptProc
  0004:00000008       System.ErrorProc
@@ -7560,746 +7562,748 @@ Line numbers for MMHooks(..\mmcommon\MMHooks.pas) segment .text
   1491 0001:00041CB4  1493 0001:00041CB7  1494 0001:00041CBC  1501 0001:00041CC0
   1503 0001:00041CC4  1504 0001:00041CC9  1508 0001:00041CCC  1509 0001:00041CD2
   1519 0001:00041CD4  1520 0001:00041CD8  1522 0001:00041CDA  1523 0001:00041CE0
-  1524 0001:00041CE6  1525 0001:00041CE9  1526 0001:00041CEE  1540 0001:00041CF0
-  1541 0001:00041D01  1542 0001:00041D27  1543 0001:00041D2B  1544 0001:00041D31
-  1543 0001:00041D45  1545 0001:00041D4D  1546 0001:00041D54  1547 0001:00041D5F
-  1548 0001:00041D6E  1546 0001:00041D78  1549 0001:00041D7B  1550 0001:00041D80
-  1551 0001:00041D86  1552 0001:00041D8B  1553 0001:00041D9C  1555 0001:00041DC7
-  1556 0001:00041DDE  1557 0001:00041DE3  1558 0001:00041DE5  1552 0001:00041DE9
-  1558 0001:00041DEC  1550 0001:00041DF0  1559 0001:00041DF8  1560 0001:00041DFF
-  1561 0001:00041E07  1588 0001:00041E14  1589 0001:00041E17  1590 0001:00041E19
-  1591 0001:00041E1C  1592 0001:00041E1E  1593 0001:00041E23  1595 0001:00041E2A
-  1602 0001:00041E2C  1603 0001:00041E34  1604 0001:00041E40  1605 0001:00041E56
-  1606 0001:00041E5C  1607 0001:00041E5E  1608 0001:00041E6A  1606 0001:00041E7A
-  1609 0001:00041E82  1614 0001:00041E88  1615 0001:00041E96  1616 0001:00041EAF
-  1617 0001:00041EBA  1618 0001:00041ED4  1619 0001:00041EE9  1620 0001:00041EF4
-  1621 0001:00041EFB  1622 0001:00041F07  1623 0001:00041F15  1625 0001:00041F47
-  1626 0001:00041F64  1627 0001:00041F66  1622 0001:00041F67  1627 0001:00041F6D
-  1621 0001:00041F6E  1628 0001:00041F74  1635 0001:00041F7C  1636 0001:00041FA2
-  1638 0001:00041FAC  1639 0001:00041FB6  1640 0001:00041FCE  1641 0001:00041FDC
-  1642 0001:00041FDE  1641 0001:00041FE8  1643 0001:00041FF0  1644 0001:0004200D
-  1646 0001:00042023  1647 0001:0004202A  1651 0001:00042058  1655 0001:00042059
-  1657 0001:0004205C  1658 0001:00042061  1659 0001:00042062  1678 0001:00042064
-  1679 0001:00042069  1680 0001:00042070  1683 0001:00042078  1684 0001:0004207B
-  1681 0001:0004207C  1686 0001:00042092  1687 0001:00042096  1688 0001:00042098
-  1693 0001:000420A0  1694 0001:000420A2  1695 0001:000420A7  1697 0001:000420BB
-  1698 0001:000420CB  1700 0001:000420CD  1701 0001:000420D6  1702 0001:000420DA
-  1703 0001:000420F1  1724 0001:000420F8  1725 0001:00042105  1726 0001:00042134
-  1727 0001:00042136  1728 0001:00042140  1730 0001:00042157  1731 0001:00042166
-  1734 0001:00042168  1733 0001:00042169  1735 0001:00042187  1737 0001:000421FA
-  1738 0001:00042207  1739 0001:0004221B  1741 0001:000422D6  1742 0001:00042320
-  1745 0001:00042356  1746 0001:00042366  1747 0001:00042375  1749 0001:000423D3
-  1751 0001:0004243D  1755 0001:00042488  1756 0001:00042489  1757 0001:0004248A
-  1758 0001:0004248B  1759 0001:0004248E  1760 0001:00042491  1761 0001:00042496
-  1762 0001:00042497  1763 0001:00042498  1764 0001:00042499  1768 0001:0004249C
-  1769 0001:0004249D  1770 0001:0004249E  1771 0001:0004249F  1772 0001:000424A2
-  1773 0001:000424A7  1774 0001:000424A8  1775 0001:000424A9  1776 0001:000424AA
-  1818 0001:000424AC  1819 0001:000424D2  1821 0001:000424D7  1823 0001:000424E6
-  1824 0001:000424ED  1819 0001:000424F3  1826 0001:000424F6  1828 0001:0004250C
-  1829 0001:0004253C  1832 0001:00042541  1833 0001:00042543  1839 0001:000425B0
-  1840 0001:0004260D  1841 0001:0004260F  1832 0001:00042610  1842 0001:0004261C
-  1854 0001:0004277C  1855 0001:0004277E  1856 0001:00042788  1857 0001:0004278B
-  1858 0001:00042796  1859 0001:000427A8  1860 0001:000427AD  1869 0001:000427F0
-  1870 0001:000427FD  1872 0001:00042804  1871 0001:00042837  1874 0001:0004284B
-  1875 0001:0004285C  1877 0001:0004286C  1878 0001:00042877  1879 0001:0004288B
-  1880 0001:00042891  1874 0001:00042892  1881 0001:00042895  1883 0001:00042898
-  1884 0001:000428C0  1886 0001:000428E2  1887 0001:000428F3  1888 0001:00042903
-  1889 0001:0004290F  1890 0001:00042916  1892 0001:0004291C  1886 0001:00042923
-  1893 0001:00042926  1895 0001:00042929  1896 0001:0004293A  1897 0001:0004294A
-  1895 0001:00042956  1898 0001:00042959  1903 0001:00042960  1904 0001:00042981
-  1910 0001:00042984  1911 0001:00042985  1912 0001:00042986  1913 0001:0004298B
-  1914 0001:0004298D  1915 0001:0004298E  1916 0001:0004298F  1917 0001:00042991
-  1918 0001:00042993  1920 0001:00042998  1926 0001:0004299C  1927 0001:000429A2
-  1928 0001:000429A5  1929 0001:000429A9  1936 0001:000429AC  1939 0001:000429B0
-  1940 0001:000429B5  1941 0001:000429BC  1942 0001:000429C5  1943 0001:000429CF
-  1937 0001:000429D6  1945 0001:000429E7  1949 0001:000429EC  1950 0001:000429F6
-  1951 0001:000429FB  1952 0001:00042A04  1968 0001:00042A08  1969 0001:00042A28
-  1970 0001:00042A37  1971 0001:00042A45  1972 0001:00042A4F  1973 0001:00042A59
-  1974 0001:00042A5B  1975 0001:00042A6C  1973 0001:00042AB6  1977 0001:00042ABE
-  1978 0001:00042AE8  1981 0001:00042AF2  1983 0001:00042B09  1984 0001:00042B15
-  1986 0001:00042B19  1987 0001:00042B39  1989 0001:00042B52  1991 0001:00042B56
-  1992 0001:00042B6D  1994 0001:00042BBA  1981 0001:00042BBB  1996 0001:00042BD1
-  1998 0001:00042BE1  2002 0001:00042C18  2008 0001:00042C20  2010 0001:00042C22
-  2011 0001:00042C27  2017 0001:00042C28  2018 0001:00042C2A  2022 0001:00042C2B
-  2024 0001:00042C2F  2025 0001:00042C33  2026 0001:00042C34  2027 0001:00042C36
-  2029 0001:00042C3D  2031 0001:00042C3F  2037 0001:00042C40  2038 0001:00042C43
-  2039 0001:00042C45  2040 0001:00042C47  2042 0001:00042C4E  2048 0001:00042C50
-  2049 0001:00042C53  2050 0001:00042C55  2052 0001:00042C5C  2097 0001:00042C60
-  2099 0001:00042C85  2100 0001:00042C91  2101 0001:00042CA2  2102 0001:00042CB5
-  2103 0001:00042CB8  2105 0001:00042CC2  2106 0001:00042CC7  2107 0001:00042CCF
-  2108 0001:00042CD7  2103 0001:00042CDA  2110 0001:00042CDD  2112 0001:00042CE7
-  2113 0001:00042CFA  2114 0001:00042CFF  2115 0001:00042D09  2116 0001:00042D13
-  2118 0001:00042D1E  2119 0001:00042D22  2121 0001:00042D26  2122 0001:00042D2E
-  2123 0001:00042D36  2110 0001:00042D39  2124 0001:00042D3C  2140 0001:00042D68
-  2144 0001:00042D6B  2145 0001:00042D70  2146 0001:00042DAE  2148 0001:00042DB6
-  2149 0001:00042DBE  2150 0001:00042DC8  2151 0001:00042DCC  2152 0001:00042DD4
-  2153 0001:00042DD8  2154 0001:00042E03  2155 0001:00042E10  2160 0001:00042E1D
-  2161 0001:00042E28  2163 0001:00042E30  2164 0001:00042E39  2165 0001:00042E3F
-  2166 0001:00042E49  2168 0001:00042E52  2169 0001:00042E56  2175 0001:00042E5C
-  2176 0001:00042E60  2177 0001:00042E64  2178 0001:00042E66  2179 0001:00042E68
-  2180 0001:00042E6D  2181 0001:00042E72  2182 0001:00042E75  2183 0001:00042E77
-  2189 0001:00042E78  2190 0001:00042E7B  2191 0001:00042E81  2192 0001:00042E87
-  2193 0001:00042E89  2194 0001:00042E8F  2195 0001:00042E91  2196 0001:00042E96
-  2202 0001:00042E98  2203 0001:00042E9C  2204 0001:00042E9E  2205 0001:00042EA0
-  2206 0001:00042EA2  2207 0001:00042EA8  2208 0001:00042EAA  2209 0001:00042EAC
-  2211 0001:00042EB0  2222 0001:00042EB4  2223 0001:00042EB6  2224 0001:00042EBA
-  2225 0001:00042EBC  2226 0001:00042EC0  2227 0001:00042EC2  2228 0001:00042EC6
-  2229 0001:00042EC8  2230 0001:00042ECC  2234 0001:00042ECE  2235 0001:00042ED0
-  2241 0001:00042ED7  2248 0001:00042ED8  2249 0001:00042ED9  2250 0001:00042EDD
-  2251 0001:00042EE2  2252 0001:00042EE4  2253 0001:00042EF6  2251 0001:00042EFC
-  2254 0001:00042F04  2263 0001:00042F08  2264 0001:00042F0C  2265 0001:00042F0E
-  2266 0001:00042F13  2267 0001:00042F18  2268 0001:00042F1B  2273 0001:00042F1C
-  2274 0001:00042F1D  2275 0001:00042F23  2276 0001:00042F25  2277 0001:00042F3D
-  2275 0001:00042F44  2278 0001:00042F4C  2282 0001:00042F50  2283 0001:00042F56
-  2286 0001:00042F5B  2287 0001:00042F60  2288 0001:00042F65  2289 0001:00042F68
-  2296 0001:00042F6C  2297 0001:00042F6E  2298 0001:00042F75  2300 0001:00042F89
-  2301 0001:00042FA5  2302 0001:00042FA9  2304 0001:00042FB4  2346 0001:00042FB8
-  2347 0001:00042FBB  2348 0001:00042FBD  2349 0001:00042FC0  2350 0001:00042FC7
-  2351 0001:00042FC9  2352 0001:00042FD0  2353 0001:00042FD2  2355 0001:00042FD7
-  2364 0001:00042FD8  2365 0001:00042FD9  2366 0001:00042FDD  2367 0001:00042FDF
-  2369 0001:00042FE1  2370 0001:00042FE4  2371 0001:00042FE7  2372 0001:00042FED
-  2373 0001:00042FF0  2374 0001:00042FF3  2375 0001:00042FF4  2376 0001:00042FF9
-  2377 0001:00042FFC  2378 0001:00042FFE  2379 0001:00042FFF  2381 0001:00043002
-  2382 0001:00043004  2383 0001:00043009  2384 0001:0004300F  2385 0001:00043012
-  2386 0001:00043016  2387 0001:00043018  2389 0001:00043019  2390 0001:0004301E
-  2391 0001:00043023  2392 0001:00043029  2394 0001:0004302B  2402 0001:0004302C
-  2403 0001:00043030  2404 0001:00043057  2457 0001:0004305C  2458 0001:00043060
-  2459 0001:00043078  2460 0001:00043082  2461 0001:00043089  2462 0001:000430A9
-  2463 0001:000430B2  2471 0001:000430D0  2473 0001:000430D2  2474 0001:000430D7
-  2483 0001:000430D8  2484 0001:000430DF  2485 0001:000430F7  2498 0001:000430F8
-  2499 0001:000430FC  2501 0001:00043108  2502 0001:00043116  2512 0001:00043118
-  2515 0001:0004313F  2516 0001:00043147  2517 0001:0004314E  2518 0001:00043155
-  2520 0001:0004315D  2521 0001:00043164  2522 0001:00043168  2523 0001:0004316F
-  2524 0001:00043176  2525 0001:0004317A  2526 0001:00043186  2527 0001:00043190
-  2528 0001:00043192  2529 0001:0004319B  2530 0001:000431A1  2532 0001:000431A8
-  2533 0001:000431AD  2535 0001:000431B2  2536 0001:000431C0  2538 0001:000431C5
-  2539 0001:000431CF  2541 0001:000431D7  2543 0001:00043218  2545 0001:00043239
-  2546 0001:0004323F  2548 0001:0004327F  2551 0001:000432CE  2554 0001:000432D3
-  2555 0001:000432DB  2556 0001:000432DF  2557 0001:000432E6  2560 0001:000432FC
-  2561 0001:00043303  2564 0001:0004331F  2565 0001:0004332B  2569 0001:0004335C
-  2570 0001:00043366  2572 0001:00043372  2573 0001:00043380  2575 0001:00043392
-  2582 0001:00043394  2583 0001:0004339B  2585 0001:0004339D  2586 0001:000433A2
-  2587 0001:000433A4  2597 0001:000433A6  2598 0001:000433A8  2600 0001:000433AE
-  2601 0001:000433B5  2603 0001:000433B6  2604 0001:000433C0  2609 0001:000433C4
-  2613 0001:000433CA  2615 0001:000433D1  2616 0001:000433DB  2623 0001:000433DC
-  2625 0001:000433DE  2626 0001:000433DF  2627 0001:000433E4  2628 0001:000433EB
-  2629 0001:000433ED  2630 0001:000433F4  2632 0001:000433FE  2633 0001:000433FF
-  2634 0001:00043406  2635 0001:00043408  2636 0001:0004340E  2637 0001:0004340F
-  2638 0001:00043414  2640 0001:00043415  2641 0001:00043416  2642 0001:00043417
-  2648 0001:00043418  2649 0001:0004341B  2650 0001:0004341D  2651 0001:00043424
-  2652 0001:00043428  2653 0001:00043431  2654 0001:00043435  2655 0001:0004344B
-  2656 0001:00043452  2657 0001:00043459  2658 0001:00043460  2659 0001:00043467
-  2660 0001:0004346C  2662 0001:00043473  2663 0001:00043478  2664 0001:00043487
-  2665 0001:00043491  2666 0001:00043493  2667 0001:0004349E  2671 0001:000434A4
-  2672 0001:000434A6  2673 0001:000434AB  2675 0001:000434AD  2678 0001:000434B0
-  2679 0001:000434B6  2681 0001:000434C0  2682 0001:000434C9  2684 0001:000434E5
-  2686 0001:000434EE  2688 0001:00043517  2689 0001:00043523  2691 0001:0004352E
-  2693 0001:00043535  2708 0001:0004359C  2709 0001:000435A3  2710 0001:000435A8
-  2711 0001:000435C3  2712 0001:000435D7  2715 0001:00043600  2716 0001:0004361A
-  2718 0001:00043627  2719 0001:0004362C  2721 0001:0004364D  2722 0001:00043655
-  2723 0001:00043668  2724 0001:00043671  2725 0001:00043677  2726 0001:0004367B
-  2727 0001:00043687  2728 0001:0004368B  2729 0001:00043692  2730 0001:000436A3
-  2732 0001:000436AD  2733 0001:000436BF  2735 0001:000436CC  2736 0001:000436DC
-  2744 0001:000436E4  2746 0001:000436E8  2747 0001:000436EB  2748 0001:000436ED
-  2749 0001:000436F0  2751 0001:000436F2  2756 0001:000436F7  2760 0001:000436F8
-  2762 0001:0004370C  2763 0001:00043714  2765 0001:00043739  2770 0001:0004373C
-  2771 0001:00043740  2772 0001:0004374F  2774 0001:0004375F  2775 0001:00043769
-  2779 0001:0004376C  2780 0001:00043773  2781 0001:00043775  2782 0001:0004377C
-  2783 0001:0004377E  2784 0001:00043780  2786 0001:00043783  2787 0001:00043785
-  2791 0001:00043788  2792 0001:0004378A  2793 0001:00043791  2794 0001:00043793
-  2795 0001:0004379A  2796 0001:0004379C  2798 0001:000437A3  2802 0001:000437A4
-  2803 0001:000437AB  2804 0001:000437AD  2805 0001:000437B4  2806 0001:000437B6
-  2807 0001:000437BD  2809 0001:000437BF  2811 0001:000437C1  2815 0001:000437C4
-  2816 0001:000437C9  2817 0001:000437D8  2821 0001:000437DC  2822 0001:000437DE
-  2823 0001:000437E3  2836 0001:000437E4  2837 0001:000437EB  2838 0001:000437EF
-  2839 0001:000437F4  2840 0001:000437FF  2841 0001:00043808  2842 0001:0004382D
-  2843 0001:00043834  2844 0001:0004383A  2846 0001:0004383E  2847 0001:00043845
-  2849 0001:0004384F  2850 0001:00043868  2851 0001:00043875  2854 0001:00043877
-  2855 0001:0004387D  2856 0001:00043885  2858 0001:00043889  2859 0001:00043893
-  2861 0001:0004389C  2862 0001:000438A4  2863 0001:000438B0  2864 0001:000438BF
-  2865 0001:000438E0  2867 0001:000438ED  2868 0001:000438F2  2870 0001:000438F9
-  2871 0001:00043901  2874 0001:0004390B  2876 0001:00043915  2877 0001:00043929
-  2878 0001:00043934  2881 0001:00043939  2882 0001:0004398E  2863 0001:00043995
-  2883 0001:0004399E  2888 0001:000439AC  2889 0001:000439AD  2890 0001:000439B9
-  2891 0001:000439C6  2892 0001:000439EA  2896 0001:000439EC  2897 0001:000439F3
-  2898 0001:000439F5  2899 0001:000439FC  2900 0001:000439FE  2901 0001:00043A05
-  2902 0001:00043A07  2903 0001:00043A0B  2904 0001:00043A10  2905 0001:00043A12
-  2906 0001:00043A17  2907 0001:00043A19  2908 0001:00043A1A  2909 0001:00043A1B
-  2910 0001:00043A20  2911 0001:00043A21  2913 0001:00043A22  2955 0001:00043A24
-  2956 0001:00043A2C  2957 0001:00043A2E  2971 0001:00043A30  2973 0001:00043A37
-  2979 0001:00043A38  2980 0001:00043A3D  2981 0001:00043A3F  2982 0001:00043A40
-  2984 0001:00043A41  2985 0001:00043A43  2993 0001:00043A44  2994 0001:00043A46
-  2996 0001:00043A4D  3009 0001:00043A50  3011 0001:00043A51  3029 0001:00043A54
-  3030 0001:00043A5B  3031 0001:00043A5D  3033 0001:00043A5F  3034 0001:00043A64
-  3040 0001:00043A68  3041 0001:00043A69  3042 0001:00043A6A  3043 0001:00043A6F
-  3044 0001:00043A71  3045 0001:00043A73  3046 0001:00043A75  3047 0001:00043A7B
-  3048 0001:00043A7D  3049 0001:00043A7F  3051 0001:00043A85  3052 0001:00043A86
-  3053 0001:00043A87  3060 0001:00043A88  3061 0001:00043A8B  3062 0001:00043A90
-  3064 0001:00043A94  3065 0001:00043AB3  3071 0001:00043AB8  3072 0001:00043ABB
-  3073 0001:00043AC0  3080 0001:00043AC4  3081 0001:00043AC7  3082 0001:00043AC9
-  3083 0001:00043ACC  3084 0001:00043AD1  3085 0001:00043AD3  3086 0001:00043AD8
-  3088 0001:00043AD9  3091 0001:00043ADE  3092 0001:00043AE3  3097 0001:00043AE4
-  3098 0001:00043AE7  3099 0001:00043AF4  3104 0001:00043AF8  3105 0001:00043AFF
-  3106 0001:00043B10  3107 0001:00043B14  3108 0001:00043B26  3116 0001:00043B38
-  3117 0001:00043B3D  3118 0001:00043B3E  3119 0001:00043B41  3120 0001:00043B47
-  3121 0001:00043B49  3122 0001:00043B4A  3123 0001:00043B4B  3124 0001:00043B50
-  3125 0001:00043B52  3127 0001:00043B57  3128 0001:00043B5B  3134 0001:00043B5C
-  3135 0001:00043B63  3136 0001:00043B65  3139 0001:00043B6A  3143 0001:00043B6C
-  3144 0001:00043B73  3146 0001:00043B75  3147 0001:00043B7C  3150 0001:00043B7F
-  3161 0001:00043B80  3162 0001:00043B87  3163 0001:00043B89  3165 0001:00043B8E
-  3166 0001:00043B90  3167 0001:00043B92  3168 0001:00043B95  3169 0001:00043B98
-  3170 0001:00043B9D  3171 0001:00043B9F  3174 0001:00043BA4  3175 0001:00043BA7
-  3176 0001:00043BAE  3177 0001:00043BB1  3180 0001:00043BB4  3181 0001:00043BB7
-  3182 0001:00043BBE  3183 0001:00043BC1  3186 0001:00043BC4  3187 0001:00043BC7
-  3188 0001:00043BCE  3189 0001:00043BD1  3192 0001:00043BD4  3193 0001:00043BD7
-  3194 0001:00043BDE  3195 0001:00043BE1  3197 0001:00043BE4  3208 0001:00043BE8
-  3209 0001:00043BE9  3210 0001:00043BEF  3211 0001:00043BF3  3212 0001:00043C01
-  3213 0001:00043C0A  3214 0001:00043C0E  3215 0001:00043C17  3216 0001:00043C1D
-  3221 0001:00043C24  3222 0001:00043C41  3223 0001:00043C48  3225 0001:00043C66
-  3226 0001:00043C76  3228 0001:00043C80  3233 0001:00043CA4  3234 0001:00043CC1
-  3235 0001:00043CC8  3236 0001:00043CCF  3240 0001:00043CEF  3242 0001:00043CF5
-  3243 0001:00043D11  3246 0001:00043D35  3250 0001:00043D5C  3251 0001:00043D63
-  3252 0001:00043D69  3253 0001:00043D70  3254 0001:00043D72  3255 0001:00043D7A
-  3257 0001:00043D81  3258 0001:00043D86  3262 0001:00043D88  3263 0001:00043D8F
-  3264 0001:00043D91  3268 0001:00043D94  3269 0001:00043D9B  3270 0001:00043D9D
-  3283 0001:00043DA0  3284 0001:00043DA7  3285 0001:00043DAE  3286 0001:00043DB4
-  3289 0001:00043DBC  3290 0001:00043DC6  3291 0001:00043DCE  3292 0001:00043DD2
-  3293 0001:00043DD6  3294 0001:00043DDA  3295 0001:00043DE0  3337 0001:00043E08
-  3338 0001:00043E0E  3341 0001:00043E1C  3342 0001:00043E3D  3343 0001:00043E98
-  3344 0001:00043E9D  3345 0001:00043EA2  3346 0001:00043EAC  3347 0001:00043EB4
-  3349 0001:00043EBC  3353 0001:00043EC4  3354 0001:00043EC8  3355 0001:00043ECD
-  3358 0001:00043ED0  3359 0001:00043ED9  3360 0001:00043F21  3366 0001:00043F28
-  3367 0001:00043F2B  3368 0001:00043F2D  3369 0001:00043F32  3370 0001:00043F36
-  3372 0001:00043F3A  3377 0001:00043F3C  3378 0001:00043F43  3379 0001:00043F58
-  3380 0001:00043F5D  3381 0001:00043F73  3382 0001:00043F7A  3383 0001:00043F90
-  3385 0001:00043F97  3386 0001:00043F9C  3390 0001:00043FB0  3391 0001:00043FB5
-  3392 0001:00043FB8  3398 0001:00043FBC  3399 0001:00043FC0  3400 0001:00043FC4
-  3406 0001:00043FC8  3407 0001:00043FCB  3434 0001:00043FCC  3436 0001:00043FD1
-  3437 0001:00043FF9  3438 0001:00043FFC  3435 0001:00044003  3440 0001:00044032
-  3450 0001:000440C0  3451 0001:000440C1  3452 0001:000440C5  3453 0001:000440CB
-  3454 0001:000440CD  3456 0001:000440CF  3457 0001:000440D4  3458 0001:000440D6
-  3459 0001:000440DA  3460 0001:000440E0  3461 0001:000440E2  3463 0001:000440E4
-  3464 0001:000440E9  3466 0001:000440EB  3468 0001:000440F3  3469 0001:000440F4
-  3475 0001:000440F8  3476 0001:000440FC  3477 0001:000440FE  3478 0001:00044100
-  3480 0001:00044107  3488 0001:00044108  3489 0001:0004410E  3495 0001:00044110
-  3496 0001:00044115  3497 0001:00044117  3499 0001:0004411A  3527 0001:0004411C
-  3528 0001:0004411D  3529 0001:00044123  3530 0001:00044127  3531 0001:00044129
-  3532 0001:0004412A  3533 0001:0004412B  3534 0001:0004412D  3535 0001:0004412F
-  3536 0001:00044135  3537 0001:00044139  3538 0001:0004413A  3539 0001:0004413B
-  3543 0001:0004413D  3546 0001:00044140  3547 0001:00044141  3555 0001:00044144
-  3556 0001:0004414B  3560 0001:0004414D  3562 0001:00044150  3564 0001:00044157
-  3570 0001:00044158  3571 0001:0004415E  3572 0001:00044162  3573 0001:00044164
-  3586 0001:00044168  3587 0001:0004416E  3588 0001:00044170  3589 0001:00044176
-  3593 0001:00044178  3594 0001:0004417A  3595 0001:0004417C  3596 0001:00044182
-  3602 0001:00044184  3603 0001:0004418A  3604 0001:00044190  3619 0001:00044194
-  3620 0001:0004419E  3624 0001:000441A0  3625 0001:000441A4  3626 0001:000441A9
-  3631 0001:000441AC  3632 0001:000441B1  3633 0001:000441B3  3634 0001:000441B5
-  3635 0001:000441B6  3636 0001:000441BD  3637 0001:000441C0  3638 0001:000441C2
-  3639 0001:000441C4  3640 0001:000441C9  3642 0001:000441CA  3643 0001:000441CC
-  3652 0001:000441D1  3654 0001:000441D3  3655 0001:000441D5  3656 0001:000441D7
-  3659 0001:000441DE  3678 0001:000441E0  3680 0001:000441E1  3686 0001:000441E4
-  3687 0001:000441E7  3688 0001:000441E9  3690 0001:000441EE  3697 0001:000441F0
-  3698 0001:000441F7  3699 0001:00044215  3700 0001:0004422B  3701 0001:0004422D
-  3702 0001:0004423B  3703 0001:00044240  3704 0001:00044248  3705 0001:00044249
-  3706 0001:00044255  3708 0001:0004425F  3709 0001:00044260  3711 0001:0004426C
-  3712 0001:00044271  3713 0001:00044273  3714 0001:0004428F  3718 0001:0004429C
-  3719 0001:000442A0  3720 0001:000442A5  3738 0001:000442A8  3739 0001:000442AE
-  3740 0001:000442B0  3742 0001:000442B3  3752 0001:000442B4  3753 0001:000442B6
-  3754 0001:000442BA  3755 0001:000442BC  3757 0001:000442C3  3761 0001:000442C4
-  3762 0001:000442CC  3763 0001:000442CE  3764 0001:000442D1  3765 0001:000442D3
-  3766 0001:000442D6  3767 0001:000442D8  3769 0001:000442DB  3770 0001:000442E1
-  3771 0001:000442E3  3776 0001:000442E4  3777 0001:000442E5  3778 0001:000442F4
-  3777 0001:00044308  3779 0001:0004430B  3786 0001:00044310  3787 0001:0004431B
-  3788 0001:00044333  3792 0001:00044334  3793 0001:0004433A  3794 0001:0004433D
-  3795 0001:00044340  3796 0001:00044343  3797 0001:00044345  3798 0001:00044347
-  3799 0001:0004434E  3801 0001:00044353  3812 0001:00044354  3814 0001:00044358
-  3815 0001:0004435A  3816 0001:0004435B  3817 0001:0004435F  3818 0001:00044364
-  3819 0001:0004436A  3820 0001:0004436C  3821 0001:0004436D  3822 0001:0004436F
-  3824 0001:00044371  3832 0001:00044374  3833 0001:00044375  3834 0001:00044376
-  3835 0001:0004437C  3836 0001:0004437D  3837 0001:0004437E  3843 0001:00044380
-  3844 0001:00044381  3845 0001:00044387  3846 0001:0004438D  3847 0001:0004438F
-  3849 0001:00044390  3855 0001:00044394  3856 0001:00044397  3857 0001:00044399
-  3858 0001:0004439E  3860 0001:000443A5  3868 0001:000443A8  3869 0001:000443E5
-  3873 0001:000443E8  3874 0001:000443EA  3875 0001:000443EB  3876 0001:000443EC
-  3877 0001:000443F1  3878 0001:000443F3  3879 0001:000443F4  3881 0001:000443F5
-  3892 0001:000443F8  3894 0001:000443FC  3900 0001:00044400  3901 0001:00044404
-  3902 0001:00044407  3903 0001:00044409  3904 0001:0004440C  3905 0001:0004440E
-  3906 0001:00044411  3907 0001:00044413  3910 0001:00044414  3911 0001:00044415
-  3912 0001:00044417  3913 0001:0004441A  3919 0001:0004441C  3920 0001:0004441F
-  3921 0001:00044421  3922 0001:00044427  3924 0001:0004442B  3930 0001:0004442C
-  3931 0001:0004442E  3932 0001:00044430  3933 0001:00044431  3935 0001:00044434
-  3941 0001:00044438  3943 0001:00044450  3944 0001:00044458  3946 0001:00044460
-  4491 0001:00044464  4492 0001:00044467  4493 0001:00044473  4494 0001:0004447F
-  4498 0001:00044484  4499 0001:0004448E  4500 0001:00044498  4504 0001:0004449C
-  4505 0001:000444A3  4506 0001:000444AD  4507 0001:000444B7  4508 0001:000444C1
-  4509 0001:000444CB  4510 0001:000444D5  4511 0001:000444DF  4512 0001:000444E9
-  4513 0001:000444F3  4514 0001:000444FD  4515 0001:00044502  4516 0001:0004450C
-  4517 0001:00044516  4518 0001:00044524  4519 0001:0004452E  4520 0001:00044538
-  4521 0001:00044542  4522 0001:00044550  4523 0001:0004455A  4524 0001:00044564
-  4525 0001:0004456E  4526 0001:00044578  4527 0001:00044582  4528 0001:0004458C
-  4529 0001:00044596  4530 0001:000445A0  4531 0001:000445AA  4532 0001:000445B4
-  4533 0001:000445BE  4534 0001:000445C8  4535 0001:000445D2  4536 0001:000445DC
-  4537 0001:000445E6  4538 0001:000445EB  4541 0001:000445EC  4542 0001:000445F3
-  4543 0001:000445FB  4544 0001:00044604  4545 0001:0004460E  4546 0001:00044617
-  4547 0001:00044621  4548 0001:00044633  4549 0001:0004463D  4550 0001:00044646
-  4551 0001:00044650  4552 0001:00044656  4553 0001:00044660  4554 0001:00044669
-  4555 0001:00044673  4556 0001:0004467C  4557 0001:00044686  4558 0001:0004468F
-  4559 0001:00044699  4560 0001:000446A2  4561 0001:000446AC  4562 0001:000446B5
-  4563 0001:000446BF  4564 0001:000446C8  4565 0001:000446D2  4566 0001:000446DB
-  4567 0001:000446E5  4568 0001:000446EE  4569 0001:000446F8  4570 0001:00044701
-  4571 0001:0004470B  4572 0001:00044714  4573 0001:0004471E  4574 0001:00044727
-  4575 0001:00044731  4576 0001:0004473A  4577 0001:00044744  4578 0001:0004474D
-  4579 0001:00044757  4580 0001:00044760  4581 0001:0004476A  4585 0001:0004476C
-  4586 0001:00044776  4587 0001:00044780  4591 0001:00044784  4592 0001:0004478E
-  4593 0001:00044793  4596 0001:00044794  4598 0001:00044795  4599 0001:0004479F
-  4600 0001:000447AD  4603 0001:000447B2  4605 0001:000447C0  4606 0001:000447DE
-  4607 0001:000447F7  4608 0001:00044810  4609 0001:00044829  4612 0001:00044833
-  4617 0001:00044844  4618 0001:0004485C  4620 0001:00044868  4621 0001:00044872
-  4623 0001:0004487C  4624 0001:00044887  4626 0001:00044894  4627 0001:000448B2
-  4628 0001:000448BC  4629 0001:000448DB  4630 0001:000448F6  4631 0001:00044911
-  4632 0001:0004491B  4637 0001:0004491C  4638 0001:0004491F  4639 0001:00044924
-  4641 0001:00044958  4642 0001:00044963  4643 0001:00044969  4645 0001:00044973
-  4647 0001:00044983  4648 0001:00044992  4650 0001:0004499C  4651 0001:000449AC
-  4652 0001:000449BB  4653 0001:000449C9  4654 0001:000449D8  4653 0001:000449E7
-  4656 0001:000449EA  4657 0001:000449EF  4688 0001:00044A24  4690 0001:00044A2E
-  4691 0001:00044A3C  4692 0001:00044A4E  4693 0001:00044A57  4699 0001:00044A62
-  4700 0001:00044A6C  4701 0001:00044A73  4707 0001:00044AE4  4708 0001:00044B0A
-  4709 0001:00044B15
+  1524 0001:00041CE6  1525 0001:00041CE9  1526 0001:00041CEE  1541 0001:00041CF0
+  1542 0001:00041CF2  1543 0001:00041CF9  1544 0001:00041D00  1545 0001:00041D02
+  1546 0001:00041D04  1548 0001:00041D06  1549 0001:00041D0E  1550 0001:00041D10
+  1554 0001:00041D16  1556 0001:00041D19  1565 0001:00041D1C  1566 0001:00041D2D
+  1567 0001:00041D53  1568 0001:00041D5F  1567 0001:00041D76  1569 0001:00041D80
+  1570 0001:00041D8B  1571 0001:00041D9B  1569 0001:00041DA5  1572 0001:00041DA8
+  1573 0001:00041DAD  1574 0001:00041DB9  1575 0001:00041DBE  1576 0001:00041DC9
+  1578 0001:00041DF1  1579 0001:00041E09  1580 0001:00041E0E  1581 0001:00041E10
+  1575 0001:00041E11  1581 0001:00041E14  1573 0001:00041E1B  1582 0001:00041E25
+  1583 0001:00041E2C  1584 0001:00041E34  1611 0001:00041E40  1612 0001:00041E43
+  1613 0001:00041E45  1614 0001:00041E48  1615 0001:00041E4A  1616 0001:00041E4F
+  1618 0001:00041E56  1625 0001:00041E58  1626 0001:00041E60  1627 0001:00041E6C
+  1628 0001:00041E82  1629 0001:00041E88  1630 0001:00041E8A  1631 0001:00041E96
+  1629 0001:00041EA6  1632 0001:00041EAE  1637 0001:00041EB4  1638 0001:00041EC2
+  1639 0001:00041EDB  1640 0001:00041EE6  1641 0001:00041F00  1642 0001:00041F15
+  1643 0001:00041F20  1644 0001:00041F27  1645 0001:00041F33  1646 0001:00041F41
+  1648 0001:00041F73  1649 0001:00041F90  1650 0001:00041F92  1645 0001:00041F93
+  1650 0001:00041F99  1644 0001:00041F9A  1651 0001:00041FA0  1658 0001:00041FA8
+  1659 0001:00041FCE  1661 0001:00041FD8  1662 0001:00041FE2  1663 0001:00041FFA
+  1664 0001:00042008  1665 0001:0004200A  1664 0001:00042014  1666 0001:0004201C
+  1667 0001:00042039  1669 0001:0004204F  1670 0001:00042056  1674 0001:00042084
+  1678 0001:00042085  1680 0001:00042088  1681 0001:0004208D  1682 0001:0004208E
+  1701 0001:00042090  1702 0001:00042095  1703 0001:0004209C  1706 0001:000420A4
+  1707 0001:000420A7  1704 0001:000420A8  1709 0001:000420BE  1710 0001:000420C2
+  1711 0001:000420C4  1716 0001:000420CC  1717 0001:000420CE  1718 0001:000420D3
+  1720 0001:000420E7  1721 0001:000420F7  1723 0001:000420F9  1724 0001:00042102
+  1725 0001:00042106  1726 0001:0004211D  1747 0001:00042124  1748 0001:00042131
+  1749 0001:00042160  1750 0001:00042162  1751 0001:0004216C  1753 0001:00042183
+  1754 0001:00042192  1757 0001:00042194  1756 0001:00042195  1758 0001:000421B3
+  1760 0001:00042226  1761 0001:00042233  1762 0001:00042247  1764 0001:00042302
+  1765 0001:0004234C  1768 0001:00042382  1769 0001:00042392  1770 0001:000423A1
+  1772 0001:000423FF  1774 0001:00042469  1778 0001:000424B4  1779 0001:000424B5
+  1780 0001:000424B6  1781 0001:000424B7  1782 0001:000424BA  1783 0001:000424BD
+  1784 0001:000424C2  1785 0001:000424C3  1786 0001:000424C4  1787 0001:000424C5
+  1791 0001:000424C8  1792 0001:000424C9  1793 0001:000424CA  1794 0001:000424CB
+  1795 0001:000424CE  1796 0001:000424D3  1797 0001:000424D4  1798 0001:000424D5
+  1799 0001:000424D6  1841 0001:000424D8  1842 0001:000424FE  1844 0001:00042503
+  1846 0001:00042512  1847 0001:00042519  1842 0001:0004251F  1849 0001:00042522
+  1851 0001:00042538  1852 0001:00042568  1855 0001:0004256D  1856 0001:0004256F
+  1862 0001:000425DC  1863 0001:00042639  1864 0001:0004263B  1855 0001:0004263C
+  1865 0001:00042648  1877 0001:000427A8  1878 0001:000427AA  1879 0001:000427B4
+  1880 0001:000427B7  1881 0001:000427C2  1882 0001:000427D4  1883 0001:000427D9
+  1892 0001:0004281C  1893 0001:00042829  1895 0001:00042830  1894 0001:00042863
+  1897 0001:00042877  1898 0001:00042888  1900 0001:00042898  1901 0001:000428A3
+  1902 0001:000428B7  1903 0001:000428BD  1897 0001:000428BE  1904 0001:000428C1
+  1906 0001:000428C4  1907 0001:000428EC  1909 0001:0004290E  1910 0001:0004291F
+  1911 0001:0004292F  1912 0001:0004293B  1913 0001:00042942  1915 0001:00042948
+  1909 0001:0004294F  1916 0001:00042952  1918 0001:00042955  1919 0001:00042966
+  1920 0001:00042976  1918 0001:00042982  1921 0001:00042985  1926 0001:0004298C
+  1927 0001:000429AD  1933 0001:000429B0  1934 0001:000429B1  1935 0001:000429B2
+  1936 0001:000429B7  1937 0001:000429B9  1938 0001:000429BA  1939 0001:000429BB
+  1940 0001:000429BD  1941 0001:000429BF  1943 0001:000429C4  1949 0001:000429C8
+  1950 0001:000429CE  1951 0001:000429D1  1952 0001:000429D5  1959 0001:000429D8
+  1962 0001:000429DC  1963 0001:000429E1  1964 0001:000429E8  1965 0001:000429F1
+  1966 0001:000429FB  1960 0001:00042A02  1968 0001:00042A13  1972 0001:00042A18
+  1973 0001:00042A22  1974 0001:00042A27  1975 0001:00042A30  1991 0001:00042A34
+  1992 0001:00042A54  1993 0001:00042A63  1994 0001:00042A71  1995 0001:00042A7B
+  1996 0001:00042A85  1997 0001:00042A87  1998 0001:00042A98  1996 0001:00042AE2
+  2000 0001:00042AEA  2001 0001:00042B14  2004 0001:00042B1E  2006 0001:00042B35
+  2007 0001:00042B41  2009 0001:00042B45  2010 0001:00042B65  2012 0001:00042B7E
+  2014 0001:00042B82  2015 0001:00042B99  2017 0001:00042BE6  2004 0001:00042BE7
+  2019 0001:00042BFD  2021 0001:00042C0D  2025 0001:00042C44  2031 0001:00042C4C
+  2033 0001:00042C4E  2034 0001:00042C53  2040 0001:00042C54  2041 0001:00042C56
+  2045 0001:00042C57  2047 0001:00042C5B  2048 0001:00042C5F  2049 0001:00042C60
+  2050 0001:00042C62  2052 0001:00042C69  2054 0001:00042C6B  2060 0001:00042C6C
+  2061 0001:00042C6F  2062 0001:00042C71  2063 0001:00042C73  2065 0001:00042C7A
+  2071 0001:00042C7C  2072 0001:00042C7F  2073 0001:00042C81  2075 0001:00042C88
+  2120 0001:00042C8C  2122 0001:00042CB1  2123 0001:00042CBD  2124 0001:00042CCE
+  2125 0001:00042CE1  2126 0001:00042CE4  2128 0001:00042CEE  2129 0001:00042CF3
+  2130 0001:00042CFB  2131 0001:00042D03  2126 0001:00042D06  2133 0001:00042D09
+  2135 0001:00042D13  2136 0001:00042D26  2137 0001:00042D2B  2138 0001:00042D35
+  2139 0001:00042D3F  2141 0001:00042D4A  2142 0001:00042D4E  2144 0001:00042D52
+  2145 0001:00042D5A  2146 0001:00042D62  2133 0001:00042D65  2147 0001:00042D68
+  2163 0001:00042D94  2167 0001:00042D97  2168 0001:00042D9C  2169 0001:00042DDA
+  2171 0001:00042DE2  2172 0001:00042DEA  2173 0001:00042DF4  2174 0001:00042DF8
+  2175 0001:00042E00  2176 0001:00042E04  2177 0001:00042E2F  2178 0001:00042E3C
+  2183 0001:00042E49  2184 0001:00042E54  2186 0001:00042E5C  2187 0001:00042E65
+  2188 0001:00042E6B  2189 0001:00042E75  2191 0001:00042E7E  2192 0001:00042E82
+  2198 0001:00042E88  2199 0001:00042E8C  2200 0001:00042E90  2201 0001:00042E92
+  2202 0001:00042E94  2203 0001:00042E99  2204 0001:00042E9E  2205 0001:00042EA1
+  2206 0001:00042EA3  2212 0001:00042EA4  2213 0001:00042EA7  2214 0001:00042EAD
+  2215 0001:00042EB3  2216 0001:00042EB5  2217 0001:00042EBB  2218 0001:00042EBD
+  2219 0001:00042EC2  2225 0001:00042EC4  2226 0001:00042EC8  2227 0001:00042ECA
+  2228 0001:00042ECC  2229 0001:00042ECE  2230 0001:00042ED4  2231 0001:00042ED6
+  2232 0001:00042ED8  2234 0001:00042EDC  2245 0001:00042EE0  2246 0001:00042EE2
+  2247 0001:00042EE6  2248 0001:00042EE8  2249 0001:00042EEC  2250 0001:00042EEE
+  2251 0001:00042EF2  2252 0001:00042EF4  2253 0001:00042EF8  2257 0001:00042EFA
+  2258 0001:00042EFC  2264 0001:00042F03  2271 0001:00042F04  2272 0001:00042F05
+  2273 0001:00042F09  2274 0001:00042F0E  2275 0001:00042F10  2276 0001:00042F22
+  2274 0001:00042F28  2277 0001:00042F2D  2286 0001:00042F30  2287 0001:00042F34
+  2288 0001:00042F36  2289 0001:00042F3B  2290 0001:00042F40  2291 0001:00042F43
+  2296 0001:00042F44  2297 0001:00042F45  2298 0001:00042F4B  2299 0001:00042F4D
+  2300 0001:00042F65  2298 0001:00042F6C  2301 0001:00042F74  2305 0001:00042F78
+  2306 0001:00042F7E  2309 0001:00042F83  2310 0001:00042F88  2311 0001:00042F8D
+  2312 0001:00042F90  2319 0001:00042F94  2320 0001:00042F96  2321 0001:00042F9D
+  2323 0001:00042FB1  2324 0001:00042FCD  2325 0001:00042FD1  2327 0001:00042FDC
+  2369 0001:00042FE0  2370 0001:00042FE3  2371 0001:00042FE5  2372 0001:00042FE8
+  2373 0001:00042FEF  2374 0001:00042FF1  2375 0001:00042FF8  2376 0001:00042FFA
+  2378 0001:00042FFF  2387 0001:00043000  2388 0001:00043001  2389 0001:00043005
+  2390 0001:00043007  2392 0001:00043009  2393 0001:0004300C  2394 0001:0004300F
+  2395 0001:00043015  2396 0001:00043018  2397 0001:0004301B  2398 0001:0004301C
+  2399 0001:00043021  2400 0001:00043024  2401 0001:00043026  2402 0001:00043027
+  2404 0001:0004302A  2405 0001:0004302C  2406 0001:00043031  2407 0001:00043037
+  2408 0001:0004303A  2409 0001:0004303E  2410 0001:00043040  2412 0001:00043041
+  2413 0001:00043046  2414 0001:0004304B  2415 0001:00043051  2417 0001:00043053
+  2425 0001:00043054  2426 0001:00043058  2427 0001:0004307F  2480 0001:00043084
+  2481 0001:00043088  2482 0001:000430A0  2483 0001:000430AA  2484 0001:000430B1
+  2485 0001:000430D1  2486 0001:000430DA  2494 0001:000430F8  2496 0001:000430FA
+  2497 0001:000430FF  2506 0001:00043100  2507 0001:00043107  2508 0001:0004311F
+  2521 0001:00043120  2522 0001:00043124  2524 0001:00043130  2525 0001:0004313E
+  2535 0001:00043140  2538 0001:00043167  2539 0001:0004316F  2540 0001:00043176
+  2541 0001:0004317D  2543 0001:00043185  2544 0001:0004318C  2545 0001:00043190
+  2546 0001:00043197  2547 0001:0004319E  2548 0001:000431A2  2549 0001:000431AE
+  2550 0001:000431B8  2551 0001:000431BA  2552 0001:000431C3  2553 0001:000431C9
+  2555 0001:000431D0  2556 0001:000431D5  2558 0001:000431DA  2559 0001:000431E8
+  2561 0001:000431ED  2562 0001:000431F7  2564 0001:000431FF  2566 0001:00043240
+  2568 0001:00043261  2569 0001:00043267  2571 0001:000432A7  2574 0001:000432F6
+  2577 0001:000432FB  2578 0001:00043303  2579 0001:00043307  2580 0001:0004330E
+  2583 0001:00043324  2584 0001:0004332B  2587 0001:00043347  2588 0001:00043353
+  2592 0001:00043384  2593 0001:0004338E  2595 0001:0004339A  2596 0001:000433A8
+  2598 0001:000433BA  2605 0001:000433BC  2606 0001:000433C3  2608 0001:000433C5
+  2609 0001:000433CA  2610 0001:000433CC  2620 0001:000433CE  2621 0001:000433D0
+  2623 0001:000433D6  2624 0001:000433DD  2626 0001:000433DE  2627 0001:000433E8
+  2632 0001:000433EC  2636 0001:000433F2  2638 0001:000433F9  2639 0001:00043403
+  2646 0001:00043404  2648 0001:00043406  2649 0001:00043407  2650 0001:0004340C
+  2651 0001:00043413  2652 0001:00043415  2653 0001:0004341C  2655 0001:00043426
+  2656 0001:00043427  2657 0001:0004342E  2658 0001:00043430  2659 0001:00043436
+  2660 0001:00043437  2661 0001:0004343C  2663 0001:0004343D  2664 0001:0004343E
+  2665 0001:0004343F  2671 0001:00043440  2672 0001:00043443  2673 0001:00043445
+  2674 0001:0004344C  2675 0001:00043450  2676 0001:00043459  2677 0001:0004345D
+  2678 0001:00043473  2679 0001:0004347A  2680 0001:00043481  2681 0001:00043488
+  2682 0001:0004348F  2683 0001:00043494  2685 0001:0004349B  2686 0001:000434A0
+  2687 0001:000434AF  2688 0001:000434B9  2689 0001:000434BB  2690 0001:000434C6
+  2694 0001:000434CC  2695 0001:000434CE  2696 0001:000434D3  2698 0001:000434D5
+  2701 0001:000434D8  2702 0001:000434DE  2704 0001:000434E8  2705 0001:000434F1
+  2707 0001:0004350D  2709 0001:00043516  2711 0001:0004353F  2712 0001:0004354B
+  2714 0001:00043556  2716 0001:0004355D  2731 0001:000435C4  2732 0001:000435CB
+  2733 0001:000435D0  2734 0001:000435EB  2735 0001:000435FF  2738 0001:00043628
+  2739 0001:00043642  2741 0001:0004364F  2742 0001:00043654  2744 0001:00043675
+  2745 0001:0004367D  2746 0001:00043690  2747 0001:00043699  2748 0001:0004369F
+  2749 0001:000436A3  2750 0001:000436AF  2751 0001:000436B3  2752 0001:000436BA
+  2753 0001:000436CB  2755 0001:000436D5  2756 0001:000436E7  2758 0001:000436F4
+  2759 0001:00043704  2767 0001:0004370C  2769 0001:00043710  2770 0001:00043713
+  2771 0001:00043715  2772 0001:00043718  2774 0001:0004371A  2779 0001:0004371F
+  2783 0001:00043720  2785 0001:00043734  2786 0001:0004373C  2788 0001:00043761
+  2793 0001:00043764  2794 0001:00043768  2795 0001:00043777  2797 0001:00043787
+  2798 0001:00043791  2802 0001:00043794  2803 0001:0004379B  2804 0001:0004379D
+  2805 0001:000437A4  2806 0001:000437A6  2807 0001:000437A8  2809 0001:000437AB
+  2810 0001:000437AD  2814 0001:000437B0  2815 0001:000437B2  2816 0001:000437B9
+  2817 0001:000437BB  2818 0001:000437C2  2819 0001:000437C4  2821 0001:000437CB
+  2825 0001:000437CC  2826 0001:000437D3  2827 0001:000437D5  2828 0001:000437DC
+  2829 0001:000437DE  2830 0001:000437E5  2832 0001:000437E7  2834 0001:000437E9
+  2838 0001:000437EC  2839 0001:000437F1  2840 0001:00043800  2844 0001:00043804
+  2845 0001:00043806  2846 0001:0004380B  2859 0001:0004380C  2860 0001:00043813
+  2861 0001:00043817  2862 0001:0004381C  2863 0001:00043827  2864 0001:00043830
+  2865 0001:00043855  2866 0001:0004385C  2867 0001:00043862  2869 0001:00043866
+  2870 0001:0004386D  2872 0001:00043877  2873 0001:00043890  2874 0001:0004389D
+  2877 0001:0004389F  2878 0001:000438A5  2879 0001:000438AD  2881 0001:000438B1
+  2882 0001:000438BB  2884 0001:000438C4  2885 0001:000438CC  2886 0001:000438D8
+  2887 0001:000438E7  2888 0001:00043908  2890 0001:00043915  2891 0001:0004391A
+  2893 0001:00043921  2894 0001:00043929  2897 0001:00043933  2899 0001:0004393D
+  2900 0001:00043951  2901 0001:0004395C  2904 0001:00043961  2905 0001:000439B6
+  2886 0001:000439BD  2906 0001:000439C6  2911 0001:000439D4  2912 0001:000439D5
+  2913 0001:000439E1  2914 0001:000439EE  2915 0001:00043A12  2919 0001:00043A14
+  2920 0001:00043A1B  2921 0001:00043A1D  2922 0001:00043A24  2923 0001:00043A26
+  2924 0001:00043A2D  2925 0001:00043A2F  2926 0001:00043A33  2927 0001:00043A38
+  2928 0001:00043A3A  2929 0001:00043A3F  2930 0001:00043A41  2931 0001:00043A42
+  2932 0001:00043A43  2933 0001:00043A48  2934 0001:00043A49  2936 0001:00043A4A
+  2978 0001:00043A4C  2979 0001:00043A54  2980 0001:00043A56  2994 0001:00043A58
+  2996 0001:00043A5F  3002 0001:00043A60  3003 0001:00043A65  3004 0001:00043A67
+  3005 0001:00043A68  3007 0001:00043A69  3008 0001:00043A6B  3016 0001:00043A6C
+  3017 0001:00043A6E  3019 0001:00043A75  3032 0001:00043A78  3034 0001:00043A79
+  3052 0001:00043A7C  3053 0001:00043A83  3054 0001:00043A85  3056 0001:00043A87
+  3057 0001:00043A8C  3063 0001:00043A90  3064 0001:00043A91  3065 0001:00043A92
+  3066 0001:00043A97  3067 0001:00043A99  3068 0001:00043A9B  3069 0001:00043A9D
+  3070 0001:00043AA3  3071 0001:00043AA5  3072 0001:00043AA7  3074 0001:00043AAD
+  3075 0001:00043AAE  3076 0001:00043AAF  3083 0001:00043AB0  3084 0001:00043AB3
+  3085 0001:00043AB8  3087 0001:00043ABC  3088 0001:00043ADB  3094 0001:00043AE0
+  3095 0001:00043AE3  3096 0001:00043AE8  3103 0001:00043AEC  3104 0001:00043AEF
+  3105 0001:00043AF1  3106 0001:00043AF4  3107 0001:00043AF9  3108 0001:00043AFB
+  3109 0001:00043B00  3111 0001:00043B01  3114 0001:00043B06  3115 0001:00043B0B
+  3120 0001:00043B0C  3121 0001:00043B0F  3122 0001:00043B1C  3127 0001:00043B20
+  3128 0001:00043B27  3129 0001:00043B38  3130 0001:00043B3C  3131 0001:00043B4E
+  3139 0001:00043B60  3140 0001:00043B65  3141 0001:00043B66  3142 0001:00043B69
+  3143 0001:00043B6F  3144 0001:00043B71  3145 0001:00043B72  3146 0001:00043B73
+  3147 0001:00043B78  3148 0001:00043B7A  3150 0001:00043B7F  3151 0001:00043B83
+  3157 0001:00043B84  3158 0001:00043B8B  3159 0001:00043B8D  3162 0001:00043B92
+  3166 0001:00043B94  3167 0001:00043B9B  3169 0001:00043B9D  3170 0001:00043BA4
+  3173 0001:00043BA7  3184 0001:00043BA8  3185 0001:00043BAF  3186 0001:00043BB1
+  3188 0001:00043BB6  3189 0001:00043BB8  3190 0001:00043BBA  3191 0001:00043BBD
+  3192 0001:00043BC0  3193 0001:00043BC5  3194 0001:00043BC7  3197 0001:00043BCC
+  3198 0001:00043BCF  3199 0001:00043BD6  3200 0001:00043BD9  3203 0001:00043BDC
+  3204 0001:00043BDF  3205 0001:00043BE6  3206 0001:00043BE9  3209 0001:00043BEC
+  3210 0001:00043BEF  3211 0001:00043BF6  3212 0001:00043BF9  3215 0001:00043BFC
+  3216 0001:00043BFF  3217 0001:00043C06  3218 0001:00043C09  3220 0001:00043C0C
+  3231 0001:00043C10  3232 0001:00043C11  3233 0001:00043C17  3234 0001:00043C1B
+  3235 0001:00043C29  3236 0001:00043C32  3237 0001:00043C36  3238 0001:00043C3F
+  3239 0001:00043C45  3244 0001:00043C4C  3245 0001:00043C69  3246 0001:00043C70
+  3248 0001:00043C8E  3249 0001:00043C9E  3251 0001:00043CA8  3256 0001:00043CCC
+  3257 0001:00043CE9  3258 0001:00043CF0  3259 0001:00043CF7  3263 0001:00043D17
+  3265 0001:00043D1D  3266 0001:00043D39  3269 0001:00043D5D  3273 0001:00043D84
+  3274 0001:00043D8B  3275 0001:00043D91  3276 0001:00043D98  3277 0001:00043D9A
+  3278 0001:00043DA2  3280 0001:00043DA9  3281 0001:00043DAE  3285 0001:00043DB0
+  3286 0001:00043DB7  3287 0001:00043DB9  3291 0001:00043DBC  3292 0001:00043DC3
+  3293 0001:00043DC5  3306 0001:00043DC8  3307 0001:00043DCF  3308 0001:00043DD6
+  3309 0001:00043DDC  3312 0001:00043DE4  3313 0001:00043DEE  3314 0001:00043DF6
+  3315 0001:00043DFA  3316 0001:00043DFE  3317 0001:00043E02  3318 0001:00043E08
+  3360 0001:00043E30  3361 0001:00043E36  3364 0001:00043E44  3365 0001:00043E65
+  3366 0001:00043EC0  3367 0001:00043EC5  3368 0001:00043ECA  3369 0001:00043ED4
+  3370 0001:00043EDC  3372 0001:00043EE4  3376 0001:00043EEC  3377 0001:00043EF0
+  3378 0001:00043EF5  3381 0001:00043EF8  3382 0001:00043F01  3383 0001:00043F49
+  3389 0001:00043F50  3390 0001:00043F53  3391 0001:00043F55  3392 0001:00043F5A
+  3393 0001:00043F5E  3395 0001:00043F62  3400 0001:00043F64  3401 0001:00043F6B
+  3402 0001:00043F80  3403 0001:00043F85  3404 0001:00043F9B  3405 0001:00043FA2
+  3406 0001:00043FB8  3408 0001:00043FBF  3409 0001:00043FC4  3413 0001:00043FD8
+  3414 0001:00043FDD  3415 0001:00043FE0  3421 0001:00043FE4  3422 0001:00043FE7
+  3423 0001:00043FEA  3429 0001:00043FEC  3430 0001:00043FEF  3457 0001:00043FF0
+  3459 0001:00043FF5  3460 0001:0004401D  3461 0001:00044020  3458 0001:00044027
+  3463 0001:00044056  3473 0001:000440E4  3474 0001:000440E5  3475 0001:000440E9
+  3476 0001:000440EF  3477 0001:000440F1  3479 0001:000440F3  3480 0001:000440F8
+  3481 0001:000440FA  3482 0001:000440FE  3483 0001:00044104  3484 0001:00044106
+  3486 0001:00044108  3487 0001:0004410D  3489 0001:0004410F  3491 0001:00044117
+  3492 0001:00044118  3498 0001:0004411C  3499 0001:00044120  3500 0001:00044122
+  3501 0001:00044124  3503 0001:0004412B  3511 0001:0004412C  3512 0001:00044132
+  3518 0001:00044134  3519 0001:00044139  3520 0001:0004413B  3522 0001:0004413E
+  3550 0001:00044140  3551 0001:00044141  3552 0001:00044147  3553 0001:0004414B
+  3554 0001:0004414D  3555 0001:0004414E  3556 0001:0004414F  3557 0001:00044151
+  3558 0001:00044153  3559 0001:00044159  3560 0001:0004415D  3561 0001:0004415E
+  3562 0001:0004415F  3566 0001:00044161  3569 0001:00044164  3570 0001:00044165
+  3578 0001:00044168  3579 0001:0004416F  3583 0001:00044171  3585 0001:00044174
+  3587 0001:0004417B  3593 0001:0004417C  3594 0001:00044182  3595 0001:00044186
+  3596 0001:00044188  3609 0001:0004418C  3610 0001:00044192  3611 0001:00044194
+  3612 0001:0004419A  3616 0001:0004419C  3617 0001:0004419E  3618 0001:000441A0
+  3619 0001:000441A6  3625 0001:000441A8  3626 0001:000441AE  3627 0001:000441B4
+  3642 0001:000441B8  3643 0001:000441C2  3647 0001:000441C4  3648 0001:000441C8
+  3649 0001:000441CD  3654 0001:000441D0  3655 0001:000441D5  3656 0001:000441D7
+  3657 0001:000441D9  3658 0001:000441DA  3659 0001:000441E1  3660 0001:000441E4
+  3661 0001:000441E6  3662 0001:000441E8  3663 0001:000441ED  3665 0001:000441EE
+  3666 0001:000441F0  3675 0001:000441F5  3677 0001:000441F7  3678 0001:000441F9
+  3679 0001:000441FB  3682 0001:00044202  3701 0001:00044204  3703 0001:00044205
+  3709 0001:00044208  3710 0001:0004420B  3711 0001:0004420D  3713 0001:00044212
+  3720 0001:00044214  3721 0001:0004421B  3722 0001:00044239  3723 0001:0004424F
+  3724 0001:00044251  3725 0001:0004425F  3726 0001:00044264  3727 0001:0004426C
+  3728 0001:0004426D  3729 0001:00044279  3731 0001:00044283  3732 0001:00044284
+  3734 0001:00044290  3735 0001:00044295  3736 0001:00044297  3737 0001:000442B3
+  3741 0001:000442C0  3742 0001:000442C4  3743 0001:000442C9  3761 0001:000442CC
+  3762 0001:000442D2  3763 0001:000442D4  3765 0001:000442D7  3775 0001:000442D8
+  3776 0001:000442DA  3777 0001:000442DE  3778 0001:000442E0  3780 0001:000442E7
+  3784 0001:000442E8  3785 0001:000442F0  3786 0001:000442F2  3787 0001:000442F5
+  3788 0001:000442F7  3789 0001:000442FA  3790 0001:000442FC  3792 0001:000442FF
+  3793 0001:00044305  3794 0001:00044307  3799 0001:00044308  3800 0001:00044309
+  3801 0001:00044318  3800 0001:0004432C  3802 0001:0004432F  3809 0001:00044334
+  3810 0001:0004433F  3811 0001:00044357  3815 0001:00044358  3816 0001:0004435E
+  3817 0001:00044361  3818 0001:00044364  3819 0001:00044367  3820 0001:00044369
+  3821 0001:0004436B  3822 0001:00044372  3824 0001:00044377  3835 0001:00044378
+  3837 0001:0004437C  3838 0001:0004437E  3839 0001:0004437F  3840 0001:00044383
+  3841 0001:00044388  3842 0001:0004438E  3843 0001:00044390  3844 0001:00044391
+  3845 0001:00044393  3847 0001:00044395  3855 0001:00044398  3856 0001:00044399
+  3857 0001:0004439A  3858 0001:000443A0  3859 0001:000443A1  3860 0001:000443A2
+  3866 0001:000443A4  3867 0001:000443A5  3868 0001:000443AB  3869 0001:000443B1
+  3870 0001:000443B3  3872 0001:000443B4  3878 0001:000443B8  3879 0001:000443BB
+  3880 0001:000443BD  3881 0001:000443C2  3883 0001:000443C9  3891 0001:000443CC
+  3892 0001:00044409  3896 0001:0004440C  3897 0001:0004440E  3898 0001:0004440F
+  3899 0001:00044410  3900 0001:00044415  3901 0001:00044417  3902 0001:00044418
+  3904 0001:00044419  3915 0001:0004441C  3917 0001:00044420  3923 0001:00044424
+  3924 0001:00044428  3925 0001:0004442B  3926 0001:0004442D  3927 0001:00044430
+  3928 0001:00044432  3929 0001:00044435  3930 0001:00044437  3933 0001:00044438
+  3934 0001:00044439  3935 0001:0004443B  3936 0001:0004443E  3942 0001:00044440
+  3943 0001:00044443  3944 0001:00044445  3945 0001:0004444B  3947 0001:0004444F
+  3953 0001:00044450  3954 0001:00044452  3955 0001:00044454  3956 0001:00044455
+  3958 0001:00044458  3964 0001:0004445C  3966 0001:00044474  3967 0001:0004447C
+  3969 0001:00044484  4516 0001:00044488  4517 0001:0004448B  4518 0001:00044497
+  4519 0001:000444A3  4523 0001:000444A8  4524 0001:000444B2  4525 0001:000444BC
+  4529 0001:000444C0  4530 0001:000444C7  4531 0001:000444D1  4532 0001:000444DB
+  4533 0001:000444E5  4534 0001:000444EF  4535 0001:000444F9  4536 0001:00044503
+  4537 0001:0004450D  4538 0001:00044517  4539 0001:00044521  4540 0001:00044526
+  4541 0001:00044530  4542 0001:0004453A  4543 0001:00044548  4544 0001:00044552
+  4545 0001:0004455C  4546 0001:00044566  4547 0001:00044574  4548 0001:0004457E
+  4549 0001:00044588  4550 0001:00044592  4551 0001:0004459C  4552 0001:000445A6
+  4553 0001:000445B0  4554 0001:000445BA  4555 0001:000445C4  4556 0001:000445CE
+  4557 0001:000445D8  4558 0001:000445E2  4559 0001:000445EC  4560 0001:000445F6
+  4561 0001:00044600  4562 0001:0004460A  4563 0001:0004460F  4566 0001:00044610
+  4567 0001:00044617  4568 0001:0004461F  4569 0001:00044628  4570 0001:00044632
+  4571 0001:0004463B  4572 0001:00044645  4573 0001:00044657  4574 0001:00044661
+  4575 0001:0004466A  4576 0001:00044674  4577 0001:0004467A  4578 0001:00044684
+  4579 0001:0004468D  4580 0001:00044697  4581 0001:000446A0  4582 0001:000446AA
+  4583 0001:000446B3  4584 0001:000446BD  4585 0001:000446C6  4586 0001:000446D0
+  4587 0001:000446D9  4588 0001:000446E3  4589 0001:000446EC  4590 0001:000446F6
+  4591 0001:000446FF  4592 0001:00044709  4593 0001:00044712  4594 0001:0004471C
+  4595 0001:00044725  4596 0001:0004472F  4597 0001:00044738  4598 0001:00044742
+  4599 0001:0004474B  4600 0001:00044755  4601 0001:0004475E  4602 0001:00044768
+  4603 0001:00044771  4604 0001:0004477B  4605 0001:00044784  4606 0001:0004478E
+  4610 0001:00044790  4611 0001:0004479A  4612 0001:000447A4  4616 0001:000447A8
+  4617 0001:000447B2  4618 0001:000447B7  4621 0001:000447B8  4623 0001:000447B9
+  4624 0001:000447C3  4625 0001:000447D1  4628 0001:000447D6  4630 0001:000447E4
+  4631 0001:00044802  4632 0001:0004481B  4633 0001:00044834  4634 0001:0004484D
+  4637 0001:00044857  4642 0001:00044868  4643 0001:00044880  4645 0001:0004488C
+  4646 0001:00044896  4648 0001:000448A0  4649 0001:000448AB  4651 0001:000448B8
+  4652 0001:000448D6  4653 0001:000448E0  4654 0001:000448FF  4655 0001:0004491A
+  4656 0001:00044935  4657 0001:0004493F  4662 0001:00044940  4663 0001:00044943
+  4664 0001:00044948  4666 0001:0004497C  4667 0001:00044987  4668 0001:0004498D
+  4670 0001:00044997  4672 0001:000449A7  4673 0001:000449B6  4675 0001:000449C0
+  4676 0001:000449D0  4677 0001:000449DF  4678 0001:000449ED  4679 0001:000449FC
+  4678 0001:00044A0B  4681 0001:00044A0E  4682 0001:00044A13  4713 0001:00044A48
+  4715 0001:00044A52  4716 0001:00044A60  4717 0001:00044A72  4718 0001:00044A7B
+  4724 0001:00044A86  4725 0001:00044A90  4726 0001:00044A97  4732 0001:00044B08
+  4733 0001:00044B2E  4734 0001:00044B39
 
 Line numbers for MMHooks(..\mmcommon\MMHooks.pas) segment .itext
 
-  4705 0002:00000590  4706 0002:000005B4
+  4730 0002:00000590  4731 0002:000005B4
 
 Line numbers for Hooks(Hooks.pas) segment .text
 
-    31 0001:00044BCC    32 0001:00044BD0    34 0001:00044BDA    35 0001:00044BDF
-    36 0001:00044BE5    38 0001:00044BE6    39 0001:00044BE8    40 0001:00044BEA
-    41 0001:00044BF0    43 0001:00044BF3    44 0001:00044BF5    45 0001:00044BF6
-    46 0001:00044BFB    47 0001:00044C05    49 0001:00044C0B    50 0001:00044C11
-    51 0001:00044C18    52 0001:00044C1B    54 0001:00044C21    55 0001:00044C27
-    56 0001:00044C2A    57 0001:00044C2D    58 0001:00044C2F    59 0001:00044C32
-    60 0001:00044C34    61 0001:00044C37    62 0001:00044C38    64 0001:00044C3A
-    65 0001:00044C3C    67 0001:00044C3E    69 0001:00044C40    70 0001:00044C46
-    73 0001:00044C4C    74 0001:00044C4F    75 0001:00044C5A    76 0001:00044C65
-    77 0001:00044C7C    78 0001:00044C91    79 0001:00044CA1    80 0001:00044CAC
-    91 0001:00044DC8    93 0001:00044DCB    94 0001:00044DD5    97 0001:00044DDE
-    99 0001:00044DE7   100 0001:00044DEE   102 0001:00044DFE   103 0001:00044E04
-   104 0001:00044E0E   105 0001:00044E12   107 0001:00044E19   110 0001:00044E1F
-   113 0001:00044E39   115 0001:00044E66   118 0001:00044E6B   120 0001:00044E7C
-   121 0001:00044E86   122 0001:00044E91   123 0001:00044E9C   127 0001:00044EA1
-   128 0001:00044EB2   130 0001:00044EC5   132 0001:00044ECF   133 0001:00044ED9
-   134 0001:00044EE4   137 0001:00044EEB   141 0001:00044EF0   142 0001:00044EF5
-   146 0001:00044F18   147 0001:00044F1D   148 0001:00044F22   157 0001:00044F24
-   158 0001:00044F2A   159 0001:00044F36   160 0001:00044F42   172 0001:00044F7C
-   173 0001:00044F7D   174 0001:00044F8F   176 0001:00044F9E   177 0001:00044FB3
-   179 0001:00044FC1   180 0001:00044FCA   181 0001:00044FD6   187 0001:00044FE0
-   188 0001:00044FF8   189 0001:00045006   190 0001:00045013   192 0001:00045021
-   193 0001:00045025   195 0001:0004503F   197 0001:00045046   199 0001:0004504C
-   201 0001:00045059   200 0001:0004505A   203 0001:00045079   205 0001:0004507B
-   206 0001:0004508D   207 0001:00045099   208 0001:000450BD   209 0001:000450C3
-   208 0001:000450D7   210 0001:000450DA   211 0001:000450EE   212 0001:000450F9
-   213 0001:00045102   214 0001:00045106   215 0001:00045110   219 0001:00045134
-   220 0001:00045135   221 0001:0004513A   222 0001:0004513D   223 0001:00045143
-   224 0001:00045144   225 0001:00045149   229 0001:0004514C   230 0001:00045156
-   239 0001:00045158   240 0001:0004515F   241 0001:00045161   242 0001:00045166
-   244 0001:00045168   245 0001:0004516E   252 0001:00045170   253 0001:00045175
-   254 0001:0004517B   262 0001:0004517C   263 0001:00045199   264 0001:000451A8
-   266 0001:000451B6   267 0001:000451D7   268 0001:000451E5   270 0001:000451F3
-   271 0001:000451FE   272 0001:00045218   273 0001:00045225   274 0001:00045233
-   268 0001:00045234   275 0001:00045239   276 0001:00045247   280 0001:000452BC
-   281 0001:000452BD   282 0001:000452C2   283 0001:000452C3   284 0001:000452C4
-   285 0001:000452C9   286 0001:000452CB   294 0001:000452CC   295 0001:000452EB
-   297 0001:000452FE   298 0001:00045318   299 0001:0004533F   301 0001:00045351
-   302 0001:0004536A   304 0001:00045371   295 0001:00045372   305 0001:00045375
-   309 0001:000453D0   310 0001:000453D5   311 0001:000453DA   312 0001:000453DC
-   314 0001:000453E1   322 0001:000453E4   323 0001:000453FB   324 0001:00045410
-   326 0001:00045414   327 0001:0004541E   328 0001:00045440   329 0001:00045446
-   330 0001:00045459   332 0001:0004546D   334 0001:00045482   335 0001:00045485
-   337 0001:00045494   341 0001:000454E8   342 0001:000454EB   343 0001:000454F0
-   344 0001:000454F2   346 0001:000454F4   347 0001:000454F9   350 0001:000454FA
-   351 0001:00045500   352 0001:00045505   355 0001:00045508   356 0001:0004551E
-   358 0001:0004552B   361 0001:00045534   362 0001:0004553E   363 0001:0004554F
-   364 0001:0004556F   369 0001:00045575   373 0001:00045598   374 0001:00045599
-   375 0001:0004559A   376 0001:000455A0   377 0001:000455A5   378 0001:000455A6
-   379 0001:000455A7   383 0001:000455A8   384 0001:000455AE   385 0001:000455B3
-   386 0001:000455B5   390 0001:000455B8   391 0001:000455B9   392 0001:000455BA
-   393 0001:000455C0   394 0001:000455C2   395 0001:000455C7   396 0001:000455C9
-   397 0001:000455CA   398 0001:000455CB   402 0001:000455CC   403 0001:000455CD
-   404 0001:000455CE   405 0001:000455CF   406 0001:000455D2   407 0001:000455D7
-   408 0001:000455DB   409 0001:000455DC   410 0001:000455DD   411 0001:000455DE
-   412 0001:000455E4   418 0001:000455E8   419 0001:000455EA   420 0001:000455ED
-   433 0001:000455F0   434 0001:000455F7   435 0001:000455F9   436 0001:00045609
-   438 0001:0004562E   439 0001:00045631   440 0001:00045632   435 0001:00045633
-   441 0001:00045636   442 0001:0004563A   444 0001:00045647   445 0001:0004564C
-   451 0001:00045654   452 0001:0004565A   453 0001:0004565C   454 0001:0004565E
-   456 0001:0004565F   457 0001:00045660   458 0001:00045665   459 0001:0004566B
-   460 0001:0004566C   461 0001:00045670   462 0001:00045675   464 0001:00045676
-   465 0001:0004567B   467 0001:0004567C   468 0001:0004567E   469 0001:00045684
-   470 0001:00045687   478 0001:00045688   479 0001:0004568F   480 0001:00045691
-   482 0001:00045699   496 0001:0004569C   497 0001:000456BC   498 0001:000456BF
-   500 0001:000456C7   501 0001:000456CB   502 0001:000456D6   503 0001:000456DE
-   505 0001:000456E2   506 0001:000456F5   508 0001:0004571F   509 0001:00045748
-   510 0001:00045760   511 0001:00045768   512 0001:0004577A   513 0001:000457AA
-   520 0001:000457D0   521 0001:000457D2   522 0001:000457D4   523 0001:000457DA
-   524 0001:000457DF   525 0001:000457E1   526 0001:000457E7   530 0001:000457E8
-   531 0001:000457EA   532 0001:000457EB   533 0001:000457ED   534 0001:000457F3
-   535 0001:000457F8   536 0001:000457FA   537 0001:00045800   545 0001:00045804
-   546 0001:00045827   547 0001:0004582C   548 0001:00045853   550 0001:0004585D
-   551 0001:0004586B   552 0001:00045878   553 0001:0004587E   555 0001:0004588E
-   556 0001:000458A8   557 0001:000458B5   559 0001:000458CD   561 0001:000458DE
-   565 0001:00045920   566 0001:00045924   567 0001:00045928   568 0001:0004592D
-   569 0001:0004592F   570 0001:00045931   571 0001:00045932   574 0001:00045935
-   575 0001:00045936   576 0001:00045937   577 0001:00045939   578 0001:0004593C
-   579 0001:0004593E   583 0001:00045940   584 0001:00045943   585 0001:00045948
-   587 0001:00045949   588 0001:0004594A   589 0001:0004594C   590 0001:0004594D
-   591 0001:0004594E   592 0001:00045950   596 0001:00045954   597 0001:0004595A
-   598 0001:0004595F   604 0001:00045960   605 0001:00045962   606 0001:0004596B
-   607 0001:0004596D   609 0001:0004596E   615 0001:00045970   616 0001:00045973
-   624 0001:00045974   625 0001:00045975   626 0001:00045988   632 0001:0004598C
-   633 0001:0004598D   634 0001:00045992   635 0001:00045994   636 0001:00045995
-   637 0001:00045997   638 0001:00045999   639 0001:000459A1   640 0001:000459A3
-   641 0001:000459AA   642 0001:000459AC   643 0001:000459AD   644 0001:000459B2
-   645 0001:000459B3   646 0001:000459BA   647 0001:000459C0   648 0001:000459C5
-   649 0001:000459C7   651 0001:000459C9   652 0001:000459CA   653 0001:000459D0
-   654 0001:000459D5   656 0001:000459DA   665 0001:000459DC   666 0001:000459DD
-   667 0001:000459E3   668 0001:000459E4   669 0001:000459E7   670 0001:000459E8
-   671 0001:000459EA   672 0001:000459EC   685 0001:000459F0   686 0001:000459F3
-   687 0001:000459FA   688 0001:000459FC   689 0001:00045A03   690 0001:00045A05
-   691 0001:00045A0C   692 0001:00045A0E   693 0001:00045A10   694 0001:00045A17
-   695 0001:00045A19   696 0001:00045A20   698 0001:00045A22   699 0001:00045A29
-   701 0001:00045A2B   702 0001:00045A32   704 0001:00045A34   705 0001:00045A3B
-   706 0001:00045A3D   708 0001:00045A3F   709 0001:00045A42   710 0001:00045A48
-   719 0001:00045A4C   720 0001:00045A53   721 0001:00045A55   722 0001:00045A5B
-   724 0001:00045A61   725 0001:00045A67   726 0001:00045A6D   735 0001:00045A70
-   736 0001:00045A72   737 0001:00045A78   738 0001:00045A7A   740 0001:00045A7C
-   741 0001:00045A7E   742 0001:00045A83   743 0001:00045A85   744 0001:00045A8B
-   745 0001:00045A8D   747 0001:00045A8F   748 0001:00045A91   751 0001:00045A97
-   752 0001:00045A9C   753 0001:00045A9F   762 0001:00045AA0   763 0001:00045AA4
-   764 0001:00045AAA   765 0001:00045AB2   766 0001:00045AB4   767 0001:00045AB7
-   773 0001:00045AB8   774 0001:00045ABB   777 0001:00045AC8   778 0001:00045AD2
-   779 0001:00045ADD   781 0001:00045AE4   782 0001:00045AEF   783 0001:00045AFA
-   784 0001:00045B05   785 0001:00045B0F   787 0001:00045B13   793 0001:00045B18
-   794 0001:00045B2E   800 0001:00045B64   801 0001:00045B6A   802 0001:00045B78
-   804 0001:00045B8D   805 0001:00045B92   811 0001:00045B98   812 0001:00045B9F
-   813 0001:00045BA6   814 0001:00045BAA   823 0001:00045BAC   824 0001:00045BB2
-   825 0001:00045BB8   831 0001:00045BBC   832 0001:00045BBE   833 0001:00045BBF
-   834 0001:00045BC1   835 0001:00045BC3   836 0001:00045BC9   837 0001:00045BCC
-   838 0001:00045BCD   839 0001:00045BCF   844 0001:00045BD0   845 0001:00045BD2
-   846 0001:00045C09   850 0001:00045C0C   851 0001:00045C11   852 0001:00045C13
-   858 0001:00045C14   859 0001:00045C15   860 0001:00045C16   861 0001:00045C18
-   862 0001:00045C1D   863 0001:00045C1F   864 0001:00045C25   865 0001:00045C27
-   866 0001:00045C28   867 0001:00045C29   868 0001:00045C2B   870 0001:00045C30
-   879 0001:00045C34   880 0001:00045C4C   881 0001:00045C7D   924 0001:00045D1C
-   925 0001:00045D3A   926 0001:00045D40   927 0001:00045D4F   928 0001:00045D62
-   929 0001:00045D72   930 0001:00045D77   931 0001:00045D8A   932 0001:00045D92
-   933 0001:00045D9B   935 0001:00045DA6   936 0001:00045DA8   944 0001:00045DD0
-   945 0001:00045DFD   946 0001:00045E03   947 0001:00045E09   948 0001:00045E0F
-   949 0001:00045E15   950 0001:00045E1B   951 0001:00045E21   952 0001:00045E27
-   953 0001:00045E2D   954 0001:00045E35   955 0001:00045E3E   956 0001:00045E42
-   958 0001:00045E58   960 0001:00045E7A   961 0001:00045E8D   962 0001:00045EA3
-   963 0001:00045EA6   964 0001:00045EB9   965 0001:00045EC1   969 0001:00045F0C
-   970 0001:00045F0D   971 0001:00045F11   972 0001:00045F12   973 0001:00045F13
-   974 0001:00045F16   975 0001:00045F17   976 0001:00045F18   977 0001:00045F1B
-   978 0001:00045F1C   979 0001:00045F1D   980 0001:00045F1F   981 0001:00045F21
-   983 0001:00045F26   984 0001:00045F2C   990 0001:00045F30   991 0001:00045F31
-   992 0001:00045F35   993 0001:00045F36   994 0001:00045F37   995 0001:00045F3A
-   996 0001:00045F3B   997 0001:00045F3C   998 0001:00045F3D   999 0001:00045F3E
-  1000 0001:00045F3F  1001 0001:00045F44  1002 0001:00045F46  1004 0001:00045F4B
-  1005 0001:00045F51  1009 0001:00045F54  1010 0001:00045F55  1011 0001:00045F57
-  1012 0001:00045F58  1013 0001:00045F5C  1014 0001:00045F5D  1015 0001:00045F60
-  1016 0001:00045F61  1017 0001:00045F63  1018 0001:00045F66  1019 0001:00045F69
-  1020 0001:00045F6C  1021 0001:00045F6D  1022 0001:00045F70  1024 0001:00045F75
-  1025 0001:00045F7B  1031 0001:00045F7C  1032 0001:00045F81  1033 0001:00045F82
-  1034 0001:00045F87  1037 0001:00045F91  1038 0001:00045F98  1044 0001:00045F9C
-  1045 0001:00045F9E  1046 0001:00045F9F  1047 0001:00045FA0  1048 0001:00045FA3
-  1054 0001:00045FA4  1055 0001:00045FAA  1056 0001:00045FAF  1057 0001:00045FB4
-  1058 0001:00045FB5  1065 0001:00045FB8  1066 0001:00045FBE  1067 0001:00045FC5
-  1068 0001:00045FC7  1069 0001:00045FCE  1070 0001:00045FCF  1072 0001:00045FD4
-  1076 0001:00045FD8  1077 0001:00045FDE  1078 0001:00045FE1  1079 0001:00045FE5
-  1080 0001:00045FE8  1081 0001:00045FEA  1082 0001:00045FF4  1083 0001:00045FF6
-  1084 0001:00045FFD  1085 0001:00046002  1087 0001:00046003  1088 0001:0004600A
-  1089 0001:0004600F  1100 0001:00046010  1101 0001:00046034  1102 0001:00046043
-  1103 0001:00046047  1104 0001:00046054  1106 0001:0004605E  1107 0001:00046063
-  1108 0001:0004606B  1104 0001:0004606E  1109 0001:00046071  1110 0001:00046076
-  1112 0001:00046080  1113 0001:00046085  1114 0001:0004609B  1115 0001:000460A3
-  1110 0001:000460A6  1116 0001:000460A9  1122 0001:000460D4  1123 0001:000460D6
-  1124 0001:000460DC  1129 0001:000460E0  1130 0001:000460E5  1132 0001:000460F4
-  1133 0001:000460FF  1137 0001:00046108  1138 0001:0004610D  1163 0001:00046110
-  1164 0001:0004611A  1168 0001:0004611C  1169 0001:00046120  1170 0001:00046125
-  1171 0001:0004612A  1175 0001:0004612C  1176 0001:0004612F  1177 0001:00046131
-  1178 0001:00046133  1179 0001:00046135  1181 0001:00046137  1183 0001:0004613C
-  1184 0001:00046141  1193 0001:00046144  1194 0001:00046148  1195 0001:0004614B
-  1196 0001:00046151  1197 0001:00046153  1199 0001:00046159  1205 0001:0004615C
-  1206 0001:00046162  1207 0001:00046164  1208 0001:00046166  1210 0001:0004616C
-  1216 0001:00046170  1217 0001:00046175  1218 0001:00046178  1222 0001:0004617C
-  1223 0001:00046181  1224 0001:00046184  1230 0001:00046188  1231 0001:0004618B
-  1232 0001:0004618D  1234 0001:00046190  1235 0001:00046195  1239 0001:00046198
-  1240 0001:0004619B  1241 0001:0004619D  1243 0001:000461A0  1244 0001:000461A5
-  1248 0001:000461A8  1249 0001:000461AB  1250 0001:000461AD  1251 0001:000461B4
-  1253 0001:000461B6  1255 0001:000461BA  1256 0001:000461BD  1262 0001:000461C0
-  1263 0001:000461C3  1264 0001:000461C5  1265 0001:000461C7  1266 0001:000461C8
-  1267 0001:000461CD  1269 0001:000461CE  1270 0001:000461D1  1271 0001:000461D3
-  1275 0001:000461D4  1276 0001:000461D7  1277 0001:000461D9  1278 0001:000461DB
-  1279 0001:000461E0  1281 0001:000461E7  1287 0001:000461E8  1288 0001:000461EB
-  1289 0001:000461ED  1290 0001:000461F4  1291 0001:000461F6  1292 0001:000461F7
-  1294 0001:000461FE  1296 0001:000461FF  1297 0001:00046206  1309 0001:00046208
-  1310 0001:0004620D  1311 0001:0004621B  1312 0001:0004621F  1314 0001:00046235
-  1315 0001:00046257  1316 0001:0004625C  1317 0001:0004626E  1319 0001:00046274
-  1312 0001:00046278  1320 0001:0004627B  1326 0001:00046284  1327 0001:00046289
-  1328 0001:0004628C  1329 0001:0004628E  1330 0001:00046292  1331 0001:00046294
-  1332 0001:00046296  1333 0001:00046298  1334 0001:0004629A  1335 0001:0004629C
-  1337 0001:0004629D  1338 0001:000462A0  1346 0001:000462A4  1347 0001:000462AC
-  1348 0001:000462BC  1349 0001:000462C7  1367 0001:000462D0  1368 0001:000462DA
-  1370 0001:000462E9  1373 0001:00046315  1374 0001:0004632F  1375 0001:00046346
-  1376 0001:0004635E  1377 0001:00046375  1378 0001:0004638F  1379 0001:000463BE
-  1380 0001:000463D0  1381 0001:000463D2  1382 0001:000463F6  1383 0001:00046406
-  1384 0001:00046418  1385 0001:0004641D  1386 0001:00046422  1389 0001:0004644C
-  1390 0001:00046460  1391 0001:00046465  1392 0001:00046471  1393 0001:0004647F
-  1394 0001:00046488  1395 0001:00046491  1396 0001:0004649A  1397 0001:000464A2
-  1398 0001:000464A6  1400 0001:000464AB  1404 0001:000464CC  1405 0001:000464CF
-  1406 0001:000464D0  1407 0001:000464D2  1408 0001:000464D4  1409 0001:000464D9
-  1410 0001:000464DA  1411 0001:000464DB  1412 0001:000464DF  1413 0001:000464E3
-  1414 0001:000464E6  1415 0001:000464E9  1419 0001:000464EC  1420 0001:000464F3
-  1421 0001:000464F4  1422 0001:000464F5  1423 0001:000464F7  1424 0001:000464F9
-  1425 0001:000464FE  1426 0001:000464FF  1427 0001:00046500  1428 0001:00046504
-  1436 0001:00046508  1437 0001:0004651E  1438 0001:00046535  1439 0001:00046541
-  1443 0001:00046564  1444 0001:00046569  1445 0001:0004656C  1446 0001:0004656E
-  1452 0001:00046570  1453 0001:00046572  1454 0001:00046574  1456 0001:00046575
-  1457 0001:00046577  1458 0001:0004657C  1464 0001:00046580  1465 0001:00046583
-  1466 0001:00046589  1467 0001:0004658B  1476 0001:0004658C  1477 0001:00046596
-  1482 0001:00046598  1483 0001:0004659B  1485 0001:000465AB  1486 0001:000465B8
-  1488 0001:000465C1  1489 0001:000465C9  1486 0001:000465CE  1491 0001:000465D1
-  1495 0001:000465D4  1496 0001:000465D9  1497 0001:000465DA  1498 0001:000465DD
-  1499 0001:000465DE  1500 0001:000465DF  1501 0001:000465E1  1507 0001:000465E4
-  1508 0001:000465ED  1509 0001:000465F4  1510 0001:00046600  1516 0001:00046604
-  1517 0001:0004660B  1518 0001:0004660C  1519 0001:00046611  1520 0001:00046612
-  1526 0001:00046614  1527 0001:0004661D  1528 0001:00046624  1529 0001:00046630
-  1535 0001:00046634  1536 0001:00046639  1537 0001:0004663E  1545 0001:00046640
-  1546 0001:00046646  1547 0001:0004664B  1558 0001:0004664C  1559 0001:00046652
-  1560 0001:00046658  1561 0001:0004665A  1562 0001:0004665C  1563 0001:00046662
-  1565 0001:00046669  1569 0001:0004666C  1570 0001:00046671  1571 0001:00046678
-  1572 0001:0004667D  1584 0001:00046680  1585 0001:00046689  1589 0001:000466F5
-  1590 0001:000466FC  1591 0001:00046719  1592 0001:00046721  1594 0001:0004672D
-  1598 0001:00046758  1599 0001:0004675E  1600 0001:00046763  1604 0001:00046764
-  1605 0001:00046765  1606 0001:0004676A  1607 0001:00046770  1608 0001:00046773
-  1625 0001:00046774  1626 0001:000467A0  1627 0001:000467B4  1628 0001:000467C3
-  1630 0001:000467DC  1631 0001:000467E4  1632 0001:000467E5  1627 0001:000467E6
-  1633 0001:000467E9  1634 0001:000467FA  1638 0001:000467FC  1639 0001:00046801
-  1640 0001:00046806  1647 0001:00046808  1649 0001:00046809  1650 0001:0004680A
-  1651 0001:0004680C  1652 0001:00046812  1653 0001:00046817  1654 0001:00046819
-  1655 0001:0004681A  1657 0001:00046820  1658 0001:00046827  1659 0001:00046828
-  1660 0001:00046831  1661 0001:00046837  1662 0001:00046838  1663 0001:0004683E
-  1665 0001:00046844  1668 0001:0004684A  1669 0001:0004684B  1670 0001:00046851
-  1671 0001:00046852  1672 0001:00046859  1673 0001:0004685A  1680 0001:0004685C
-  1681 0001:0004685D  1682 0001:0004685F  1683 0001:00046865  1684 0001:0004686A
-  1685 0001:0004686C  1686 0001:0004686D  1687 0001:00046873  1688 0001:00046876
-  1689 0001:00046877  1691 0001:0004687C  1694 0001:00046882  1695 0001:00046883
-  1696 0001:00046886  1697 0001:0004688B  1734 0001:000468AC  1735 0001:000468BF
-  1737 0001:000468C9  1738 0001:000468CB  1739 0001:000468CE  1741 0001:000468DB
-  1745 0001:000468DC  1746 0001:000468DD  1747 0001:000468DF  1748 0001:000468E0
-  1749 0001:000468E1  1750 0001:000468E3  1755 0001:000468E4  1756 0001:000468E5
-  1757 0001:000468E6  1758 0001:000468E9  1760 0001:000468EA  1761 0001:000468EB
-  1762 0001:000468EC  1763 0001:000468ED  1764 0001:000468EF  1765 0001:000468F4
-  1771 0001:000468F8  1772 0001:00046906  1773 0001:0004690F  1775 0001:00046918
-  1777 0001:0004691F  1778 0001:00046930  1780 0001:0004693D  1781 0001:00046958
-  1783 0001:0004695C  1784 0001:0004696D  1786 0001:0004696F  1777 0001:00046970
-  1787 0001:00046975  1788 0001:0004698A  1789 0001:0004698E  1790 0001:00046999
-  1794 0001:000469A4  1795 0001:000469A5  1796 0001:000469AA  1800 0001:000469AC
-  1801 0001:000469AD  1802 0001:000469B0  1803 0001:000469B1  1804 0001:000469B5
-  1805 0001:000469B9  1806 0001:000469BE  1823 0001:000469C0  1824 0001:000469EA
-  1825 0001:00046A04  1826 0001:00046A10  1827 0001:00046A1E  1828 0001:00046A39
-  1829 0001:00046A3E  1831 0001:00046A73  1832 0001:00046A7F  1833 0001:00046A86
-  1836 0001:00046A8A  1837 0001:00046AA5  1839 0001:00046AB7  1840 0001:00046AC3
-  1841 0001:00046ADF  1842 0001:00046AEA  1844 0001:00046AF3  1847 0001:00046B64
-  1848 0001:00046B6A  1849 0001:00046B71  1850 0001:00046B81  1851 0001:00046B8F
-  1856 0001:00046B94  1857 0001:00046BA1  1858 0001:00046BAD  1860 0001:00046BB5
-  1861 0001:00046BC0  1862 0001:00046BD0  1863 0001:00046BDD  1864 0001:00046BFB
-  1865 0001:00046C07  1866 0001:00046C0E  1867 0001:00046C10  1868 0001:00046C12
-  1857 0001:00046C13  1869 0001:00046C18  1870 0001:00046C1A  1874 0001:00046C20
-  1875 0001:00046C25  1879 0001:00046C28  1880 0001:00046C2D  1883 0001:00046C30
-  1884 0001:00046C52  1885 0001:00046C75  1887 0001:00046C85  1886 0001:00046CBB
-  1889 0001:00046CD4  1891 0001:00046CE4  1894 0001:00046D20  1895 0001:00046D5D
-  1896 0001:00046D79  1898 0001:00046D8D  1899 0001:00046DE1  1900 0001:00046DED
-  1901 0001:00046E0F  1906 0001:00046E6C  1907 0001:00046E94  1908 0001:00046EAC
-  1909 0001:00046EB8  1910 0001:00046ECB  1911 0001:00046EF7  1914 0001:00046F07
-  1915 0001:00046F30  1916 0001:00046F4E  1912 0001:00046F84  1919 0001:00046FA1
-  1921 0001:00046FB1  1930 0001:00047034  1931 0001:00047057  1932 0001:0004706F
-  1933 0001:00047080  1934 0001:00047094  1935 0001:0004709E  1937 0001:000470B4
-  1938 0001:000470C8  1939 0001:000470DC  1940 0001:000470F0  1941 0001:00047104
-  1942 0001:00047118  1943 0001:00047133  1944 0001:00047174  1945 0001:000471B5
-  1946 0001:000471BB  1947 0001:000471C5  1948 0001:000471CA  1949 0001:000471CF
-  1974 0001:00047304  1975 0001:00047309  1976 0001:00047317  1977 0001:00047323
-  1978 0001:00047341  1979 0001:0004735F  1980 0001:00047376  1981 0001:00047388
-  1984 0001:0004738C  1985 0001:000473A6  1986 0001:000473C9  1988 0001:000473D9
-  1987 0001:00047404  1990 0001:00047424  1992 0001:00047434  1997 0001:00047470
-  1998 0001:00047487  1999 0001:00047490  2000 0001:00047497  2001 0001:000474A6
-  2002 0001:000474AD  2003 0001:000474B7  2005 0001:000474C1  2006 0001:000474D2
-  2007 0001:000474DE  2008 0001:000474E7  2009 0001:000474F3  2010 0001:00047504
-  2009 0001:0004752D  2011 0001:00047532  2015 0001:00047584  2016 0001:00047586
-  2018 0001:0004758B  2019 0001:0004758E  2020 0001:00047593  2026 0001:00047594
-  2027 0001:000475B3  2028 0001:000475D0  2029 0001:000475E2  2031 0001:000475E6
-  2032 0001:000475F6  2033 0001:00047612  2035 0001:00047622  2039 0001:00047648
-  2040 0001:0004764C  2042 0001:00047651  2043 0001:00047653  2044 0001:00047656
-  2049 0001:00047658  2050 0001:0004765B  2051 0001:0004766E  2052 0001:00047684
-  2053 0001:0004768F  2069 0001:00047694  2070 0001:00047697  2071 0001:0004769D
-  2072 0001:0004769F  2073 0001:000476A2  2074 0001:000476A5  2075 0001:000476A8
-  2076 0001:000476AE  2077 0001:000476B2  2081 0001:000476B4  2082 0001:000476BA
-  2083 0001:000476BF  2084 0001:000476C2  2088 0001:000476C4  2089 0001:000476CA
-  2090 0001:000476CF  2091 0001:000476D5  2095 0001:000476D8  2096 0001:000476DB
-  2097 0001:000476DE  2098 0001:000476E5  2099 0001:000476EA  2100 0001:000476F0
-  2104 0001:000476F4  2105 0001:000476F7  2106 0001:000476FA  2107 0001:00047701
-  2108 0001:00047706  2109 0001:0004770C  2113 0001:00047710  2114 0001:00047713
-  2115 0001:00047716  2116 0001:0004771D  2117 0001:00047722  2118 0001:00047728
-  2122 0001:0004772C  2123 0001:0004772F  2124 0001:00047732  2125 0001:00047739
-  2126 0001:0004773E  2127 0001:00047744  2132 0001:00047748  2133 0001:0004774A
-  2134 0001:0004776A  2140 0001:0004776C  2141 0001:0004776E  2142 0001:00047773
-  2143 0001:0004777A  2145 0001:0004777B  2146 0001:0004777F  2155 0001:00047780
-  2156 0001:00047786  2157 0001:0004778C  2158 0001:00047792  2159 0001:00047797
-  2168 0001:00047798  2169 0001:00047799  2170 0001:0004779E  2171 0001:0004779F
-  2172 0001:000477A5  2178 0001:000477A8  2179 0001:000477AC  2180 0001:000477B4
-  2186 0001:000477B8  2187 0001:000477BB  2188 0001:000477BD  2189 0001:000477C0
-  2190 0001:000477C2  2191 0001:000477C7  2193 0001:000477C8  2194 0001:000477CF
-  2204 0001:000477D0  2205 0001:000477FB  2206 0001:00047850  2207 0001:0004785D
-  2209 0001:00047892  2210 0001:00047895  2214 0001:00047D78  2215 0001:00047D7A
-  2216 0001:00047D7F  2217 0001:00047D81  2218 0001:00047D83  2219 0001:00047D88
-  2221 0001:00047D89  2222 0001:00047D8C  2223 0001:00047D8E  2224 0001:00047D93
-  2226 0001:00047D94  2227 0001:00047D97  2228 0001:00047D9C  2255 0001:00047DA0
-  2256 0001:00047DA1  2258 0001:00047DA3  2259 0001:00047DA5  2261 0001:00047DAF
-  2256 0001:00047DB0  2262 0001:00047DB5  2269 0001:00047DBC  2270 0001:00047DC7
-  2271 0001:00047DE4  2272 0001:00047DED  2273 0001:00047DFE  2274 0001:00047E05
-  2275 0001:00047E25  2277 0001:00047E2A  2279 0001:00047E78  2280 0001:00047E8C
-  2282 0001:00047E9B  2283 0001:00047EAF  2286 0001:00047EB8  2287 0001:00047EBC
-  2288 0001:00047EBE  2289 0001:00047ED7  2294 0001:00047EDC  2295 0001:00047EDF
-  2296 0001:00047EE6  2297 0001:00047EED  2298 0001:00047F26  2296 0001:00047F30
-  2299 0001:00047F35  2303 0001:00047F3C  2304 0001:00047F3F  2305 0001:00047F42
-  2306 0001:00047F47  2310 0001:00047F48  2311 0001:00047F4B  2312 0001:00047F50
-  2313 0001:00047F52  2314 0001:00047F57  2316 0001:00047F59  2317 0001:00047F5F
-  2318 0001:00047F65  2319 0001:00047F6A  2320 0001:00047F71  2322 0001:00047F72
-  2323 0001:00047F73  2324 0001:00047F78  2326 0001:00047F79  2330 0001:00047F7C
-  2331 0001:00047F7F  2332 0001:00047F82  2333 0001:00047F84  2334 0001:00047F89
-  2335 0001:00047F8E  2339 0001:00047F90  2340 0001:00047F96  2341 0001:00047F9C
-  2342 0001:00047F9E  2343 0001:00047FA3  2344 0001:00047FA6  2345 0001:00047FAB
-  2354 0001:00047FAC  2355 0001:00047FB2  2356 0001:00047FB7  2357 0001:00047FBB
-  2358 0001:00047FC0  2359 0001:00047FC5  2362 0001:00047FC8  2363 0001:00047FCA
-  2364 0001:00047FCC  2365 0001:00047FDD  2366 0001:00047FF1  2367 0001:00048004
-  2374 0001:0004800C  2375 0001:0004800D  2376 0001:00048012  2377 0001:00048014
-  2380 0001:00048016  2381 0001:0004801C  2382 0001:0004801E  2383 0001:00048024
-  2384 0001:0004802A  2385 0001:00048031  2386 0001:00048037  2387 0001:0004803A
-  2388 0001:0004803F  2391 0001:00048041  2392 0001:00048047  2393 0001:0004804E
-  2396 0001:00048053  2397 0001:0004805D  2398 0001:0004805E  2399 0001:00048063
-  2405 0001:00048064  2406 0001:0004806A  2407 0001:0004806D  2408 0001:0004806F
-  2409 0001:00048072  2410 0001:00048074  2419 0001:00048078  2420 0001:0004807B
-  2421 0001:00048081  2422 0001:00048085  2423 0001:00048087  2425 0001:0004808C
-  2426 0001:00048091  2427 0001:00048099  2431 0001:0004809C  2432 0001:000480A1
-  2433 0001:000480A3  2434 0001:000480A9  2435 0001:000480AB  2437 0001:000480AD
-  2443 0001:000480B0  2444 0001:000480B2  2445 0001:000480B5  2446 0001:000480B7
-  2447 0001:000480BD  2448 0001:000480BF  2449 0001:000480C6  2451 0001:000480C7
-  2453 0001:000480CE  2460 0001:000480D0  2461 0001:000480DD  2462 0001:000480FA
-  2463 0001:000480FC  2464 0001:000480FF  2465 0001:00048107  2466 0001:0004810F
-  2467 0001:00048123  2468 0001:0004812F  2474 0001:0004813C  2475 0001:00048142
-  2476 0001:00048143  2477 0001:00048145  2478 0001:0004814A  2479 0001:0004814D
-  2480 0001:00048150  2481 0001:00048152  2482 0001:00048153  2488 0001:00048154
-  2489 0001:00048157  2490 0001:0004815C  2491 0001:0004815E  2492 0001:00048163
-  2502 0001:00048164  2503 0001:00048167  2504 0001:0004816C  2505 0001:0004816E
-  2506 0001:00048173  2507 0001:00048175  2508 0001:00048178  2509 0001:0004817A
-  2510 0001:0004817D  2511 0001:0004817F  2512 0001:00048182  2513 0001:00048184
-  2514 0001:00048187  2515 0001:00048189  2516 0001:0004818C  2517 0001:0004818E
-  2518 0001:00048194  2520 0001:00048195  2522 0001:0004819B  2524 0001:0004819C
-  2525 0001:0004819E  2526 0001:000481A1  2528 0001:000481A7  2529 0001:000481AB
-  2530 0001:000481AF  2532 0001:000481B5  2533 0001:000481B6  2535 0001:000481BC
-  2536 0001:000481BF  2542 0001:000481C0  2543 0001:000481C4  2544 0001:000481C6
-  2545 0001:000481CC  2546 0001:000481D1  2547 0001:000481D3  2548 0001:000481DA
-  2550 0001:000481DB  2551 0001:000481DF  2552 0001:000481E1  2554 0001:000481E8
-  2558 0001:000481EC  2559 0001:000481EE  2560 0001:000481F1  2561 0001:000481F4
-  2562 0001:000481FA  2563 0001:000481FE  2564 0001:00048200  2566 0001:00048205
-  2567 0001:00048207  2573 0001:00048208  2574 0001:0004820E  2575 0001:00048214
-  2576 0001:00048216  2577 0001:00048217  2579 0001:00048219  2588 0001:0004821C
-  2589 0001:00048221  2590 0001:00048226  2594 0001:00048228  2595 0001:0004822F
-  2596 0001:00048231  2598 0001:0004823B  2606 0001:0004823C  2607 0001:0004823F
-  2608 0001:00048241  2609 0001:00048245  2610 0001:00048247  2611 0001:0004824D
-  2612 0001:00048250  2613 0001:00048252  2615 0001:00048253  2616 0001:00048254
-  2617 0001:00048255  2618 0001:0004825A  2625 0001:0004825C  2626 0001:00048260
-  2627 0001:00048262  2628 0001:00048266  2629 0001:0004826B  2630 0001:0004826D
-  2632 0001:00048273  2637 0001:00048274  2638 0001:0004827C  2639 0001:00048288
-  2640 0001:0004828C  2641 0001:0004829B  2650 0001:000482A4  2651 0001:000482A7
-  2652 0001:000482B5  2654 0001:000482C2  2657 0001:000482D3  2658 0001:000482DF
-  2659 0001:000482EB  2660 0001:000482FA  2661 0001:00048309  2664 0001:00048378
-  2665 0001:00048389  2668 0001:00048390  2669 0001:00048396  2670 0001:0004839F
-  2671 0001:000483A6  2675 0001:000483AC  2676 0001:000483B3  2677 0001:000483B9
-  2678 0001:000483BB  2682 0001:000483BC  2683 0001:000483C0  2685 0001:000483E0
-  2686 0001:000483FF  2690 0001:00048400  2691 0001:00048403  2692 0001:0004840A
-  2693 0001:0004840C  2695 0001:0004840E  2696 0001:00048415  2697 0001:0004841B
-  2698 0001:0004841D  2702 0001:00048420  2703 0001:00048427  2704 0001:00048429
-  2705 0001:0004842E  2706 0001:00048435  2707 0001:00048437  2708 0001:0004843A
-  2709 0001:0004843C  2711 0001:0004843E  2713 0001:00048445  2717 0001:00048448
-  2718 0001:00048453  2719 0001:0004845C  2720 0001:00048465  2721 0001:00048468
-  2725 0001:0004846C  2726 0001:00048472  2727 0001:00048479  2728 0001:0004847F
-  2729 0001:00048481  2733 0001:00048484  2734 0001:0004848B  2735 0001:0004848E
-  2736 0001:00048490  2738 0001:00048492  2739 0001:00048497  2740 0001:0004849A
-  2744 0001:0004849C  2745 0001:000484A3  2746 0001:000484A5  2748 0001:000484AC
-  2754 0001:000484B0  2755 0001:000484B3  2756 0001:000484B5  2757 0001:000484B7
-  2758 0001:000484B8  2759 0001:000484BA  2760 0001:000484BB  2761 0001:000484BE
-  2763 0001:000484BF  2769 0001:000484C0  2770 0001:000484C3  2771 0001:000484C5
-  2773 0001:000484C8  2783 0001:000484CC  2785 0001:000484CF  2786 0001:000484D2
-  2787 0001:000484D4  2789 0001:000484D6  2790 0001:000484D8  2791 0001:000484DB
-  2792 0001:000484DD  2794 0001:000484DF  2795 0001:000484E1  2796 0001:000484E4
-  2799 0001:000484E6  2800 0001:000484E8  2802 0001:000484EA  2803 0001:000484ED
-  2807 0001:000484EE  2808 0001:000484F1  2809 0001:000484F4  2810 0001:000484F7
-  2811 0001:000484FC  2812 0001:000484FF  2820 0001:00048500  2822 0001:00048503
-  2823 0001:00048506  2824 0001:00048508  2826 0001:0004850A  2827 0001:0004850C
-  2828 0001:0004850F  2829 0001:00048511  2831 0001:00048513  2832 0001:00048515
-  2833 0001:00048518  2836 0001:0004851A  2837 0001:0004851C  2839 0001:0004851E
-  2840 0001:00048521  2844 0001:00048522  2845 0001:00048525  2846 0001:00048528
-  2847 0001:0004852B  2848 0001:00048530  2849 0001:00048533  2854 0001:00048534
-  2855 0001:0004853B  2856 0001:00048543  2857 0001:0004854D  2866 0001:00048554
-  2867 0001:00048556  2868 0001:0004855B  2869 0001:0004855D  2870 0001:00048563
-  2871 0001:00048568  2872 0001:0004856E  2873 0001:00048570  2875 0001:00048576
-  2883 0001:00048578  2884 0001:00048579  2885 0001:00048581  2886 0001:0004858B
-  2887 0001:00048591  2888 0001:0004859D  2889 0001:000485A5  2890 0001:000485A9
-  2891 0001:000485AE  2895 0001:000485B4  2896 0001:000485B9  2897 0001:000485BB
-  2898 0001:000485BD  2900 0001:000485C4  2908 0001:000485C8  2909 0001:000485CC
-  2910 0001:000485D7  2911 0001:000485F0  2912 0001:000485FA  2913 0001:0004860A
-  2914 0001:00048614  2915 0001:0004862B  2921 0001:00048630  2922 0001:00048633
-  2923 0001:00048635  2925 0001:0004863C  2931 0001:00048640  2932 0001:00048643
-  2933 0001:00048645  2935 0001:00048647  2940 0001:00048648  2941 0001:00048649
-  2942 0001:0004864B  2943 0001:00048657  2944 0001:0004865C  2952 0001:00048660
-  2953 0001:0004867A  2954 0001:0004867C  2955 0001:00048684  2956 0001:0004869D
-  2957 0001:000486A7  2958 0001:000486C0  2959 0001:000486C6  2960 0001:000486CA
-  2961 0001:000486D6  2968 0001:00048724  2970 0001:00048725  2971 0001:00048763
-  2972 0001:00048771  2978 0001:00048778  2979 0001:00048783  2988 0001:00048784
-  2989 0001:00048786  2990 0001:0004878F  2991 0001:00048799  2992 0001:000487B1
-  2990 0001:000487C3  2993 0001:000487C8  2999 0001:000487CC  3000 0001:000487D3
-  3001 0001:000487D5  3002 0001:000487D8  3004 0001:000487DC  3012 0001:000487E0
-  3013 0001:000487E2  3014 0001:000487E4  3015 0001:000487E9  3016 0001:000487EF
-  3017 0001:000487F9  3019 0001:000487FB  3029 0001:000487FC  3030 0001:000487FF
-  3031 0001:00048801  3032 0001:00048804  3033 0001:00048806  3034 0001:00048809
-  3035 0001:0004880B  3036 0001:0004880E  3038 0001:00048810  3039 0001:00048817
-  3041 0001:0004881D  3045 0001:00048820  3046 0001:00048827  3047 0001:00048829
-  3048 0001:00048830  3049 0001:00048832  3050 0001:00048838  3051 0001:0004883A
-  3053 0001:0004883E  3059 0001:00048840  3060 0001:00048842  3061 0001:00048844
-  3063 0001:0004884B  3069 0001:0004884C  3070 0001:00048852  3071 0001:00048854
-  3072 0001:00048859  3400 0001:00048900  3401 0001:0004891A  3402 0001:00048941
-  3403 0001:0004894F  3404 0001:00048959  3405 0001:00048989  3403 0001:00048993
-  3407 0001:000489A8  3409 0001:000489B8  3414 0001:00048A14  3415 0001:00048A1A
-  3416 0001:00048A21  3417 0001:00048A26  3418 0001:00048A2B  3419 0001:00048A30
-  3420 0001:00048A35  3421 0001:00048A3E  3422 0001:00048A48  3423 0001:00048A54
-  3424 0001:00048A5E  3425 0001:00048A6A  3426 0001:00048A74  3427 0001:00048A80
-  3428 0001:00048A8A  3429 0001:00048A96  3430 0001:00048AA0  3431 0001:00048AAC
-  3432 0001:00048AB6  3433 0001:00048AC2  3434 0001:00048ACC  3435 0001:00048AD8
-  3436 0001:00048AE2  3437 0001:00048AEE  3438 0001:00048AF8  3439 0001:00048B04
-  3440 0001:00048B0E  3441 0001:00048B1A  3442 0001:00048B24  3443 0001:00048B30
-  3444 0001:00048B3A  3445 0001:00048B46  3447 0001:00048B4B  3448 0001:00048B5F
-  3449 0001:00048B68  3450 0001:00048B70  3451 0001:00048B77  3452 0001:00048B83
-  3453 0001:00048B8A  3454 0001:00048B91  3455 0001:00048BA0  3458 0001:00048BA4
-  3459 0001:00048BB1  3460 0001:00048BBB  3461 0001:00048BCF  3462 0001:00048BD4
-  3463 0001:00048BE8  3464 0001:00048BF4  3465 0001:00048BFE  3466 0001:00048C0A
-  3467 0001:00048C10  3468 0001:00048C1C  3469 0001:00048C22  3470 0001:00048C2E
-  3471 0001:00048C34  3472 0001:00048C40  3473 0001:00048C46  3474 0001:00048C52
-  3475 0001:00048C5B  3476 0001:00048C67  3477 0001:00048C70  3478 0001:00048C7C
-  3479 0001:00048C85  3480 0001:00048C91  3481 0001:00048C9A  3482 0001:00048CA6
-  3483 0001:00048CAF  3484 0001:00048CBB  3485 0001:00048CC4  3486 0001:00048CD0
-  3487 0001:00048CD9  3488 0001:00048CE5  3489 0001:00048CEA  3503 0001:00048DEC
-  3504 0001:00048E14
+    31 0001:00044BF0    32 0001:00044BF4    34 0001:00044BFE    35 0001:00044C03
+    36 0001:00044C09    38 0001:00044C0A    39 0001:00044C0C    40 0001:00044C0E
+    41 0001:00044C14    43 0001:00044C17    44 0001:00044C19    45 0001:00044C1A
+    46 0001:00044C1F    47 0001:00044C29    49 0001:00044C2F    50 0001:00044C35
+    51 0001:00044C3C    52 0001:00044C3F    54 0001:00044C45    55 0001:00044C4B
+    56 0001:00044C4E    57 0001:00044C51    58 0001:00044C53    59 0001:00044C56
+    60 0001:00044C58    61 0001:00044C5B    62 0001:00044C5C    64 0001:00044C5E
+    65 0001:00044C60    67 0001:00044C62    69 0001:00044C64    70 0001:00044C6A
+    73 0001:00044C70    74 0001:00044C73    75 0001:00044C7E    76 0001:00044C89
+    77 0001:00044CA0    78 0001:00044CB5    79 0001:00044CC5    80 0001:00044CD0
+    91 0001:00044DEC    93 0001:00044DEF    94 0001:00044DF9    97 0001:00044E02
+    99 0001:00044E0B   100 0001:00044E12   102 0001:00044E22   103 0001:00044E28
+   104 0001:00044E32   105 0001:00044E36   107 0001:00044E3D   110 0001:00044E43
+   113 0001:00044E5D   115 0001:00044E8A   118 0001:00044E8F   120 0001:00044EA0
+   121 0001:00044EAA   122 0001:00044EB5   123 0001:00044EC0   127 0001:00044EC5
+   128 0001:00044ED6   130 0001:00044EE9   132 0001:00044EF3   133 0001:00044EFD
+   134 0001:00044F08   137 0001:00044F0F   141 0001:00044F14   142 0001:00044F19
+   146 0001:00044F3C   147 0001:00044F41   148 0001:00044F46   157 0001:00044F48
+   158 0001:00044F4E   159 0001:00044F5A   160 0001:00044F66   172 0001:00044FA0
+   173 0001:00044FA1   174 0001:00044FB3   176 0001:00044FC2   177 0001:00044FD7
+   179 0001:00044FE5   180 0001:00044FEE   181 0001:00044FFA   187 0001:00045004
+   188 0001:0004501C   189 0001:0004502A   190 0001:00045037   192 0001:00045045
+   193 0001:00045049   195 0001:00045063   197 0001:0004506A   199 0001:00045070
+   201 0001:0004507D   200 0001:0004507E   203 0001:0004509D   205 0001:0004509F
+   206 0001:000450B1   207 0001:000450BD   208 0001:000450E1   209 0001:000450E7
+   208 0001:000450FB   210 0001:000450FE   211 0001:00045112   212 0001:0004511D
+   213 0001:00045126   214 0001:0004512A   215 0001:00045134   219 0001:00045158
+   220 0001:00045159   221 0001:0004515E   222 0001:00045161   223 0001:00045167
+   224 0001:00045168   225 0001:0004516D   229 0001:00045170   230 0001:0004517A
+   239 0001:0004517C   240 0001:00045183   241 0001:00045185   242 0001:0004518A
+   244 0001:0004518C   245 0001:00045192   252 0001:00045194   253 0001:00045199
+   254 0001:0004519F   262 0001:000451A0   263 0001:000451BD   264 0001:000451CC
+   266 0001:000451DA   267 0001:000451FB   268 0001:00045209   270 0001:00045217
+   271 0001:00045222   272 0001:0004523C   273 0001:00045249   274 0001:00045257
+   268 0001:00045258   275 0001:0004525D   276 0001:0004526B   280 0001:000452E0
+   281 0001:000452E1   282 0001:000452E6   283 0001:000452E7   284 0001:000452E8
+   285 0001:000452ED   286 0001:000452EF   294 0001:000452F0   295 0001:0004530F
+   297 0001:00045322   298 0001:0004533C   299 0001:00045363   301 0001:00045375
+   302 0001:0004538E   304 0001:00045395   295 0001:00045396   305 0001:00045399
+   309 0001:000453F4   310 0001:000453F9   311 0001:000453FE   312 0001:00045400
+   314 0001:00045405   322 0001:00045408   323 0001:0004541F   324 0001:00045434
+   326 0001:00045438   327 0001:00045442   328 0001:00045464   329 0001:0004546A
+   330 0001:0004547D   332 0001:00045491   334 0001:000454A6   335 0001:000454A9
+   337 0001:000454B8   341 0001:0004550C   342 0001:0004550F   343 0001:00045514
+   344 0001:00045516   346 0001:00045518   347 0001:0004551D   350 0001:0004551E
+   351 0001:00045524   352 0001:00045529   355 0001:0004552C   356 0001:00045542
+   358 0001:0004554F   361 0001:00045558   362 0001:00045562   363 0001:00045573
+   364 0001:00045593   369 0001:00045599   373 0001:000455BC   374 0001:000455BD
+   375 0001:000455BE   376 0001:000455C4   377 0001:000455C9   378 0001:000455CA
+   379 0001:000455CB   383 0001:000455CC   384 0001:000455D2   385 0001:000455D7
+   386 0001:000455D9   390 0001:000455DC   391 0001:000455DD   392 0001:000455DE
+   393 0001:000455E4   394 0001:000455E6   395 0001:000455EB   396 0001:000455ED
+   397 0001:000455EE   398 0001:000455EF   402 0001:000455F0   403 0001:000455F1
+   404 0001:000455F2   405 0001:000455F3   406 0001:000455F6   407 0001:000455FB
+   408 0001:000455FF   409 0001:00045600   410 0001:00045601   411 0001:00045602
+   412 0001:00045608   418 0001:0004560C   419 0001:0004560E   420 0001:00045611
+   433 0001:00045614   434 0001:0004561B   435 0001:0004561D   436 0001:0004562D
+   438 0001:00045652   439 0001:00045655   440 0001:00045656   435 0001:00045657
+   441 0001:0004565A   442 0001:0004565E   444 0001:0004566B   445 0001:00045670
+   451 0001:00045678   452 0001:0004567E   453 0001:00045680   454 0001:00045682
+   456 0001:00045683   457 0001:00045684   458 0001:00045689   459 0001:0004568F
+   460 0001:00045690   461 0001:00045694   462 0001:00045699   464 0001:0004569A
+   465 0001:0004569F   467 0001:000456A0   468 0001:000456A2   469 0001:000456A8
+   470 0001:000456AB   478 0001:000456AC   479 0001:000456B3   480 0001:000456B5
+   482 0001:000456BD   496 0001:000456C0   497 0001:000456E0   498 0001:000456E3
+   500 0001:000456EB   501 0001:000456EF   502 0001:000456FA   503 0001:00045702
+   505 0001:00045706   506 0001:00045719   508 0001:00045743   509 0001:0004576C
+   510 0001:00045784   511 0001:0004578C   512 0001:0004579E   513 0001:000457CE
+   520 0001:000457F4   521 0001:000457F6   522 0001:000457F8   523 0001:000457FE
+   524 0001:00045803   525 0001:00045805   526 0001:0004580B   530 0001:0004580C
+   531 0001:0004580E   532 0001:0004580F   533 0001:00045811   534 0001:00045817
+   535 0001:0004581C   536 0001:0004581E   537 0001:00045824   545 0001:00045828
+   546 0001:0004584B   547 0001:00045850   548 0001:00045877   550 0001:00045881
+   551 0001:0004588F   552 0001:0004589C   553 0001:000458A2   555 0001:000458B2
+   556 0001:000458CC   557 0001:000458D9   559 0001:000458F1   561 0001:00045902
+   565 0001:00045944   566 0001:00045948   567 0001:0004594C   568 0001:00045951
+   569 0001:00045953   570 0001:00045955   571 0001:00045956   574 0001:00045959
+   575 0001:0004595A   576 0001:0004595B   577 0001:0004595D   578 0001:00045960
+   579 0001:00045962   583 0001:00045964   584 0001:00045967   585 0001:0004596C
+   587 0001:0004596D   588 0001:0004596E   589 0001:00045970   590 0001:00045971
+   591 0001:00045972   592 0001:00045974   596 0001:00045978   597 0001:0004597E
+   598 0001:00045983   604 0001:00045984   605 0001:00045986   606 0001:0004598F
+   607 0001:00045991   609 0001:00045992   615 0001:00045994   616 0001:00045997
+   624 0001:00045998   625 0001:00045999   626 0001:000459AC   632 0001:000459B0
+   633 0001:000459B1   634 0001:000459B6   635 0001:000459B8   636 0001:000459B9
+   637 0001:000459BB   638 0001:000459BD   639 0001:000459C5   640 0001:000459C7
+   641 0001:000459CE   642 0001:000459D0   643 0001:000459D1   644 0001:000459D6
+   645 0001:000459D7   646 0001:000459DE   647 0001:000459E4   648 0001:000459E9
+   649 0001:000459EB   651 0001:000459ED   652 0001:000459EE   653 0001:000459F4
+   654 0001:000459F9   656 0001:000459FE   665 0001:00045A00   666 0001:00045A01
+   667 0001:00045A07   668 0001:00045A08   669 0001:00045A0B   670 0001:00045A0C
+   671 0001:00045A0E   672 0001:00045A10   685 0001:00045A14   686 0001:00045A17
+   687 0001:00045A1E   688 0001:00045A20   689 0001:00045A27   690 0001:00045A29
+   691 0001:00045A30   692 0001:00045A32   693 0001:00045A34   694 0001:00045A3B
+   695 0001:00045A3D   696 0001:00045A44   698 0001:00045A46   699 0001:00045A4D
+   701 0001:00045A4F   702 0001:00045A56   704 0001:00045A58   705 0001:00045A5F
+   706 0001:00045A61   708 0001:00045A63   709 0001:00045A66   710 0001:00045A6C
+   719 0001:00045A70   720 0001:00045A77   721 0001:00045A79   722 0001:00045A7F
+   724 0001:00045A85   725 0001:00045A8B   726 0001:00045A91   735 0001:00045A94
+   736 0001:00045A96   737 0001:00045A9C   738 0001:00045A9E   740 0001:00045AA0
+   741 0001:00045AA2   742 0001:00045AA7   743 0001:00045AA9   744 0001:00045AAF
+   745 0001:00045AB1   747 0001:00045AB3   748 0001:00045AB5   751 0001:00045ABB
+   752 0001:00045AC0   753 0001:00045AC3   762 0001:00045AC4   763 0001:00045AC8
+   764 0001:00045ACE   765 0001:00045AD6   766 0001:00045AD8   767 0001:00045ADB
+   773 0001:00045ADC   774 0001:00045ADF   777 0001:00045AEC   778 0001:00045AF6
+   779 0001:00045B01   781 0001:00045B08   782 0001:00045B13   783 0001:00045B1E
+   784 0001:00045B29   785 0001:00045B33   787 0001:00045B37   793 0001:00045B3C
+   794 0001:00045B52   800 0001:00045B88   801 0001:00045B8E   802 0001:00045B9C
+   804 0001:00045BB1   805 0001:00045BB6   811 0001:00045BBC   812 0001:00045BC3
+   813 0001:00045BCA   814 0001:00045BCE   823 0001:00045BD0   824 0001:00045BD6
+   825 0001:00045BDC   831 0001:00045BE0   832 0001:00045BE2   833 0001:00045BE3
+   834 0001:00045BE5   835 0001:00045BE7   836 0001:00045BED   837 0001:00045BF0
+   838 0001:00045BF1   839 0001:00045BF3   844 0001:00045BF4   845 0001:00045BF6
+   846 0001:00045C2D   850 0001:00045C30   851 0001:00045C35   852 0001:00045C37
+   858 0001:00045C38   859 0001:00045C39   860 0001:00045C3A   861 0001:00045C3C
+   862 0001:00045C41   863 0001:00045C43   864 0001:00045C49   865 0001:00045C4B
+   866 0001:00045C4C   867 0001:00045C4D   868 0001:00045C4F   870 0001:00045C54
+   879 0001:00045C58   880 0001:00045C70   881 0001:00045CA1   924 0001:00045D40
+   925 0001:00045D5E   926 0001:00045D64   927 0001:00045D73   928 0001:00045D86
+   929 0001:00045D96   930 0001:00045D9B   931 0001:00045DAE   932 0001:00045DB6
+   933 0001:00045DBF   935 0001:00045DCA   936 0001:00045DCC   944 0001:00045DF4
+   945 0001:00045E21   946 0001:00045E27   947 0001:00045E2D   948 0001:00045E33
+   949 0001:00045E39   950 0001:00045E3F   951 0001:00045E45   952 0001:00045E4B
+   953 0001:00045E51   954 0001:00045E59   955 0001:00045E62   956 0001:00045E66
+   958 0001:00045E7C   960 0001:00045E9E   961 0001:00045EB1   962 0001:00045EC7
+   963 0001:00045ECA   964 0001:00045EDD   965 0001:00045EE5   969 0001:00045F30
+   970 0001:00045F31   971 0001:00045F35   972 0001:00045F36   973 0001:00045F37
+   974 0001:00045F3A   975 0001:00045F3B   976 0001:00045F3C   977 0001:00045F3F
+   978 0001:00045F40   979 0001:00045F41   980 0001:00045F43   981 0001:00045F45
+   983 0001:00045F4A   984 0001:00045F50   990 0001:00045F54   991 0001:00045F55
+   992 0001:00045F59   993 0001:00045F5A   994 0001:00045F5B   995 0001:00045F5E
+   996 0001:00045F5F   997 0001:00045F60   998 0001:00045F61   999 0001:00045F62
+  1000 0001:00045F63  1001 0001:00045F68  1002 0001:00045F6A  1004 0001:00045F6F
+  1005 0001:00045F75  1009 0001:00045F78  1010 0001:00045F79  1011 0001:00045F7B
+  1012 0001:00045F7C  1013 0001:00045F80  1014 0001:00045F81  1015 0001:00045F84
+  1016 0001:00045F85  1017 0001:00045F87  1018 0001:00045F8A  1019 0001:00045F8D
+  1020 0001:00045F90  1021 0001:00045F91  1022 0001:00045F94  1024 0001:00045F99
+  1025 0001:00045F9F  1031 0001:00045FA0  1032 0001:00045FA5  1033 0001:00045FA6
+  1034 0001:00045FAB  1037 0001:00045FB5  1038 0001:00045FBC  1044 0001:00045FC0
+  1045 0001:00045FC2  1046 0001:00045FC3  1047 0001:00045FC4  1048 0001:00045FC7
+  1054 0001:00045FC8  1055 0001:00045FCE  1056 0001:00045FD3  1057 0001:00045FD8
+  1058 0001:00045FD9  1065 0001:00045FDC  1066 0001:00045FE2  1067 0001:00045FE9
+  1068 0001:00045FEB  1069 0001:00045FF2  1070 0001:00045FF3  1072 0001:00045FF8
+  1076 0001:00045FFC  1077 0001:00046002  1078 0001:00046005  1079 0001:00046009
+  1080 0001:0004600C  1081 0001:0004600E  1082 0001:00046018  1083 0001:0004601A
+  1084 0001:00046021  1085 0001:00046026  1087 0001:00046027  1088 0001:0004602E
+  1089 0001:00046033  1100 0001:00046034  1101 0001:00046058  1102 0001:00046067
+  1103 0001:0004606B  1104 0001:00046078  1106 0001:00046082  1107 0001:00046087
+  1108 0001:0004608F  1104 0001:00046092  1109 0001:00046095  1110 0001:0004609A
+  1112 0001:000460A4  1113 0001:000460A9  1114 0001:000460BF  1115 0001:000460C7
+  1110 0001:000460CA  1116 0001:000460CD  1122 0001:000460F8  1123 0001:000460FA
+  1124 0001:00046100  1129 0001:00046104  1130 0001:00046109  1132 0001:00046118
+  1133 0001:00046123  1137 0001:0004612C  1138 0001:00046131  1163 0001:00046134
+  1164 0001:0004613E  1168 0001:00046140  1169 0001:00046144  1170 0001:00046149
+  1171 0001:0004614E  1175 0001:00046150  1176 0001:00046153  1177 0001:00046155
+  1178 0001:00046157  1179 0001:00046159  1181 0001:0004615B  1183 0001:00046160
+  1184 0001:00046165  1193 0001:00046168  1194 0001:0004616C  1195 0001:0004616F
+  1196 0001:00046175  1197 0001:00046177  1199 0001:0004617D  1205 0001:00046180
+  1206 0001:00046186  1207 0001:00046188  1208 0001:0004618A  1210 0001:00046190
+  1216 0001:00046194  1217 0001:00046199  1218 0001:0004619C  1222 0001:000461A0
+  1223 0001:000461A5  1224 0001:000461A8  1230 0001:000461AC  1231 0001:000461AF
+  1232 0001:000461B1  1234 0001:000461B4  1235 0001:000461B9  1239 0001:000461BC
+  1240 0001:000461BF  1241 0001:000461C1  1243 0001:000461C4  1244 0001:000461C9
+  1248 0001:000461CC  1249 0001:000461CF  1250 0001:000461D1  1251 0001:000461D8
+  1253 0001:000461DA  1255 0001:000461DE  1256 0001:000461E1  1262 0001:000461E4
+  1263 0001:000461E7  1264 0001:000461E9  1265 0001:000461EB  1266 0001:000461EC
+  1267 0001:000461F1  1269 0001:000461F2  1270 0001:000461F5  1271 0001:000461F7
+  1275 0001:000461F8  1276 0001:000461FB  1277 0001:000461FD  1278 0001:000461FF
+  1279 0001:00046204  1281 0001:0004620B  1287 0001:0004620C  1288 0001:0004620F
+  1289 0001:00046211  1290 0001:00046218  1291 0001:0004621A  1292 0001:0004621B
+  1294 0001:00046222  1296 0001:00046223  1297 0001:0004622A  1309 0001:0004622C
+  1310 0001:00046231  1311 0001:0004623F  1312 0001:00046243  1314 0001:00046259
+  1315 0001:0004627B  1316 0001:00046280  1317 0001:00046292  1319 0001:00046298
+  1312 0001:0004629C  1320 0001:0004629F  1326 0001:000462A8  1327 0001:000462AD
+  1328 0001:000462B0  1329 0001:000462B2  1330 0001:000462B6  1331 0001:000462B8
+  1332 0001:000462BA  1333 0001:000462BC  1334 0001:000462BE  1335 0001:000462C0
+  1337 0001:000462C1  1338 0001:000462C4  1346 0001:000462C8  1347 0001:000462D0
+  1348 0001:000462E0  1349 0001:000462EB  1367 0001:000462F4  1368 0001:000462FE
+  1370 0001:0004630D  1373 0001:00046339  1374 0001:00046353  1375 0001:0004636A
+  1376 0001:00046382  1377 0001:00046399  1378 0001:000463B3  1379 0001:000463E2
+  1380 0001:000463F4  1381 0001:000463F6  1382 0001:0004641A  1383 0001:0004642A
+  1384 0001:0004643C  1385 0001:00046441  1386 0001:00046446  1389 0001:00046470
+  1390 0001:00046484  1391 0001:00046489  1392 0001:00046495  1393 0001:000464A3
+  1394 0001:000464AC  1395 0001:000464B5  1396 0001:000464BE  1397 0001:000464C6
+  1398 0001:000464CA  1400 0001:000464CF  1404 0001:000464F0  1405 0001:000464F3
+  1406 0001:000464F4  1407 0001:000464F6  1408 0001:000464F8  1409 0001:000464FD
+  1410 0001:000464FE  1411 0001:000464FF  1412 0001:00046503  1413 0001:00046507
+  1414 0001:0004650A  1415 0001:0004650D  1419 0001:00046510  1420 0001:00046517
+  1421 0001:00046518  1422 0001:00046519  1423 0001:0004651B  1424 0001:0004651D
+  1425 0001:00046522  1426 0001:00046523  1427 0001:00046524  1428 0001:00046528
+  1436 0001:0004652C  1437 0001:00046542  1438 0001:00046559  1439 0001:00046565
+  1443 0001:00046588  1444 0001:0004658D  1445 0001:00046590  1446 0001:00046592
+  1452 0001:00046594  1453 0001:00046596  1454 0001:00046598  1456 0001:00046599
+  1457 0001:0004659B  1458 0001:000465A0  1464 0001:000465A4  1465 0001:000465A7
+  1466 0001:000465AD  1467 0001:000465AF  1476 0001:000465B0  1477 0001:000465BA
+  1482 0001:000465BC  1483 0001:000465BF  1485 0001:000465CF  1486 0001:000465DC
+  1488 0001:000465E5  1489 0001:000465ED  1486 0001:000465F2  1491 0001:000465F5
+  1495 0001:000465F8  1496 0001:000465FD  1497 0001:000465FE  1498 0001:00046601
+  1499 0001:00046602  1500 0001:00046603  1501 0001:00046605  1507 0001:00046608
+  1508 0001:00046611  1509 0001:00046618  1510 0001:00046624  1516 0001:00046628
+  1517 0001:0004662F  1518 0001:00046630  1519 0001:00046635  1520 0001:00046636
+  1526 0001:00046638  1527 0001:00046641  1528 0001:00046648  1529 0001:00046654
+  1535 0001:00046658  1536 0001:0004665D  1537 0001:00046662  1545 0001:00046664
+  1546 0001:0004666A  1547 0001:0004666F  1558 0001:00046670  1559 0001:00046676
+  1560 0001:0004667C  1561 0001:0004667E  1562 0001:00046680  1563 0001:00046686
+  1565 0001:0004668D  1569 0001:00046690  1570 0001:00046695  1571 0001:0004669C
+  1572 0001:000466A1  1584 0001:000466A4  1585 0001:000466AD  1589 0001:00046719
+  1590 0001:00046720  1591 0001:0004673D  1592 0001:00046745  1594 0001:00046751
+  1598 0001:0004677C  1599 0001:00046782  1600 0001:00046787  1604 0001:00046788
+  1605 0001:00046789  1606 0001:0004678E  1607 0001:00046794  1608 0001:00046797
+  1625 0001:00046798  1626 0001:000467C4  1627 0001:000467D8  1628 0001:000467E7
+  1630 0001:00046800  1631 0001:00046808  1632 0001:00046809  1627 0001:0004680A
+  1633 0001:0004680D  1634 0001:0004681E  1638 0001:00046820  1639 0001:00046825
+  1640 0001:0004682A  1647 0001:0004682C  1649 0001:0004682D  1650 0001:0004682E
+  1651 0001:00046830  1652 0001:00046836  1653 0001:0004683B  1654 0001:0004683D
+  1655 0001:0004683E  1657 0001:00046844  1658 0001:0004684B  1659 0001:0004684C
+  1660 0001:00046855  1661 0001:0004685B  1662 0001:0004685C  1663 0001:00046862
+  1665 0001:00046868  1668 0001:0004686E  1669 0001:0004686F  1670 0001:00046875
+  1671 0001:00046876  1672 0001:0004687D  1673 0001:0004687E  1680 0001:00046880
+  1681 0001:00046881  1682 0001:00046883  1683 0001:00046889  1684 0001:0004688E
+  1685 0001:00046890  1686 0001:00046891  1687 0001:00046897  1688 0001:0004689A
+  1689 0001:0004689B  1691 0001:000468A0  1694 0001:000468A6  1695 0001:000468A7
+  1696 0001:000468AA  1697 0001:000468AF  1734 0001:000468D0  1735 0001:000468E3
+  1737 0001:000468ED  1738 0001:000468EF  1739 0001:000468F2  1741 0001:000468FF
+  1745 0001:00046900  1746 0001:00046901  1747 0001:00046903  1748 0001:00046904
+  1749 0001:00046905  1750 0001:00046907  1755 0001:00046908  1756 0001:00046909
+  1757 0001:0004690A  1758 0001:0004690D  1760 0001:0004690E  1761 0001:0004690F
+  1762 0001:00046910  1763 0001:00046911  1764 0001:00046913  1765 0001:00046918
+  1771 0001:0004691C  1772 0001:0004692A  1773 0001:00046933  1775 0001:0004693C
+  1777 0001:00046943  1778 0001:00046954  1780 0001:00046961  1781 0001:0004697C
+  1783 0001:00046980  1784 0001:00046991  1786 0001:00046993  1777 0001:00046994
+  1787 0001:00046999  1788 0001:000469AE  1789 0001:000469B2  1790 0001:000469BD
+  1794 0001:000469C8  1795 0001:000469C9  1796 0001:000469CE  1800 0001:000469D0
+  1801 0001:000469D1  1802 0001:000469D4  1803 0001:000469D5  1804 0001:000469D9
+  1805 0001:000469DD  1806 0001:000469E2  1823 0001:000469E4  1824 0001:00046A0E
+  1825 0001:00046A28  1826 0001:00046A34  1827 0001:00046A42  1828 0001:00046A5D
+  1829 0001:00046A62  1831 0001:00046A97  1832 0001:00046AA3  1833 0001:00046AAA
+  1836 0001:00046AAE  1837 0001:00046AC9  1839 0001:00046ADB  1840 0001:00046AE7
+  1841 0001:00046B03  1842 0001:00046B0E  1844 0001:00046B17  1847 0001:00046B88
+  1848 0001:00046B8E  1849 0001:00046B95  1850 0001:00046BA5  1851 0001:00046BB3
+  1856 0001:00046BB8  1857 0001:00046BC5  1858 0001:00046BD1  1860 0001:00046BD9
+  1861 0001:00046BE4  1862 0001:00046BF4  1863 0001:00046C01  1864 0001:00046C1F
+  1865 0001:00046C2B  1866 0001:00046C32  1867 0001:00046C34  1868 0001:00046C36
+  1857 0001:00046C37  1869 0001:00046C3C  1870 0001:00046C3E  1874 0001:00046C44
+  1875 0001:00046C49  1879 0001:00046C4C  1880 0001:00046C51  1883 0001:00046C54
+  1884 0001:00046C76  1885 0001:00046C99  1887 0001:00046CA9  1886 0001:00046CDF
+  1889 0001:00046CF8  1891 0001:00046D08  1894 0001:00046D44  1895 0001:00046D81
+  1896 0001:00046D9D  1898 0001:00046DB1  1899 0001:00046E05  1900 0001:00046E11
+  1901 0001:00046E33  1906 0001:00046E90  1907 0001:00046EB8  1908 0001:00046ED0
+  1909 0001:00046EDC  1910 0001:00046EEF  1911 0001:00046F1B  1914 0001:00046F2B
+  1915 0001:00046F54  1916 0001:00046F72  1912 0001:00046FA8  1919 0001:00046FC5
+  1921 0001:00046FD5  1930 0001:00047058  1931 0001:0004707B  1932 0001:00047093
+  1933 0001:000470A4  1934 0001:000470B8  1935 0001:000470C2  1937 0001:000470D8
+  1938 0001:000470EC  1939 0001:00047100  1940 0001:00047114  1941 0001:00047128
+  1942 0001:0004713C  1943 0001:00047157  1944 0001:00047198  1945 0001:000471D9
+  1946 0001:000471DF  1947 0001:000471E9  1948 0001:000471EE  1949 0001:000471F3
+  1974 0001:00047328  1975 0001:0004732D  1976 0001:0004733B  1977 0001:00047347
+  1978 0001:00047365  1979 0001:00047383  1980 0001:0004739A  1981 0001:000473AC
+  1984 0001:000473B0  1985 0001:000473CA  1986 0001:000473ED  1988 0001:000473FD
+  1987 0001:00047428  1990 0001:00047448  1992 0001:00047458  1997 0001:00047494
+  1998 0001:000474AB  1999 0001:000474B4  2000 0001:000474BB  2001 0001:000474CA
+  2002 0001:000474D1  2003 0001:000474DB  2005 0001:000474E5  2006 0001:000474F6
+  2007 0001:00047502  2008 0001:0004750B  2009 0001:00047517  2010 0001:00047528
+  2009 0001:00047551  2011 0001:00047556  2015 0001:000475A8  2016 0001:000475AA
+  2018 0001:000475AF  2019 0001:000475B2  2020 0001:000475B7  2026 0001:000475B8
+  2027 0001:000475D7  2028 0001:000475F4  2029 0001:00047606  2031 0001:0004760A
+  2032 0001:0004761A  2033 0001:00047636  2035 0001:00047646  2039 0001:0004766C
+  2040 0001:00047670  2042 0001:00047675  2043 0001:00047677  2044 0001:0004767A
+  2049 0001:0004767C  2050 0001:0004767F  2051 0001:00047692  2052 0001:000476A8
+  2053 0001:000476B3  2069 0001:000476B8  2070 0001:000476BB  2071 0001:000476C1
+  2072 0001:000476C3  2073 0001:000476C6  2074 0001:000476C9  2075 0001:000476CC
+  2076 0001:000476D2  2077 0001:000476D6  2081 0001:000476D8  2082 0001:000476DE
+  2083 0001:000476E3  2084 0001:000476E6  2088 0001:000476E8  2089 0001:000476EE
+  2090 0001:000476F3  2091 0001:000476F9  2095 0001:000476FC  2096 0001:000476FF
+  2097 0001:00047702  2098 0001:00047709  2099 0001:0004770E  2100 0001:00047714
+  2104 0001:00047718  2105 0001:0004771B  2106 0001:0004771E  2107 0001:00047725
+  2108 0001:0004772A  2109 0001:00047730  2113 0001:00047734  2114 0001:00047737
+  2115 0001:0004773A  2116 0001:00047741  2117 0001:00047746  2118 0001:0004774C
+  2122 0001:00047750  2123 0001:00047753  2124 0001:00047756  2125 0001:0004775D
+  2126 0001:00047762  2127 0001:00047768  2132 0001:0004776C  2133 0001:0004776E
+  2134 0001:0004778E  2140 0001:00047790  2141 0001:00047792  2142 0001:00047797
+  2143 0001:0004779E  2145 0001:0004779F  2146 0001:000477A3  2155 0001:000477A4
+  2156 0001:000477AA  2157 0001:000477B0  2158 0001:000477B6  2159 0001:000477BB
+  2168 0001:000477BC  2169 0001:000477BD  2170 0001:000477C2  2171 0001:000477C3
+  2172 0001:000477C9  2178 0001:000477CC  2179 0001:000477D0  2180 0001:000477D8
+  2186 0001:000477DC  2187 0001:000477DF  2188 0001:000477E1  2189 0001:000477E4
+  2190 0001:000477E6  2191 0001:000477EB  2193 0001:000477EC  2194 0001:000477F3
+  2204 0001:000477F4  2205 0001:0004781F  2206 0001:00047874  2207 0001:00047881
+  2209 0001:000478B6  2210 0001:000478B9  2214 0001:00047D9C  2215 0001:00047D9E
+  2216 0001:00047DA3  2217 0001:00047DA5  2218 0001:00047DA7  2219 0001:00047DAC
+  2221 0001:00047DAD  2222 0001:00047DB0  2223 0001:00047DB2  2224 0001:00047DB7
+  2226 0001:00047DB8  2227 0001:00047DBB  2228 0001:00047DC0  2255 0001:00047DC4
+  2256 0001:00047DC5  2258 0001:00047DC7  2259 0001:00047DC9  2261 0001:00047DD3
+  2256 0001:00047DD4  2262 0001:00047DD9  2269 0001:00047DE0  2270 0001:00047DEB
+  2271 0001:00047E08  2272 0001:00047E11  2273 0001:00047E22  2274 0001:00047E29
+  2275 0001:00047E49  2277 0001:00047E4E  2279 0001:00047E9C  2280 0001:00047EB0
+  2282 0001:00047EBF  2283 0001:00047ED3  2286 0001:00047EDC  2287 0001:00047EE0
+  2288 0001:00047EE2  2289 0001:00047EFB  2294 0001:00047F00  2295 0001:00047F03
+  2296 0001:00047F0A  2297 0001:00047F11  2298 0001:00047F4A  2296 0001:00047F54
+  2299 0001:00047F59  2303 0001:00047F60  2304 0001:00047F63  2305 0001:00047F66
+  2306 0001:00047F6B  2310 0001:00047F6C  2311 0001:00047F6F  2312 0001:00047F74
+  2313 0001:00047F76  2314 0001:00047F7B  2316 0001:00047F7D  2317 0001:00047F83
+  2318 0001:00047F89  2319 0001:00047F8E  2320 0001:00047F95  2322 0001:00047F96
+  2323 0001:00047F97  2324 0001:00047F9C  2326 0001:00047F9D  2330 0001:00047FA0
+  2331 0001:00047FA3  2332 0001:00047FA6  2333 0001:00047FA8  2334 0001:00047FAD
+  2335 0001:00047FB2  2339 0001:00047FB4  2340 0001:00047FBA  2341 0001:00047FC0
+  2342 0001:00047FC2  2343 0001:00047FC7  2344 0001:00047FCA  2345 0001:00047FCF
+  2354 0001:00047FD0  2355 0001:00047FD6  2356 0001:00047FDB  2357 0001:00047FDF
+  2358 0001:00047FE4  2359 0001:00047FE9  2362 0001:00047FEC  2363 0001:00047FEE
+  2364 0001:00047FF0  2365 0001:00048001  2366 0001:00048015  2367 0001:00048028
+  2374 0001:00048030  2375 0001:00048031  2376 0001:00048036  2377 0001:00048038
+  2380 0001:0004803A  2381 0001:00048040  2382 0001:00048042  2383 0001:00048048
+  2384 0001:0004804E  2385 0001:00048055  2386 0001:0004805B  2387 0001:0004805E
+  2388 0001:00048063  2391 0001:00048065  2392 0001:0004806B  2393 0001:00048072
+  2396 0001:00048077  2397 0001:00048081  2398 0001:00048082  2399 0001:00048087
+  2405 0001:00048088  2406 0001:0004808E  2407 0001:00048091  2408 0001:00048093
+  2409 0001:00048096  2410 0001:00048098  2419 0001:0004809C  2420 0001:0004809F
+  2421 0001:000480A5  2422 0001:000480A9  2423 0001:000480AB  2425 0001:000480B0
+  2426 0001:000480B5  2427 0001:000480BD  2431 0001:000480C0  2432 0001:000480C5
+  2433 0001:000480C7  2434 0001:000480CD  2435 0001:000480CF  2437 0001:000480D1
+  2443 0001:000480D4  2444 0001:000480D6  2445 0001:000480D9  2446 0001:000480DB
+  2447 0001:000480E1  2448 0001:000480E3  2449 0001:000480EA  2451 0001:000480EB
+  2453 0001:000480F2  2460 0001:000480F4  2461 0001:00048101  2462 0001:0004811E
+  2463 0001:00048120  2464 0001:00048123  2465 0001:0004812B  2466 0001:00048133
+  2467 0001:00048147  2468 0001:00048153  2474 0001:00048160  2475 0001:00048166
+  2476 0001:00048167  2477 0001:00048169  2478 0001:0004816E  2479 0001:00048171
+  2480 0001:00048174  2481 0001:00048176  2482 0001:00048177  2488 0001:00048178
+  2489 0001:0004817B  2490 0001:00048180  2491 0001:00048182  2492 0001:00048187
+  2502 0001:00048188  2503 0001:0004818B  2504 0001:00048190  2505 0001:00048192
+  2506 0001:00048197  2507 0001:00048199  2508 0001:0004819C  2509 0001:0004819E
+  2510 0001:000481A1  2511 0001:000481A3  2512 0001:000481A6  2513 0001:000481A8
+  2514 0001:000481AB  2515 0001:000481AD  2516 0001:000481B0  2517 0001:000481B2
+  2518 0001:000481B8  2520 0001:000481B9  2522 0001:000481BF  2524 0001:000481C0
+  2525 0001:000481C2  2526 0001:000481C5  2528 0001:000481CB  2529 0001:000481CF
+  2530 0001:000481D3  2532 0001:000481D9  2533 0001:000481DA  2535 0001:000481E0
+  2536 0001:000481E3  2542 0001:000481E4  2543 0001:000481E8  2544 0001:000481EA
+  2545 0001:000481F0  2546 0001:000481F5  2547 0001:000481F7  2548 0001:000481FE
+  2550 0001:000481FF  2551 0001:00048203  2552 0001:00048205  2554 0001:0004820C
+  2558 0001:00048210  2559 0001:00048212  2560 0001:00048215  2561 0001:00048218
+  2562 0001:0004821E  2563 0001:00048222  2564 0001:00048224  2566 0001:00048229
+  2567 0001:0004822B  2573 0001:0004822C  2574 0001:00048232  2575 0001:00048238
+  2576 0001:0004823A  2577 0001:0004823B  2579 0001:0004823D  2588 0001:00048240
+  2589 0001:00048245  2590 0001:0004824A  2594 0001:0004824C  2595 0001:00048253
+  2596 0001:00048255  2598 0001:0004825F  2606 0001:00048260  2607 0001:00048263
+  2608 0001:00048265  2609 0001:00048269  2610 0001:0004826B  2611 0001:00048271
+  2612 0001:00048274  2613 0001:00048276  2615 0001:00048277  2616 0001:00048278
+  2617 0001:00048279  2618 0001:0004827E  2625 0001:00048280  2626 0001:00048284
+  2627 0001:00048286  2628 0001:0004828A  2629 0001:0004828F  2630 0001:00048291
+  2632 0001:00048297  2637 0001:00048298  2638 0001:000482A0  2639 0001:000482AC
+  2640 0001:000482B0  2641 0001:000482BF  2650 0001:000482C8  2651 0001:000482CB
+  2652 0001:000482D9  2654 0001:000482E6  2657 0001:000482F7  2658 0001:00048303
+  2659 0001:0004830F  2660 0001:0004831E  2661 0001:0004832D  2664 0001:0004839C
+  2665 0001:000483AD  2668 0001:000483B4  2669 0001:000483BA  2670 0001:000483C3
+  2671 0001:000483CA  2675 0001:000483D0  2676 0001:000483D7  2677 0001:000483DD
+  2678 0001:000483DF  2682 0001:000483E0  2683 0001:000483E4  2685 0001:00048404
+  2686 0001:00048423  2690 0001:00048424  2691 0001:00048427  2692 0001:0004842E
+  2693 0001:00048430  2695 0001:00048432  2696 0001:00048439  2697 0001:0004843F
+  2698 0001:00048441  2702 0001:00048444  2703 0001:0004844B  2704 0001:0004844D
+  2705 0001:00048452  2706 0001:00048459  2707 0001:0004845B  2708 0001:0004845E
+  2709 0001:00048460  2711 0001:00048462  2713 0001:00048469  2717 0001:0004846C
+  2718 0001:00048477  2719 0001:00048480  2720 0001:00048489  2721 0001:0004848C
+  2725 0001:00048490  2726 0001:00048496  2727 0001:0004849D  2728 0001:000484A3
+  2729 0001:000484A5  2733 0001:000484A8  2734 0001:000484AF  2735 0001:000484B2
+  2736 0001:000484B4  2738 0001:000484B6  2739 0001:000484BB  2740 0001:000484BE
+  2744 0001:000484C0  2745 0001:000484C7  2746 0001:000484C9  2748 0001:000484D0
+  2754 0001:000484D4  2755 0001:000484D7  2756 0001:000484D9  2757 0001:000484DB
+  2758 0001:000484DC  2759 0001:000484DE  2760 0001:000484DF  2761 0001:000484E2
+  2763 0001:000484E3  2769 0001:000484E4  2770 0001:000484E7  2771 0001:000484E9
+  2773 0001:000484EC  2783 0001:000484F0  2785 0001:000484F3  2786 0001:000484F6
+  2787 0001:000484F8  2789 0001:000484FA  2790 0001:000484FC  2791 0001:000484FF
+  2792 0001:00048501  2794 0001:00048503  2795 0001:00048505  2796 0001:00048508
+  2799 0001:0004850A  2800 0001:0004850C  2802 0001:0004850E  2803 0001:00048511
+  2807 0001:00048512  2808 0001:00048515  2809 0001:00048518  2810 0001:0004851B
+  2811 0001:00048520  2812 0001:00048523  2820 0001:00048524  2822 0001:00048527
+  2823 0001:0004852A  2824 0001:0004852C  2826 0001:0004852E  2827 0001:00048530
+  2828 0001:00048533  2829 0001:00048535  2831 0001:00048537  2832 0001:00048539
+  2833 0001:0004853C  2836 0001:0004853E  2837 0001:00048540  2839 0001:00048542
+  2840 0001:00048545  2844 0001:00048546  2845 0001:00048549  2846 0001:0004854C
+  2847 0001:0004854F  2848 0001:00048554  2849 0001:00048557  2854 0001:00048558
+  2855 0001:0004855F  2856 0001:00048567  2857 0001:00048571  2866 0001:00048578
+  2867 0001:0004857A  2868 0001:0004857F  2869 0001:00048581  2870 0001:00048587
+  2871 0001:0004858C  2872 0001:00048592  2873 0001:00048594  2875 0001:0004859A
+  2883 0001:0004859C  2884 0001:0004859D  2885 0001:000485A5  2886 0001:000485AF
+  2887 0001:000485B5  2888 0001:000485C1  2889 0001:000485C9  2890 0001:000485CD
+  2891 0001:000485D2  2895 0001:000485D8  2896 0001:000485DD  2897 0001:000485DF
+  2898 0001:000485E1  2900 0001:000485E8  2908 0001:000485EC  2909 0001:000485F0
+  2910 0001:000485FB  2911 0001:00048614  2912 0001:0004861E  2913 0001:0004862E
+  2914 0001:00048638  2915 0001:0004864F  2921 0001:00048654  2922 0001:00048657
+  2923 0001:00048659  2925 0001:00048660  2931 0001:00048664  2932 0001:00048667
+  2933 0001:00048669  2935 0001:0004866B  2940 0001:0004866C  2941 0001:0004866D
+  2942 0001:0004866F  2943 0001:0004867B  2944 0001:00048680  2952 0001:00048684
+  2953 0001:0004869E  2954 0001:000486A0  2955 0001:000486A8  2956 0001:000486C1
+  2957 0001:000486CB  2958 0001:000486E4  2959 0001:000486EA  2960 0001:000486EE
+  2961 0001:000486FA  2968 0001:00048748  2970 0001:00048749  2971 0001:00048787
+  2972 0001:00048795  2978 0001:0004879C  2979 0001:000487A7  2988 0001:000487A8
+  2989 0001:000487AA  2990 0001:000487B3  2991 0001:000487BD  2992 0001:000487D5
+  2990 0001:000487E7  2993 0001:000487EC  2999 0001:000487F0  3000 0001:000487F7
+  3001 0001:000487F9  3002 0001:000487FC  3004 0001:00048800  3012 0001:00048804
+  3013 0001:00048806  3014 0001:00048808  3015 0001:0004880D  3016 0001:00048813
+  3017 0001:0004881D  3019 0001:0004881F  3029 0001:00048820  3030 0001:00048823
+  3031 0001:00048825  3032 0001:00048828  3033 0001:0004882A  3034 0001:0004882D
+  3035 0001:0004882F  3036 0001:00048832  3038 0001:00048834  3039 0001:0004883B
+  3041 0001:00048841  3045 0001:00048844  3046 0001:0004884B  3047 0001:0004884D
+  3048 0001:00048854  3049 0001:00048856  3050 0001:0004885C  3051 0001:0004885E
+  3053 0001:00048862  3059 0001:00048864  3060 0001:00048866  3061 0001:00048868
+  3063 0001:0004886F  3069 0001:00048870  3070 0001:00048876  3071 0001:00048878
+  3072 0001:0004887D  3400 0001:00048924  3401 0001:0004893E  3402 0001:00048965
+  3403 0001:00048973  3404 0001:0004897D  3405 0001:000489AD  3403 0001:000489B7
+  3407 0001:000489CC  3409 0001:000489DC  3414 0001:00048A38  3415 0001:00048A3E
+  3416 0001:00048A45  3417 0001:00048A4A  3418 0001:00048A4F  3419 0001:00048A54
+  3420 0001:00048A59  3421 0001:00048A62  3422 0001:00048A6C  3423 0001:00048A78
+  3424 0001:00048A82  3425 0001:00048A8E  3426 0001:00048A98  3427 0001:00048AA4
+  3428 0001:00048AAE  3429 0001:00048ABA  3430 0001:00048AC4  3431 0001:00048AD0
+  3432 0001:00048ADA  3433 0001:00048AE6  3434 0001:00048AF0  3435 0001:00048AFC
+  3436 0001:00048B06  3437 0001:00048B12  3438 0001:00048B1C  3439 0001:00048B28
+  3440 0001:00048B32  3441 0001:00048B3E  3442 0001:00048B48  3443 0001:00048B54
+  3444 0001:00048B5E  3445 0001:00048B6A  3447 0001:00048B6F  3448 0001:00048B83
+  3449 0001:00048B8C  3450 0001:00048B94  3451 0001:00048B9B  3452 0001:00048BA7
+  3453 0001:00048BAE  3454 0001:00048BB5  3455 0001:00048BC4  3458 0001:00048BC8
+  3459 0001:00048BD5  3460 0001:00048BDF  3461 0001:00048BF3  3462 0001:00048BF8
+  3463 0001:00048C0C  3464 0001:00048C18  3465 0001:00048C22  3466 0001:00048C2E
+  3467 0001:00048C34  3468 0001:00048C40  3469 0001:00048C46  3470 0001:00048C52
+  3471 0001:00048C58  3472 0001:00048C64  3473 0001:00048C6A  3474 0001:00048C76
+  3475 0001:00048C7F  3476 0001:00048C8B  3477 0001:00048C94  3478 0001:00048CA0
+  3479 0001:00048CA9  3480 0001:00048CB5  3481 0001:00048CBE  3482 0001:00048CCA
+  3483 0001:00048CD3  3484 0001:00048CDF  3485 0001:00048CE8  3486 0001:00048CF4
+  3487 0001:00048CFD  3488 0001:00048D09  3489 0001:00048D0E  3503 0001:00048E10
+  3504 0001:00048E38
 
 Line numbers for Hooks(Hooks.pas) segment .itext
 
@@ -8308,9 +8312,9 @@ Line numbers for Hooks(Hooks.pas) segment .itext
 
 Line numbers for MM8patch(C:\_Delphi\mm8patch\MM8patch.dpr) segment .itext
 
-   454 0002:0000068C   455 0002:0000069F   456 0002:000006AD   457 0002:000006C5
-   458 0002:000006CF   459 0002:000006DC   460 0002:000006E1   461 0002:000006E6
-   462 0002:000006EB   465 0002:000006FF   467 0002:00000715
+   459 0002:0000068C   460 0002:0000069F   461 0002:000006AD   462 0002:000006C5
+   463 0002:000006CF   464 0002:000006DC   465 0002:000006E1   466 0002:000006E6
+   467 0002:000006EB   470 0002:000006FF   472 0002:00000715
 
 Bound resource files
 
