@@ -386,7 +386,7 @@ Version 2.5:
 [+] Minor tweaks to UI Layout mode
 [-] If current fines are due, arcomage win/lose count wasn't added to awards
 [-] Master Healer NPC was messing up player skills when activated
-[-] Artifacts weren't generated properly as objects on the ground
+[-] FixUnmarkedArtifacts - Artifacts weren't generated properly as objects on the ground
 [-] Artifacts generated specifically as level 7 items weren't marked as found
 [-] FixLichImmune - Lich was becoming immune to elemental magic if resistances are 200
 [-] NPCs with action (Heal/TP/...) had 1 selectable non-interactive dialog item at the bottom. It was shifting everything up
@@ -422,6 +422,14 @@ Version 2.5.4:
 [*] Since Titan's Stronghold has an unreachable chest with an artifact, I've disabled FixUnmarkedArtifacts by default
 [-] My bug: IndoorFovMul was only working in UILayout mode
 
+Version 2.5.5:
+(MM6-MM8)
+[-] My bug: Possible corruption when taking an item from character's inventory
+[-] My bug: FixChests option got broken by 2.5.4 changes
+(MM7, MM8)
+[*] FixUnmarkedArtifacts now also respects the 13 artifacts limit imposed by the game
+
+
 [!!] MM8  https://discord.com/channels/296507109997019137/296508593744773120/924945750427861033
 [!!] https://discord.com/channels/296507109997019137/296508593744773120/900738954477834260
 [!!] Configure controls like in MM6, keyboard layout-independant in-game Controls
@@ -435,6 +443,7 @@ Version 2.5.4:
 [!!] FPS don't do std action?
 [!!] Setup controls
 [!!] MouseLookBorder in UILayout mode
+[!!] Hammerhands description
 
 (Figo:) Is there still the limit of how many we can acquire with one party (~13)?
 I've read that in the Merge there is none, so how about a vanilla game?
