@@ -529,8 +529,6 @@ begin
     RenderLimX:= RenderMaxWidth;
   if RenderMaxHeight >= 480 then
     RenderLimY:= RenderMaxHeight;
-  if _IsD3D^ and (max(RenderLimX, RenderLimY) > 2048) and not Direct3DFixed and not UseVoodoo then
-    FixDirect3D;
   CalcRenderSize;
 end;
 
@@ -766,11 +764,18 @@ end;
 function TMyDirectDraw.CreateDevice(const rclsid: TRefClsID;
   lpDDS: IDirectDrawSurface4; out lplpD3DDevice: IDirect3DDevice3;
   pUnkOuter: IInterface): HResult;
+label retry;
 begin
+retry:
   if lpDDS = MyBackBuffer then
     Result:= D3D.CreateDevice(rclsid, BackBuffer, lplpD3DDevice, pUnkOuter)
   else
     Result:= D3D.CreateDevice(rclsid, lpDDS, lplpD3DDevice, pUnkOuter);
+  if (Result <> DD_OK) and _IsD3D^ and (max(RenderLimX, RenderLimY) > 2048) and not Direct3DFixed and not UseVoodoo then
+  begin
+    FixDirect3D;
+    goto retry;
+  end;
   if Result = DD_OK then
     TMyDevice.Hook(lplpD3DDevice);
 end;

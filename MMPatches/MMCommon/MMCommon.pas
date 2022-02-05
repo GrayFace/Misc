@@ -74,6 +74,8 @@ const
   hqFixWaterWalkManaDrain = 86;
   hqKeepEmptyWands = 87;
   hqDontSkipSimpleMessage = 88;
+  hqFixItemDuplicates = 89;
+  hqFixClubsGeneration = 90;
 
 {$IFDEF mm6}
   m6 = 1;
@@ -187,6 +189,8 @@ type
     FixWaterWalkManaDrain: LongBool;          //
     KeepEmptyWands: LongBool;                 //
     DontSkipSimpleMessage: LongBool;          // (unused in MM8)
+    FixItemDuplicates: LongBool;              //
+    FixClubsGeneration: LongBool;             // (MM8 only)
   end;
 
 var
@@ -614,6 +618,8 @@ const
   _SpritesCount = pint(__SpritesCount);
   __ObjectsCount = m6*$5E2180 + m7*$6650AC + m8*$692FB4;
   _ObjectsCount = pint(__ObjectsCount);
+  __Objects = m6*$5C9AD8 + m7*$6650B0 + m8*$692FB8;
+  _Objects = pchar(__Objects);
   __MonstersCount = m6*$5B22F8 + m7*$6650A8 + m8*$692FB0;
   _MonstersCount = pint(__MonstersCount);
   __MonstersLimit = m6*$4A35FA + m7*$4BBED6 + m8*$4BA086;
@@ -687,7 +693,7 @@ const
   _ObjOff_Z = $C;
   _ObjOff_Size = $70 - m6*$C;
 
-  _Skill_Club = -m6 + m7*37 + m8*40;
+  _Skill_Club = -m6 + m7*37 + m8*39;
   _Skill_Misc = m6*12 + m7*38 + m8*40;
 
 const
@@ -1049,8 +1055,12 @@ begin
       info:= 'Smooth turn speed in double speed mode';
       TurnSpeedDouble:= ReadInteger('TurnSpeedDouble', 120)/200;
       ProgressiveDaggerTrippleDamage:= ReadBool('ProgressiveDaggerTrippleDamage', true, false);
-      info:= 'Set to -1 to disable MM8 original implementation of mouse look. Set to a value above 0 to perform rotation when mouse is this close to view border';
-      {$IFDEF mm8}MouseBorder:= ReadInteger('MouseLookBorder', 100);{$ENDIF}
+     {$IFDEF mm8}
+      info:= 'Set to -1 to disable MM8 original implementation of mouse look and make right button pause the game instead. A value above 0 would lead to view rotating when mouse is this close to view border and right button is pressed';
+      DelList.Add('Set to -1 to disable MM8 original implementation of mouse look. Set to a value above 0 to perform rotation when mouse is this close to view border');
+      MouseBorder:= ReadInteger('MouseLookBorder', 100);
+      FixClubsGeneration:= ReadBool('FixClubsGeneration', true, false);
+     {$ENDIF}
       info:= 'If set to 1, items that didn''t fit into a chest would appear next time you open it';
       FixChests:= ReadBool('FixChests', false, false);
       info:= 'Minimal recovery value of blasters and bows (used to be 0 in original game)';
@@ -1249,6 +1259,7 @@ begin
       KeepEmptyWands:= ReadBool('KeepEmptyWands', true, false);
       {$IFNDEF mm8}DontSkipSimpleMessage:= ReadBool('DontSkipSimpleMessage', true, false);{$ENDIF}
       {$IFNDEF mm8}FixUnmarkedArtifacts:= ReadBool('FixUnmarkedArtifacts', m7 = 0, false);{$ENDIF}
+      FixItemDuplicates:= ReadBool('FixItemDuplicates', true, false);
 
 {$IFDEF mm6}
       info:= 'Set this to 0 to disable loading of mm6text.dll';
@@ -1634,9 +1645,10 @@ var
   i: int;
 begin
   i:= 0;
-  while hk[i].p <> 0 do
+  while not CompareMem(@hk[i], @RSEmptyHook, SizeOf(RSEmptyHook)) do
   begin
-    CheckHook(hk[i]);
+    if hk[i].p <> 0 then
+      CheckHook(hk[i]);
     inc(i);
   end;
 end;

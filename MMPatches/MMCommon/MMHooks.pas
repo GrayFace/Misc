@@ -1398,7 +1398,7 @@ begin
   a.Condition:= a.Condition and not cond;
   i:= a.Number - _ArtifactsFoundBase^;
   //zM(i, BoolToInt[refund]);
-  if i >= _ArtifactsFoundCount^ then
+  if uint(i) >= _ArtifactsFoundCount^ then
     exit;
   p:= _pArtifactsFound^ + i;
   if refund then
@@ -3742,18 +3742,6 @@ asm
   jmp DoFixBuffTime
 end;
 
-//----- Fix removed objects reappearing when dropping one on the ground or saving
-//(Elemental Mod does it, but I haven't been able to reproduce the bug, at least in MM6)
-
-//procedure FixSummonObject;
-//asm
-//{$IFDEF mm6}
-//  cmp edx, dword ptr [__ObjectsCount]
-//{$ELSE}
-//  cmp ebx, dword ptr [__ObjectsCount]
-//{$ENDIF}
-//end;
-
 //----- Fix potion explosions breaking hardened items
 
 procedure FixPotionBreakItem;
@@ -3968,10 +3956,57 @@ begin
   end;
 end;
 
+//----- New Evt commands
+
+procedure DoRefundChest(i: byte);
+begin
+  CheckChests(ptr(_pChests^ + _ChestOff_Size*i), 1);
+end;
+
+procedure NewEvtCommands;
+asm
+  cmp byte ptr [esi + 4], $45
+  jnz @std
+  mov al, [esi + 5]
+  call DoRefundChest
+@std:
+end;
+
+//----- Fix items from one map appearing in another when traveling by foot
+
+procedure FixClearLevel;
+begin
+  ZeroMemory(_Objects, _ObjOff_Size*min(1000, uint(_ObjectsCount^)));
+end;
+
+//----- Custom LODs - fix copying *.ddm and *.dlv when starting new game
+
+var
+  freadLock: function(p: ptr; size, n: uint; handle: ptr): uint; cdecl;
+
+function ReadGamesFileProc(ret: ptr; p: PChar; _size, _n: uint; handle: ptr): uint; cdecl;
+const
+  skip = (1 - m6)*8;
+  sz = skip + 8;
+begin
+  Result:= freadLock(p, 1, sz, handle);
+  inc(Result, freadLock(p + sz, 1, pint(p + skip)^, handle));
+end;
+
+procedure ReadGamesFileHook;
+asm
+  call ReadGamesFileProc
+{$IFDEF mm6}
+  mov [esp + $188 - $120 + $14], eax
+{$ELSE}
+  mov [ebp - $6C + $14], eax
+{$ENDIF}
+end;
+
 //----- HooksList
 
 var
-  HooksCommon: array[1..84] of TRSHookInfo = (
+  HooksCommon: array[1..87] of TRSHookInfo = (
     (p: m6*$453ACE + m7*$463341 + m8*$461316; newp: @UpdateHintHook;
        t: RShtCallStore; Querry: hqFixStayingHints), // Fix element hints staying active in some dialogs
     (p: m6*$4226F8 + m7*$427E71 + m8*$4260A8; newp: @FixItemSpells;
@@ -4065,8 +4100,6 @@ var
     (p: m6*$41A309 + m7*$41D1CF + m8*$41C60A; newp: @FixBuffTime; t: RShtCall), // Fix buff duration display
     (p: m6*$41A472 + m7*$41D2CE + m8*$41C709; size: 2), // Fix buff duration display
     (p: m6*$41A4DE + m7*$41D30D + m8*$41C748; size: 2), // Fix buff duration display
-//    (p: m6*$42A74B + m7*$42F5F0 + m8*$42E083; newp: @FixSummonObject;
-//      t: RShtCall; size: 6), // Fix removed objects reappearing when dropping one on the ground or saving
     (p: m7*$41617B + m8*$415636; size: 10), // Fix potion explosions breaking hardened items
     (p: m7*$41619F + m8*$41565A; size: 3), // Fix potion explosions breaking hardened items
     (p: m7*$416198 + m8*$415653; newp: @FixPotionBreakItem;
@@ -4126,6 +4159,12 @@ var
       t: RShtBefore; size: 5 + m6; Querry: hqFixUnmarkedArtifacts), // Fix deliberately generated artifacts not marked as found
     (p: m6*$44A732 + m7*$450637; newp: @FixUnmarkedArtifactsMax;
       t: RShtAfter; size: 5 + m7*2; Querry: hqFixUnmarkedArtifacts), // Fix deliberately generated artifacts not marked as found
+    (p: m6*$43C942 + m7*$446978 + m8*$44389D; newp: @NewEvtCommands;
+      t: RShtBeforeJmp6), // New Evt commands
+    (p: m6*$458C20 + m7*$460780 + m8*$45E093; newp: @FixClearLevel;
+      t: RShtCallBefore; Querry: hqFixItemDuplicates), // Fix items from one map appearing in another when traveling by foot
+    (p: m6*$458818 + m7*$4609E3 + m8*$45E2F8; backup: @@freadLock; newp: @ReadGamesFileHook;
+      t: RShtCall), // Custom LODs - fix copying *.ddm and *.dlv when starting new game
     ()
   );
 {$IFDEF MM6}
@@ -4603,6 +4642,8 @@ begin
     ApplyHooks(hqFixUnimplementedSpells);
   if Options.DontSkipSimpleMessage then
     ApplyHooks(hqDontSkipSimpleMessage);
+  if Options.FixItemDuplicates then
+    ApplyHooks(hqFixItemDuplicates);
 end;
 
 procedure ApplyMMHooksSW;

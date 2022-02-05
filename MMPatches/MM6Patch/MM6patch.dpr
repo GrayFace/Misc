@@ -348,6 +348,13 @@ Version 2.5.5:
 (MM7, MM8)
 [*] FixUnmarkedArtifacts now also respects the 13 artifacts limit imposed by the game
 
+Version 2.5.6:
+(MM6-MM8)
+[+] New Evt command 0x45 - RefundChestArtifacts
+[-] FixItemDuplicates - Fix items from one map appearing in another when traveling by foot
+[-] My bug: DisableHooks option wasn't working for some hooks
+[-] My bug: With custom *.games.lod archives incorrect data was written to autosave on New Game start
+
 
 Если загрузить сейв, где все рожи одинаковые, а потом сейв с разными, будут черные пятна на месте рож
 

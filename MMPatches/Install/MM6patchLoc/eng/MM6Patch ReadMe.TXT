@@ -1,4 +1,4 @@
-GrayFace MM6 Patch v2.5.5
+GrayFace MM6 Patch v2.5.6
 By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
@@ -10,6 +10,19 @@ For all exploits the patch fixes an option to disable the fix shoud be described
 At the end of ReadMe you'll find info on how to report errors.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
+
+New in version 2.5.6:
+  << MM6 - MM8 >>
+[+] New command available to map scripts (*.evt) that powers some of the MM6 and MM7 changes of this version (code 0x45 - RefundChestArtifacts).
+[-] Items laying on the ground in one map were appearing in another when traveling by foot sometimes. Add FixItemDuplicates=0 to INI to disable this fix.
+[-] My bug: DisableHooks option wasn't working for some new hooks.
+[-] My bug: When custom *.games.lod archives are used, incorrect data was written to autosave on New Game start. It was fully inconsequential until version 2.5.4.
+  << Fixes in maps >>
+[-] Castle Ironfist (outd3), Control Center (sci-fi): Duplicated chest. (thanks to Black Phantom for the fixes)
+[-] Silver Cove (outd1), Mire of the Damned (outc3), Paradise Valley (outa2): Duplicated house. (thanks to Black Phantom for the fixes)
+[-] Gharik's Forge (d18), The Hive (hive), Tomb of VARN (pyramid), Blackshire (outb2), Control Center (sci-fi): It was possible for artifacts to be generated in inaccessible chests, reducing the number of artifacts you could find as a result. In Blackshire it was also possible to get rewards for statuettes quest again after the map refills.
+[-] The Monolith (d13): +5 Personality was only given to unpromoted Cleric and Druids.
+[-] Castle Darkmoor (cd2): One of the first cube sides didn't teleport the party when touched after activation. Reloading was opening the final hall barrier if you've pressed the levers, but haven't activated the cube yet. One of tiles that summon liches in the room before said barrier had a wrong texture. (thanks to Black Phantom for the fixes)
 
 New in version 2.5.5:
   << MM6 - MM8 >>
