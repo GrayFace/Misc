@@ -43,6 +43,8 @@ type
   RShtFunctionStart:
     <code at @p>  ->  jmp @store
     (here @std is an allocated code block containing code from @p and jump to p + size)
+  RShtBeforeJmp6:
+    jz @std -> jz @store2
   RShtCallBefore:
     call @std  ->  call @store2
 }
@@ -199,8 +201,9 @@ begin
     RShtBeforeJmp6:
     begin
       p1:= RSAllocCode(10);               // p: jnz p1
-      Jmp(p1, new, true);                 // call @hook
-      Jmp(p1 + 5, RSGetHookValue(Hook));  // jmp @std
+      pbyte(p1)^:= $68;          // push @orig
+      pint(p1+1)^:= RSGetHookValue(Hook);
+      Jmp(p1 + 5, new);          // jmp @hook
       pint(p+2)^:= p1 - p - 6;
     end;
     RShtAfter:

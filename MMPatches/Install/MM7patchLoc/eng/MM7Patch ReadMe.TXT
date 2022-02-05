@@ -1,4 +1,4 @@
-GrayFace MM7 Patch v2.5.5
+GrayFace MM7 Patch v2.5.6
 By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
@@ -10,6 +10,19 @@ For all exploits the patch fixes an option to disable the fix shoud be described
 At the end of ReadMe you'll find info on how to report errors.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
+
+New in version 2.5.6:
+  << MM6 - MM8 >>
+[+] New command available to map scripts (*.evt) that powers some of the MM6 and MM7 changes of this version (code 0x45 - RefundChestArtifacts).
+[-] Items laying on the ground in one map were appearing in another when traveling by foot sometimes. Add FixItemDuplicates=0 to INI to disable this fix.
+[-] My bug: DisableHooks option wasn't working for some new hooks.
+[-] My bug: When custom *.games.lod archives are used, incorrect data was written to autosave on New Game start. It was fully inconsequential until version 2.5.4.
+  << MM7, MM8 >>
+[-] My bug: The DirectX 7 bug/limitation fix was being applied prematurely, causing a crash on Wine.
+  << MM7 >>
+[-] My bug caused by abnormal localization: In German version of the game the party was shooting torches with patch version 2.5.*. This fix also fixes abnormalities of some sprites in that localization.
+  << Fixes in maps >>
+[-] The Maze (d02), The Titans' Stronghold (d09): It was possible for artifacts to be generated in inaccessible chests, reducing the number of artifacts you could find as a result.
 
 New in version 2.5.5:
   << MM6 - MM8 >>
@@ -326,7 +339,7 @@ New in version 2.1:
 [-] The Land of the Giants (out12): A well at coordinates x:14972 y:3968 was meant to cost 5000, but was usable without paying, thus becoming a cheat when used with Protection from Magic.
 [-] Fixes of Black Phantom patch (with additional improvements):
 - The Maze (d02): "Haldar's Remains" quest item was disappearing if not taken the first time the chest is opened.
-- Stone City (d24): when resting there was a chance of dwarves attacking the party.
+- Stone City (d24): When resting there was a chance of dwarves attacking the party.
 - Emerald Island (out01): Anvil was called "Button". Autonote "2 points of permanent Luck from the well on the western edge of Emerald Island" wasn't used.
 - Castle Harmondale (d29): Quest "0" no longer appears in Quest Log. Under some circumstances no human/elf/neutral flags were placed in the castle after delivering the artifact. Good/evil flags didn't always match the alignment. Golem was appearing before you complete the quest (and animate it) if you found all parts.
 - The Wine Cellar (d16): Unique vampire possesing Vampire's Cape item wasn't appearing in the location. Now a Light path quest requires not just entering the Wine Cellar, but killing this vampire as it was planned by developers.
