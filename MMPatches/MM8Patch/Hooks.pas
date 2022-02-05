@@ -3071,10 +3071,39 @@ asm
   push $437AC5
 end;
 
+//----- Fix clubs being generated as sword 0 instead
+
+procedure FixClubsGenerationRead;
+const
+  club: pchar = 'club';
+asm
+  mov edx, [esp + 4]
+  push eax
+  push club
+  push edx
+  call eax
+  test eax, eax
+  jnz @std
+  lea eax, [esi+esi*2]
+  shl eax, 4
+  mov byte ptr [eax+edi+21h], _Skill_Club
+  add esp, 8+8+4
+  push $4551FE
+  ret
+@std:
+  add esp, 8
+end;
+
+procedure FixClubsGeneration;
+asm
+  mov [ebp - 4], _Skill_Club
+  push $454028
+end;
+
 //----- HooksList
 
 var
-  HooksList: array[1..314] of TRSHookInfo = (
+  HooksList: array[1..316] of TRSHookInfo = (
     (p: $458E18; newp: @KeysHook; t: RShtCall; size: 6), // My keys handler
     (p: $463862; old: $450493; backup: @@SaveNamesStd; newp: @SaveNamesHook; t: RShtCall), // Buggy autosave/quicksave filenames localization
     (p: $4CD509; t: RShtNop; size: 12), // Fix Save/Load Slots: it resets SaveSlot, SaveScroll
@@ -3391,6 +3420,8 @@ var
     (p: $437AAD; newp: @FixOfAcid; t: RShtJmp; size: 6), // 'of Acid' was dealing Water damage instead of Body
     (p: $40546F; old: $36FF; new: $9057; t: RSht2), // (push edi) Fix monsters using 'Spirit Lash', 'Inferno', 'Prismatic Light'
     (p: $463EF0; size: 2), // Intro movies were unskippable on 1st launch
+    (p: $454F51; newp: @FixClubsGenerationRead; t: RShtCallStore), // Fix clubs being generated as sword 0 instead
+    (p: $45459C; newp: @FixClubsGeneration; t: RSht4; Querry: hqFixClubsGeneration), // Fix clubs being generated as sword 0 instead
     ()
   );
 
@@ -3485,6 +3516,8 @@ begin
     RSApplyHooks(HooksList, hqTrueColor);
   if Options.FixMonsterSummon then
     RSApplyHooks(HooksList, hqFixMonsterSummon);
+  if Options.FixClubsGeneration then
+    RSApplyHooks(HooksList, hqFixClubsGeneration);
   ApplyMMDeferredHooks;
 end;
 

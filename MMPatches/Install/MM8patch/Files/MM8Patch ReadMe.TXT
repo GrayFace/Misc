@@ -1,4 +1,4 @@
-GrayFace MM8 Patch v2.5.5
+GrayFace MM8 Patch v2.5.6
 By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
@@ -10,6 +10,17 @@ For all exploits the patch fixes an option to disable the fix shoud be described
 At the end of ReadMe you'll find info on how to report errors.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
+
+New in version 2.5.6:
+  << MM6 - MM8 >>
+[+] New command available to map scripts (*.evt) that powers some of the MM6 and MM7 changes of this version (code 0x45 - RefundChestArtifacts).
+[-] Items laying on the ground in one map were appearing in another when traveling by foot sometimes. Add FixItemDuplicates=0 to INI to disable this fix.
+[-] My bug: DisableHooks option wasn't working for some new hooks.
+[-] My bug: When custom *.games.lod archives are used, incorrect data was written to autosave on New Game start. It was fully inconsequential until version 2.5.4.
+  << MM7, MM8 >>
+[-] My bug: The DirectX 7 bug/limitation fix was being applied prematurely, causing a crash on Wine.
+  << MM8 >>
+[-] Ogre corpses were containing most basic sword instead of a club. Add FixClubsGeneration=0 to INI to disable this fix.
 
 New in version 2.5.5:
   << MM6 - MM8 >>

@@ -406,6 +406,17 @@ Version 2.5.5:
 [-] My bug: Possible corruption when taking an item from character's inventory
 [-] My bug: FixChests option got broken by 2.5.4 changes
 
+Version 2.5.6:
+(MM6-MM8)
+[+] New Evt command 0x45 - RefundChestArtifacts
+[-] FixItemDuplicates - Fix items from one map appearing in another when traveling by foot
+[-] My bug: DisableHooks option wasn't working for some hooks
+[-] My bug: With custom *.games.lod archives incorrect data was written to autosave on New Game start
+(MM7, MM8)
+[-] My bug: The DirectX 7 bug fix was being applied prematurely, causing a crash on Wine
+(MM8)
+[-] FixClubsGeneration - Ogres were dropping 1st level sword instead of clubs 
+
 
 
 Version ?:
