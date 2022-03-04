@@ -76,6 +76,7 @@ const
   hqDontSkipSimpleMessage = 88;
   hqFixItemDuplicates = 89;
   hqFixClubsGeneration = 90;
+  hqFixAcidBurst = 91;
 
 {$IFDEF mm6}
   m6 = 1;
@@ -191,6 +192,7 @@ type
     DontSkipSimpleMessage: LongBool;          // (unused in MM8)
     FixItemDuplicates: LongBool;              //
     FixClubsGeneration: LongBool;             // (MM8 only)
+    FixAcidBurst: LongBool;                   // (unused in MM6)
   end;
 
 var
@@ -700,6 +702,7 @@ const
   _malloc: function(size:int):ptr cdecl = ptr(m6*$4AE753 + m7*$4CADC2 + m8*$4D9F62);
   _new: function(size:int):ptr cdecl = ptr(m6*$4AEBA5 + m7*$4CB06B + m8*$4D9E0B);
   _free: procedure(p:ptr) cdecl = ptr(m6*$4AE724 + m7*$4CAEFC + m8*$4DA09C);
+  _strcmpi: function(s1, s2: PChar): int cdecl = ptr(m6*$4AF370 + m7*$4CAAF0 + m8*$4DA920);
   _ProcessActions: TProcedure = ptr(m6*$42ADA0 + m7*$4304D6 + m8*$42EDD8);
   _LoadBitmap: function(_, __, this: int; pal: {$IFNDEF mm8}int{$ELSE}int64{$ENDIF}; name: PChar): int = ptr(m6*$40B430 + m7*$40FB2C + m8*$410D70);
   _DrawBmpTrans: procedure(_, __, screen: int; bmp:{$IFNDEF mm8}uint{$ELSE}uint64{$ENDIF}; y, x: int) = ptr(m7*$4A6204 + m8*$4A419B);
@@ -1245,6 +1248,7 @@ begin
       FixSouldrinker:= ReadBool('FixSouldrinker', true, false);
       FixClubsDelay:= ReadBool('FixClubsDelay', true, false);
       ClimbBetter:= ReadBool('ClimbBetter', true, false);
+      FixAcidBurst:= ReadBool('FixAcidBurst', true, false);
 {$ENDIF}
       FixHouseAnimationRestart:= ReadBool('FixHouseAnimationRestart', true, false);
       info:= 'Makes right mouse button act as Esc in houses, NPC, map entrance and message dialogs';

@@ -1,4 +1,4 @@
-GrayFace MM6 Patch v2.5.6
+GrayFace MM6 Patch v2.5.7
 By Sergey Rozhenko <mailto:sergroj@mail.ru>
 https://grayface.github.io/
 
@@ -10,6 +10,10 @@ For all exploits the patch fixes an option to disable the fix shoud be described
 At the end of ReadMe you'll find info on how to report errors.
 
 ([+] - feature, [-] - fixed bug, [*] - other)
+
+New in version 2.5.7:
+  << MM6 - MM8 >>
+[*] Support (i.e. no problems like crashes) for old saves with inconsequential incorrect data caused by my bug fixed in the previous version.
 
 New in version 2.5.6:
   << MM6 - MM8 >>

@@ -355,6 +355,10 @@ Version 2.5.6:
 [-] My bug: DisableHooks option wasn't working for some hooks
 [-] My bug: With custom *.games.lod archives incorrect data was written to autosave on New Game start
 
+Version 2.5.7:
+(MM6-MM8)
+[*] No more crashes when playing saves with incorrect data from pre-2.5.6 bug in custom *.games.lod support
+
 
 Если загрузить сейв, где все рожи одинаковые, а потом сейв с разными, будут черные пятна на месте рож
 

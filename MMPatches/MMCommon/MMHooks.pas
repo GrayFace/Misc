@@ -1457,8 +1457,11 @@ end;
 //      inc(Result);
 //end;
 
-procedure RefillAnyProc(buf: pchar);
+procedure RefillAnyProc(buf: pchar; skip: int);
 begin
+  if pint(buf - 4 - 32*(1 - m6))^ = 0 then
+    exit;  // never visited before
+  inc(buf, skip);
   if m6 = 0 then
     inc(buf, _SpritesCount^*2);
   inc(buf, 4 + pint(buf)^*_MonOff_Size);
@@ -1470,8 +1473,7 @@ end;
 
 procedure RefillBlvProc(buf: pchar);
 begin
-  inc(buf, _VisibleOutlinesSize^ + (1 - m6)*_IndoorFacetsCount^*4);
-  RefillAnyProc(buf);
+  RefillAnyProc(buf, _VisibleOutlinesSize^ + (1 - m6)*_IndoorFacetsCount^*4);
 end;
 
 var
@@ -1479,8 +1481,7 @@ var
 
 procedure RefillOdmProc(buf: pchar);
 begin
-  inc(buf, 968*2 + OdmFacetBitsCount*4);
-  RefillAnyProc(buf);
+  RefillAnyProc(buf, 968*2 + OdmFacetBitsCount*4);
 end;
 
 procedure RefillBlvHook;
@@ -3514,8 +3515,16 @@ end;
 //----- Acid Burst doing physical damage
 
 procedure FixAcidBurst;
+const
+  sNone: PChar = 'none';
 asm
   cmp dword ptr [esp + $24 - 8], 29
+  jnz @std
+  push esi
+  push sNone
+  call _strcmpi
+  add esp, 8
+  test eax, eax
   jnz @std
   mov byte ptr [edi], 2
 @std:
@@ -4387,7 +4396,7 @@ var
     (p: $40570B; newp: @FixShrapmetal; t: RShtBefore; Querry: hqFixMonsterSpells), // Fix monsters' Shrapmetal spread
     (p: $47BB77; newp: @FixSpritesWrapAround; t: RShtBefore; size: 7), // Don't show sprites from another side of the map with increased FOV
     (p: $42E4F0; old: $43642D; newp: @FixSouldrinkerHook; t: RShtCall; Querry: hqFixSouldrinker), // Souldrinker was hitting monsters beyond party range
-    (p: $453A31; old: $453AE6; newp: @FixAcidBurst; t: RShtBeforeJmp6), // Acid Burst doing physical damage
+    (p: $453A31; old: $453AE6; newp: @FixAcidBurst; t: RShtBeforeJmp6; Querry: hqFixAcidBurst), // Acid Burst doing physical damage
     (p: $404B02; newp: @FixMonSpellCast; t: RShtBefore), // Spells that couldn't be cast by monsters before
     (p: $468FCF; newp: @EquipOnSpearHook; t: RShtAfter; size: 6), // Unable to equip sword or dagger when non-master spear is equipped
     (p: $469037; size: $469041 - $469037), // Unable to equip sword or dagger when non-master spear is equipped
@@ -4532,7 +4541,7 @@ var
     (p: $40531F; newp: @FixShrapmetal; t: RShtBefore; size: 8; Querry: hqFixMonsterSpells), // Fix Shrapmetal spread
     (p: $47AE66; newp: @FixSpritesWrapAround; t: RShtBefore; size: 7), // Don't show sprites from another side of the map with increased FOV
     (p: $42C730; old: $433D70; newp: @FixSouldrinkerHook; t: RShtCall; Querry: hqFixSouldrinker), // Souldrinker was hitting monsters beyond party range
-    (p: $45119B; old: $451250; newp: @FixAcidBurst; t: RShtBeforeJmp6), // Acid Burst doing physical damage
+    (p: $45119B; old: $451250; newp: @FixAcidBurst; t: RShtBeforeJmp6; Querry: hqFixAcidBurst), // Acid Burst doing physical damage
     (p: $467453; newp: @EquipOnSpearHook; t: RShtAfter; size: 6), // Unable to equip sword or dagger when non-master spear is equipped
     (p: $4674BB; size: $4674C5 - $4674BB), // Unable to equip sword or dagger when non-master spear is equipped
     (p: $40EFC3; newp: @FixArcomage; t: RShtAfter; size: 6), // Fix Arcomage hanging
@@ -4644,6 +4653,8 @@ begin
     ApplyHooks(hqDontSkipSimpleMessage);
   if Options.FixItemDuplicates then
     ApplyHooks(hqFixItemDuplicates);
+  if Options.FixAcidBurst then
+    ApplyHooks(hqFixAcidBurst);
 end;
 
 procedure ApplyMMHooksSW;
