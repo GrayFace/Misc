@@ -417,6 +417,12 @@ Version 2.5.6:
 (MM8)
 [-] FixClubsGeneration - Ogres were dropping 1st level sword instead of clubs 
 
+Version 2.5.7:
+(MM6-MM8)
+[*] No more crashes when playing saves with incorrect data from pre-2.5.6 bug in custom *.games.lod support
+(MM7, MM8)
+[-] My bug: The Acid Burst fix was overwriting the element even if it's deliberately set to Physical. Ini option to disable fix.
+
 
 
 Version ?:
